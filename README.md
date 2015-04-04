@@ -23,14 +23,14 @@ Version 0.2 is compatible with Python 2.6. Previous version used "check_output",
 
 ## Screenshots
 
-Configuration
+### Configuration
 
 ![WPWatcher Configuration](/screens/wpwatcher-config.png "WPWacther Config")
 
-Scan Run
+### Scan Run
 
 ![WPWatcher Screenshot](/screens/wpwatcher.png "WPWatcher Run")
 
-Report
+### Report
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
