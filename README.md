@@ -1,5 +1,5 @@
 # WPWatcher
-Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email
+Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
 ## In a Nutshell
 
@@ -8,6 +8,11 @@ Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites a
   - Elements are divided in "Warnings" and "Alerts"
   - Mail is sent if at least 1 warning or 1 alert has been found
   - Local log file "wpwatcher.log" also lists all the findings (integrate in monitoring)
+
+## Prerequisites 
+
+  - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries)
+  - Python 2.6+ (standard libraries)
 
 ## Usage
 
