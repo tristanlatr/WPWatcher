@@ -13,6 +13,7 @@ import json
 import smtplib
 import traceback
 import subprocess
+import logging
 from subprocess import CalledProcessError
 import argparse
 import configparser
@@ -21,11 +22,33 @@ from email.mime.text import MIMEText
 from datetime import datetime
 
 configuration=None
+log = logging.getLogger('wpwatcher')
+
+# Setup logger
+def init_log(verbose, quiet, logfile):
+    format_string='%(asctime)s - %(levelname)s - %(message)s'
+    if verbose : verb_level=logging.DEBUG
+    elif quiet : verb_level=logging.ERROR
+    else : verb_level=logging.INFO
+    log.setLevel(verb_level)
+    std = logging.StreamHandler()
+    std.setLevel(verb_level)
+    std.setFormatter(logging.Formatter(format_string))
+    log.handlers=[]
+    log.addHandler(std)
+    if logfile :
+        fh = logging.FileHandler(logfile)
+        fh.setLevel(verb_level)
+        fh.setFormatter(logging.Formatter(format_string))
+        log.addHandler(fh)
+    if verbose and quiet :
+        log.warning("Verbose and quiet values are both set to True. By default, verbose value has priority.")
+    return (log)
 
 # Check if WPScan is installed
 def is_wpscan_installed():
     try:
-        result = subprocess.Popen([configuration.get('wpscan','wpscan_path'), '--version'], stdout=subprocess.PIPE).communicate()[0]
+        result = subprocess.Popen([conf('wpscan_path'), '--version'], stdout=subprocess.PIPE).communicate()[0]
         if 'WordPress Security Scanner' in str(result): return 1
         else: return 0
     except CalledProcessError:
@@ -33,59 +56,65 @@ def is_wpscan_installed():
 
 # Update WPScan from github
 def update_wpscan():
-    print("[INFO] Updating WPScan")
+    log.info("Updating WPScan")
     try:
-        result = subprocess.Popen([configuration.get('wpscan','wpscan_path'), '--update'], stdout=subprocess.PIPE).communicate()[0]
+        process = subprocess.Popen([conf('wpscan_path'), '--update'], stdout=subprocess.PIPE)
+        result, _  = process.communicate()
+        if process.returncode :
+            log.error("WPScan failed with exit code: %s \n %s" % ( str(process.returncode), str(result.decode("utf-8") ) ) )
+            log.error("Error updating wpscan")
     except CalledProcessError as exc:
-        print("[ERROR]", exc.returncode, exc.output)
-    print(result.decode("utf-8"))
+        log.error("WPScan failed with exit code: %s \n %s" % ( str(exc.returncode), str(exc.output) ) ) 
+        log.error("Error updating wpscan")
+    log.debug(result.decode("utf-8"))
 
 # Run WPScan on defined domains
 def run_scan():
-    print("[INFO] Starting scans on configured sites")
-    for wp_site in json.loads(configuration.get('wpscan','wp_sites')):
+    log.info("Starting scans on configured sites")
+    for wp_site in conf('wp_sites'):
+
+        # Read the wp_site dict and assing default values if needed ----------
         if 'url' not in wp_site:
-            print("[ERROR] Site must have a 'url' key." + str(wp_site))
-            exit(128)
-        if 'email_report_recepients' not in wp_site: wp_site['email_report_recepients']=[]
-        if 'false_positive_strings' not in wp_site: wp_site['false_positive_strings']=[]
+            log.error("Site must have a 'url' key: %s" % (str(wp_site)))
+            exit(-1)
+        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
+        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
+        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
+
         # Scan ----------------------------------------------------------------
         try:
-            print("[INFO] Scanning '%s'" % wp_site['url'])
-
-            process = subprocess.Popen(  [configuration.get('wpscan','wpscan_path')] + 
-                                        json.loads(configuration.get('wpscan','wpscan_args')) + 
-                                        ['--url', wp_site['url']], stdout=subprocess.PIPE )
-            result, _ = process.communicate()
+            
+            cmd=[conf('wpscan_path')] + conf('wpscan_args') + wp_site['wpscan_args'] + ['--url', wp_site['url']]
+            log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
+            result, _  = process.communicate()
             if process.returncode :
-                print("[WARNING] WPScan returned with code: " +str(process.returncode) + '\n' + result.decode("utf-8") )
+                log.error("WPScan failed with exit code: %s %s" % ( str(process.returncode), str(result.decode("utf-8") ) ) )
+            else:
+                # Print results
+                log.debug(result.decode("utf-8"))
+        
         except CalledProcessError as exc:
-            print("[ERROR]", exc.returncode, exc.output)
+            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), str(exc.output) ) ) 
 
         # Parse the results ---------------------------------------------------
         (warnings, alerts) = parse_results(result.decode("utf-8") , wp_site['false_positive_strings'] )
-        
-        # Print results
-        # print(result.decode("utf-8"))
 
         # Report Options ------------------------------------------------------
         # Email
-        if configuration.getboolean('wpscan','send_email_report') and ( warnings or alerts ):
-            send_report(wp_site, warnings, alerts, result.decode("utf-8"))
+        if conf('send_email_report') and ( warnings or alerts ):
+            send_report(wp_site, warnings, alerts,
+                fulloutput=result.decode("utf-8") if conf('verbose') else None)
         # Logfile
-        try:
-            with open(configuration.get('wpscan','log_file'), 'a') as log:
-                for warning in warnings:
-                    log.write("%s %s WARNING: %s\n" % (get_timestamp(), wp_site['url'], warning))
-                for alert in alerts:
-                    log.write("%s %s ALERT: %s\n" % (get_timestamp(), wp_site['url'], alert))
-        except Exception:
-            print("[ERROR] Cannot write to log file")
+        for warning in warnings:
+            log.warning("WPScan INFO %s %s" % (wp_site['url'], warning))
+        for alert in alerts:
+            log.warning("WPScan ALERT %s %s" % (wp_site['url'], alert))
 
 # Is the line defined as false positive
 def is_false_positive(string, site_false_positives):
     # False Positive Detection
-    for fp_string in json.loads(configuration.get('wpscan','false_positive_strings'))+site_false_positives:
+    for fp_string in conf('false_positive_strings')+site_false_positives:
         if fp_string in string:
             # print fp_string, string
             return 1
@@ -142,9 +171,9 @@ def parse_results(results, site_false_positives):
 # Send email report
 def send_report(wp_site, warnings, alerts, fulloutput=None):
 
-    to_email = ','.join( wp_site['email_report_recepients'] + json.loads(configuration.get('wpscan','email_report_recepients')) )
+    to_email = ','.join( wp_site['email_to'] + conf('email_to') )
 
-    print("[INFO] Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
+    log.info("Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
 
     try:
         message = "Issues have been detected by WPScan on one of your sites\n"
@@ -164,24 +193,24 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
         mime_msg = MIMEText(message)
 
         mime_msg['Subject'] = 'WPWatcher report on %s - %s' % (wp_site['url'], get_timestamp())
-        mime_msg['From'] = configuration.get('wpscan','from_email')
+        mime_msg['From'] = conf('from_email')
         mime_msg['To'] = to_email
 
         # SMTP Connection
-        s = smtplib.SMTP(configuration.get('wpscan','smtp_server'))
+        s = smtplib.SMTP(conf('smtp_server'))
         s.ehlo()
         # SSL
-        if configuration.getboolean('wpscan','smtp_ssl'):
+        if conf('smtp_ssl'):
             s.starttls()
         # SMTP Auth
-        if configuration.getboolean('wpscan','smtp_auth'):
-            s.login(configuration.get('wpscan','smtp_user'), configuration.get('wpscan','smtp_pass'))
+        if conf('smtp_auth'):
+            s.login(conf('smtp_user'), conf('smtp_pass'))
         # Send Email
-        s.sendmail(configuration.get('wpscan','from_email'), to_email, mime_msg.as_string())
+        s.sendmail(conf('from_email'), to_email, mime_msg.as_string())
         s.quit()
 
-    except Exception as e:
-        print("[ERROR] Unable to send mail report.")
+    except Exception:
+        log.error("Unable to send mail report of " + wp_site['url'] + "to " + to_email)
 
 
 def get_timestamp():
@@ -205,8 +234,31 @@ def read_config(configpath):
     try:
         configuration = configparser.ConfigParser()
         configuration.read(configpath)
-    except: return False
+    except Exception as err: 
+        log.error(err)
+        return False
     return True
+
+def conf(key):
+    if configuration:
+        # Boolean conf values
+        if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet']:
+            return configuration.getboolean('wpwatcher', key)
+        # JSON lists conf values
+        elif key in ['wp_sites', 'email_to', 'wpscan_args', 'false_positive_strings']:
+            try:
+                loaded=json.loads(configuration.get('wpwatcher', key))
+            except Exception as err:
+                log.error(err)
+                log.error("Could not read JSON value of key: %s for string: %s" % (key, configuration.get('wpwatcher', key)))
+                exit(-1)
+            return loaded if loaded else []
+        # Default conf values
+        else:
+            return configuration.get('wpwatcher', key)
+    else:
+        log.error("No configuration")
+        exit(-1)
 
 def parse_args():
 
@@ -217,24 +269,27 @@ def parse_args():
 
 if __name__ == '__main__':
     args=parse_args()
-
+    # Read config
     if args.conf: 
         if not read_config(args.conf):
-            print("[ERROR] Could not read config " + str(args.conf))
-            exit(128)
+            log.error("Could not read config " + str(args.conf))
+            exit(-1)
     else:
         if not find_config_file():
-            print("[ERROR] Could not find config file ")
-            exit(128)
+            log.error("Could not find config file")
+            exit(-1)
         else:
             if not read_config(find_config_file()):
-                print("[ERROR] Could not read config " + str(find_config_file()))
-                exit(128)
-
+                log.error("Could not read config " + str(find_config_file()))
+                exit(-1)
+    # Init logger
+    init_log(verbose=conf('verbose'),
+        quiet=conf('quiet'),
+        logfile=conf('log_file'))
     # Check if WPScan exists
     if not is_wpscan_installed():
-        print("[ERROR] WPScan not installed.\nPlease install wpscan on your system.\nSee https://wpscan.org for installation steps.")
-        exit(128)
+        log.error("WPScan not installed.\nPlease install wpscan on your system.\nSee https://wpscan.org for installation steps.")
+        exit(-1)
     else:
         update_wpscan()
 

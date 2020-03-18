@@ -18,42 +18,69 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
 
 Best Practice:
   1. Save script on server system
-  2. Adjust the sites to scan and other configuration in a config file
-  3. Adjust the mail server settings in the config file
+  2. Configure script in the config file
   4. Configure cron to run WPWatcher frequently
+
+    $ python3 ./wpwatcher.py
+    # or
+    $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
 
 ## Compatibility
 
 Version 0.3 is compatible with Python 3.
 
 ## Configuration
+If not specified with `--conf`, will use ./wpwatcher.conf or ~/wpwatcher.conf by default.
+```ini
+    [wpwatcher]
 
-    [wpscan]
-    # Monitoerd sites and custom email report recepient
-    wp_sites=   [   
-        {   "url":"exemple.com"  },
-        {   
-            "url":"exemple2.com",
-            "email_report_recepients":["person1@mail.com"], 
-            "false_positive_strings":["this string"]
-        }
-    ]
-    # Default email report recepient, will always receive email report
-    email_report_recepients=["alerts@domain.com"]
+    # Monitoerd sites, custom email report recepient, false positives and specific wpscan arguments
+    wp_sites=   [
+            {   
+                "url":"aeets.com",
+                "email_to":["user1@mail.com"], 
+                "false_positive_strings":["Vulnerability 123"],
+                "wpscan_args":["--verbose", "--enumerate", "vp,vt,cb,dbe,m"] 
+            },
+            {   
+                "url":"exemple.com",
+                "email_to":null, 
+                "false_positive_strings":null,
+                "wpscan_args":null
+            },
+            {   
+                "url":"exemple.com"
+            }
+        ]
+
+    # False positive strings
+    # Can be set to null list with false_positive_strings=null
+    false_positive_strings=[    "You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up",
+                                "No plugins Found.",
+                                "No themes Found.",
+                                "No Config Backups Found.", 
+                                "No DB Exports Found.",
+                                "No Medias Found." ]
+                                
+    # Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/bin/wpscan
+    wpscan_path=wpscan
+
+    # Log file
+    log_file=./wpwatcher.log
+
     # WPScan arguments. wpscan v3.7
+    # Can be set to null with wpscan_args=null
     wpscan_args=[   "--no-banner",
                     "--random-user-agent", 
                     "--format", "cli-no-colour",
-                    "--disable-tls-checks",
-                    "--enumerate", "vp,vt,cb,dbe,u,m" ]
-    # False positive strings
-    false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"   ]
-    # Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/bin/wpscan
-    wpscan_path= wpscan
-    # Log file
-    log_file=./wpwatcher.log
+                    "--disable-tls-checks" ]
+
     # Whether not sending emails
     send_email_report=No
+
+    # Default email report recepient, will always receive email report
+    email_to=["alerts@domain.com"]
+
     # Email settings
     smtp_server=mailserver.de:587
     smtp_auth=Yes
@@ -62,14 +89,17 @@ Version 0.3 is compatible with Python 3.
     smtp_ssl=Yes
     from_email=wpwatcher@domain.com
 
+    # Set yes to print only errors ans WPScan warnings
+    quiet=No
 
-
-## Screenshots
-
-### Scan Run
+    # Set yes to print wpscan out put every time
+    # If any alert, will email full wpscan output as well
+    verbose=No
+```
+## Scan Run
 
 ![WPWatcher Screenshot](/screens/wpwatcher.png "WPWatcher Run")
 
-### Report
+## Report
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
