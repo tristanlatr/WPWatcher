@@ -139,8 +139,8 @@ def parse_results(results, site_false_positives):
     message=str()
     # Parse the lines
     for line in results.splitlines():
-        # Remove colorization
-        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+        # Remove colorization snd strip
+        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
         # [+] = Begin of the message
         if line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]"):
             if warning_on:
@@ -158,7 +158,7 @@ def parse_results(results, site_false_positives):
         if "[!]" in line:
             alert_on = True
         # Append message line
-        message+=line
+        message+='\n'+line
     return ( warnings, alerts )
 
 
@@ -170,16 +170,16 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
     log.info("Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
 
     try:
-        if (warnings or alerts) :message = "Issues have been detected by WPScan on one of your sites"
+        if (warnings or alerts) :message = "Issues have been detected by WPScan on one of your sites: %s" % (wp_site['url'])
         else: message = "Here is the last WPScan report of your site"
         
         if alerts:
             message += "\n\n\tAlerts\n\n"
-            message += "\n".join(alerts)
+            message += "\n\n".join(alerts)
 
         if warnings:
             message += "\n\n\tWarnings\n\n"
-            message += "\n".join(warnings)
+            message += "\n\n".join(warnings)
 
         if fulloutput:
             message += "\n\n\tFull WPScan output\n\n"
