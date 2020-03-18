@@ -25,7 +25,7 @@ configuration=None
 log = logging.getLogger('wpwatcher')
 
 # Setup logger
-def init_log(verbose, quiet, logfile):
+def init_log(verbose=False, quiet=False, logfile=None):
     format_string='%(asctime)s - %(levelname)s - %(message)s'
     if verbose : verb_level=logging.DEBUG
     elif quiet : verb_level=logging.ERROR
@@ -241,7 +241,6 @@ def read_config(configpath):
     try:
         configuration = configparser.ConfigParser()
         configuration.read(configpath)
-        log.info("Read config file %s" % (configpath))
     except Exception as err: 
         log.error(err)
         return False
@@ -276,24 +275,27 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
+    init_log()
     args=parse_args()
     # Read config
+    configpath=None
     if args.conf: 
-        if not read_config(args.conf):
-            log.error("Could not read config " + str(args.conf))
-            exit(-1)
+        configpath=args.conf
     else:
         if not find_config_file():
             log.error("Could not find config file")
             exit(-1)
         else:
-            if not read_config(find_config_file()):
-                log.error("Could not read config " + str(find_config_file()))
-                exit(-1)
-    # Init logger
+            configpath=find_config_file()
+    if not read_config(configpath):
+        log.error("Could not read config " + str(configpath))
+        exit(-1)
+    # Init logger with config
     init_log(verbose=conf('verbose'),
         quiet=conf('quiet'),
         logfile=conf('log_file'))
+    log.info("Read config file %s" % (configpath))
+
     # Check if WPScan exists
     if not is_wpscan_installed():
         log.error("WPScan not installed.\nPlease install wpscan on your system.\nSee https://wpscan.org for installation steps.")
