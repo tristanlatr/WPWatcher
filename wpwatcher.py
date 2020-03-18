@@ -154,7 +154,7 @@ def parse_results(results, site_false_positives):
         # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
         #     message_begin=True
         # Toogle Warning/Alert
-        if "|[!]" in line or "[i]" in line:
+        if "| [!]" in line or "[i]" in line:
             warning_on = True
         elif "[!]" in line:
             alert_on = True
