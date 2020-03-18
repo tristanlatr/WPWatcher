@@ -137,43 +137,35 @@ def parse_results(results, site_false_positives):
     alerts = []
     warning_on = False
     alert_on = False
-    last_message = ""
-
+    message=str()
     # Parse the lines
     for line in results.splitlines():
-
         # Remove colorization
         line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
-
+        # [+] = Begin of the message
+        if line.startswith("[+]"):
+            message=str()    
+        # Append message line
+        message+=line
         # Empty line = end of message
-        if line == "" or line.startswith("[+]"):
+        if line =="":
+            # log.debug("Parsed message: ")
+            # log.debug(message)
             if warning_on:
-                if not is_false_positive(warning, site_false_positives):
-                    warnings.append(warning)
+                if not is_false_positive(message, site_false_positives):
+                    warnings.append(message)
                 warning_on = False
             if alert_on:
-                if not is_false_positive(alert, site_false_positives):
-                    alerts.append(alert)
+                if not is_false_positive(message, site_false_positives):
+                    alerts.append(message)
                 alert_on = False
-
-        # Add to warning/alert
-        if warning_on:
-            warning += " / %s" % line.lstrip(" ")
-        if alert_on:
-            alert += " / %s" % line.lstrip(" ")
+            message=str()
 
         # Start Warning/Alert
-        if line.startswith("[i]"):
-            # Warning message
-            warning = "%s / %s" % ( last_message, line )
+        if line.startswith("[i]") or line.startswith("|[i]"):
             warning_on = True
-        if line.startswith("[!]"):
-            # Warning message
-            alert = line
+        if line.startswith("[!]") or line.startswith("|[!]"):
             alert_on = True
-
-        # Store lase message
-        last_message = line
 
     return ( warnings, alerts )
 
