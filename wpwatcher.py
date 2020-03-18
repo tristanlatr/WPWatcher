@@ -154,9 +154,9 @@ def parse_results(results, site_false_positives):
         # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
         #     message_begin=True
         # Toogle Warning/Alert
-        if "[i]" in line:
+        if "|[!]" in line or "[i]" in line:
             warning_on = True
-        if "[!]" in line:
+        elif "[!]" in line:
             alert_on = True
         # Append message line if any
         if line!="": message+= line if message=="" else '\n'+line
@@ -198,7 +198,7 @@ def send_report(wp_site, warnings, alerts, infos=None):
 
         if infos:
             message += "\n\n\tInformations\n\n"
-            message += infos
+            message += "\n\n".join(infos)
 
         mime_msg = MIMEText(message)
 
