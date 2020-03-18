@@ -61,7 +61,7 @@ def run_scan():
         # Report Options ------------------------------------------------------
         # Email
         if configuration.getboolean('wpscan','send_email_report') and ( warnings or alerts ):
-            send_report(wp_site, warnings, alerts)
+            send_report(wp_site, warnings, alerts, result.decode("utf-8"))
         # Logfile
         try:
             with open(configuration.get('wpscan','log_file'), 'a') as log:
@@ -123,22 +123,26 @@ def parse_results(results):
 
 
 # Send email report
-def send_report(wp_site, warnings, alerts):
+def send_report(wp_site, warnings, alerts, fulloutput=None):
 
-    to_email = json.loads(configuration.get('wpscan','wp_sites'))[wp_site] + ' ' +configuration.get('wpscan','email_report_recepient')
+    to_email = json.loads(configuration.get('wpscan','wp_sites'))[wp_site] + ' ' + configuration.get('wpscan','email_report_recepient')
 
     print("[INFO] Sending email report stating items found on %s to %s" % (wp_site, to_email))
 
     try:
         message = "Issues have been detected by WPScan on one of your sites\n"
+        
+        if alerts:
+            message += "\nAlerts\n"
+            message += "\n".join(alerts)
 
         if warnings:
             message += "\nWarnings\n"
             message += "\n".join(warnings)
 
-        if alerts:
-            message += "\nAlerts\n"
-            message += "\n".join(alerts)
+        if fulloutput:
+            message += "\nFull WPScan output\n"
+            message += fulloutput
 
         mime_msg = MIMEText(message)
 
