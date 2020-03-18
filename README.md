@@ -12,19 +12,50 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
 ## Prerequisites 
 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries)
-  - Python 2.6+ (standard libraries)
+  - Python 3 (standard libraries)
 
 ## Usage
 
 Best Practice:
   1. Save script on server system
-  2. Adjust the sites to scan
-  3. Adjust the mail server settings
+  2. Adjust the sites to scan and other configuration in a config file
+  3. Adjust the mail server settings in the config file
   4. Configure cron to run WPWatcher frequently
 
 ## Compatibility
 
-Version 0.2 is compatible with Python 2.6. Previous version used "check_output", which is not available in Python 2.6.
+Version 0.3 is compatible with Python 3.
+
+## Configuration
+
+    [wpscan]
+    # Monitoerd sites and custom email report recepient
+    # Leave blank string if None
+    wp_sites={ "exemple.com" : "noone@gmail.com" }
+    # Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/bin/wpscan
+    wpscan_path= wpscan
+    # WPScan arguments. wpscan v3.7
+    wpscan_args=[   "--no-banner", 
+                    "--random-user-agent", 
+                    "--format", "cli-no-colour",
+                    "--disable-tls-checks",
+                    "--enumerate", "vp,vt,cb,dbe,u,m" ]
+    # False positive strings
+    false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"   ]
+    # Log file
+    log_file=./wpwatcher.log
+    # Whether not sending emails
+    send_email_report=No
+    # Default email report recepient, will always receive email report
+    email_report_recepient=alerts@domain.com
+    # Email settings
+    smtp_server=mailserver.de:587
+    smtp_auth=Yes
+    smtp_user=office
+    smtp_pass=p@assw0rd
+    smtp_ssl=Yes
+    from_email=wpwatcher@domain.com
+
 
 ## Screenshots
 
