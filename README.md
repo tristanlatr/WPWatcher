@@ -26,9 +26,10 @@ Best Practice:
     # or
     $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
 
-Return `4` status code if one or more WPScan command failed.  
-Return `3` status code if unable to send one or more email report.  
-Return `-1` status code if fatal error.  
+Return non zero status code if :
+- one or more WPScan command failed
+- unable to send one or more email report
+- other errors
 
 ## Compatibility
 
@@ -88,6 +89,10 @@ wpscan_args=[   "--no-banner",
 # Whether not sending emails
 send_email_report=No
 
+# If set to yes, will send reports even is they is alert.
+# Use with verbose=yes to send complete wpscan output by email all the time
+always_send_reports=No
+
 # Default email report recepients, will always receive email reports of all sites
 # Must be a valid Json string
 # Can be set to null with email_to=null
@@ -105,7 +110,7 @@ from_email=wpwatcher@domain.com
 quiet=No
 
 # Set yes to print wpscan out put every time
-# If any alert, will email full wpscan output as well
+# Will email full wpscan output as well
 verbose=No
 ```
 ## Scan Run

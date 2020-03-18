@@ -74,9 +74,10 @@ def run_scan():
     for wp_site in conf('wp_sites'):
         exit_code=0
         # Read the wp_site dict and assing default values if needed ----------
-        if 'url' not in wp_site:
-            log.error("Site must have a 'url' key: %s" % (str(wp_site)))
-            exit(-1)
+        if 'url' not in wp_site or wp_site['url']=="":
+            log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
+            exit_code=-1
+            continue
         if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
         if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
         if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
@@ -90,24 +91,24 @@ def run_scan():
             result, _  = process.communicate()
             if process.returncode :
                 log.error("WPScan failed with exit code: %s. Output: %s" % ( str(process.returncode), " ".join(line.strip() for line in str(result.decode("utf-8")).splitlines()) ) )
-                exit_code=4
+                exit_code=-1
             else:
                 # Print results
                 log.debug(result.decode("utf-8"))
         
         except CalledProcessError as exc:
             log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
-            exit_code=4
+            exit_code=-1
 
         # Parse the results ---------------------------------------------------
         (warnings, alerts) = parse_results(result.decode("utf-8") , wp_site['false_positive_strings'] )
 
         # Report Options ------------------------------------------------------
         # Email
-        if conf('send_email_report') and ( warnings or alerts ):
+        if conf('send_email_report') and ( warnings or alerts or conf('always_send_reports')):
             if not send_report(wp_site, warnings, alerts,
                 fulloutput=result.decode("utf-8") if conf('verbose') else None):
-                exit_code=3
+                exit_code=-1
 
         # Logfile
         for warning in warnings:
