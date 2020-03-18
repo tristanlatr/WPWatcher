@@ -72,7 +72,7 @@ def update_wpscan():
 def run_scan():
     log.info("Starting scans on configured sites")
     for wp_site in conf('wp_sites'):
-
+        exit_code=0
         # Read the wp_site dict and assing default values if needed ----------
         if 'url' not in wp_site:
             log.error("Site must have a 'url' key: %s" % (str(wp_site)))
@@ -89,13 +89,15 @@ def run_scan():
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
             result, _  = process.communicate()
             if process.returncode :
-                log.error("WPScan failed with exit code: %s %s" % ( str(process.returncode), str(result.decode("utf-8") ) ) )
+                log.error("WPScan failed with exit code: %s. Output: %s" % ( str(process.returncode), " ".join(line.strip() for line in str(result.decode("utf-8")).splitlines()) ) )
+                exit_code=4
             else:
                 # Print results
                 log.debug(result.decode("utf-8"))
         
         except CalledProcessError as exc:
-            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), str(exc.output) ) ) 
+            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
+            exit_code=4
 
         # Parse the results ---------------------------------------------------
         (warnings, alerts) = parse_results(result.decode("utf-8") , wp_site['false_positive_strings'] )
@@ -110,6 +112,11 @@ def run_scan():
             log.warning("WPScan INFO %s %s" % (wp_site['url'], warning))
         for alert in alerts:
             log.warning("WPScan ALERT %s %s" % (wp_site['url'], alert))
+    if exit_code == 0:
+        log.info("Scans finished successfully.") 
+    else:
+        log.info("Scans finished with errors.") 
+    return(exit_code)
 
 # Is the line defined as false positive
 def is_false_positive(string, site_false_positives):
@@ -234,6 +241,7 @@ def read_config(configpath):
     try:
         configuration = configparser.ConfigParser()
         configuration.read(configpath)
+        log.info("Read config file %s" % (configpath))
     except Exception as err: 
         log.error(err)
         return False
@@ -294,4 +302,4 @@ if __name__ == '__main__':
         update_wpscan()
 
     # Run Scan
-    run_scan()
+    exit(run_scan())

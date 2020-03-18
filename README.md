@@ -25,6 +25,9 @@ Best Practice:
     # or
     $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
 
+Return `4` status code if one or more WPScan command failed.  
+Return `-1` status code if fatal error.  
+
 ## Compatibility
 
 Version 0.3 is compatible with Python 3.
