@@ -105,7 +105,7 @@ def run_scan():
 
         # Report Options ------------------------------------------------------
         # Email
-        if conf('send_email_report') and ( warnings or alerts or conf('always_send_reports')):
+        if conf('send_email_report') and ( len(warnings)>0 or len(alerts)>0 or conf('always_send_reports')):
             if not send_report(wp_site, warnings, alerts,
                 fulloutput=result.decode("utf-8") if conf('verbose') else None):
                 exit_code=-1
