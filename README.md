@@ -20,12 +20,14 @@ Best Practice:
   1. Save script on server system
   2. Configure script in the config file
   4. Configure cron to run WPWatcher frequently
+  5. Configure email alerting to administrators if script fails.
 
     $ python3 ./wpwatcher.py
     # or
     $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
 
 Return `4` status code if one or more WPScan command failed.  
+Return `3` status code if unable to send one or more email report.  
 Return `-1` status code if fatal error.  
 
 ## Compatibility
@@ -33,11 +35,13 @@ Return `-1` status code if fatal error.
 Version 0.3 is compatible with Python 3.
 
 ## Configuration
-If not specified with `--conf`, will use ./wpwatcher.conf or ~/wpwatcher.conf by default.
+If not specified with `--conf`, will use `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
 ```ini
 [wpwatcher]
 
 # Monitoerd sites, custom email report recepient, false positives and specific wpscan arguments
+# Must be a valid Json string
+# Each dictrionnary must contain at least a 'url' key
 wp_sites=   [
         {   
             "url":"aeets.com",
@@ -57,6 +61,7 @@ wp_sites=   [
     ]
 
 # False positive strings
+# Must be a valid Json string
 # Can be set to null with false_positive_strings=null
 false_positive_strings=[    "You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up",
                             "No plugins Found.",
@@ -69,9 +74,11 @@ false_positive_strings=[    "You can get a free API token with 50 daily requests
 wpscan_path=wpscan
 
 # Log file
+# Can be /dev/null
 log_file=./wpwatcher.log
 
 # WPScan arguments. wpscan v3.7
+# Must be a valid Json string
 # Can be set to null with wpscan_args=null
 wpscan_args=[   "--no-banner",
                 "--random-user-agent", 
@@ -81,7 +88,9 @@ wpscan_args=[   "--no-banner",
 # Whether not sending emails
 send_email_report=No
 
-# Default email report recepient, will always receive email report
+# Default email report recepients, will always receive email reports of all sites
+# Must be a valid Json string
+# Can be set to null with email_to=null
 email_to=["alerts@domain.com"]
 
 # Email settings

@@ -105,13 +105,15 @@ def run_scan():
         # Report Options ------------------------------------------------------
         # Email
         if conf('send_email_report') and ( warnings or alerts ):
-            send_report(wp_site, warnings, alerts,
-                fulloutput=result.decode("utf-8") if conf('verbose') else None)
+            if not send_report(wp_site, warnings, alerts,
+                fulloutput=result.decode("utf-8") if conf('verbose') else None):
+                exit_code=3
+
         # Logfile
         for warning in warnings:
-            log.warning("WPScan INFO %s %s" % (wp_site['url'], warning))
+            log.warning("** WPScan INFO ** %s %s" % (wp_site['url'], warning))
         for alert in alerts:
-            log.warning("WPScan ALERT %s %s" % (wp_site['url'], alert))
+            log.warning("** WPScan ALERT ** %s %s" % (wp_site['url'], alert))
     if exit_code == 0:
         log.info("Scans finished successfully.") 
     else:
@@ -215,9 +217,11 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
         # Send Email
         s.sendmail(conf('from_email'), to_email, mime_msg.as_string())
         s.quit()
+        return(0)
 
     except Exception:
         log.error("Unable to send mail report of " + wp_site['url'] + "to " + to_email)
+        return(False)
 
 
 def get_timestamp():
