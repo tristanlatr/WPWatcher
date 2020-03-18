@@ -220,7 +220,8 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
         s.quit()
         return(0)
 
-    except Exception:
+    except Exception as err:
+        log.error(str(err))
         log.error("Unable to send mail report of " + wp_site['url'] + "to " + to_email)
         return(False)
 
