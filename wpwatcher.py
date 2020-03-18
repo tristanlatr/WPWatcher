@@ -143,6 +143,9 @@ def parse_results(results, site_false_positives):
         line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
         # [+] = Begin of the message
         if line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]"):
+            message=str()   
+        # End of the message 
+        if line=="":
             if warning_on:
                 if not is_false_positive(message, site_false_positives):
                     warnings.append(message)
@@ -150,8 +153,7 @@ def parse_results(results, site_false_positives):
             if alert_on:
                 if not is_false_positive(message, site_false_positives):
                     alerts.append(message)
-                alert_on = False
-            message=str()        
+                alert_on = False    
         # Start Warning/Alert
         if "[i]" in line:
             warning_on = True
