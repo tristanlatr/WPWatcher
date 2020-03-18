@@ -28,7 +28,6 @@ def is_wpscan_installed():
         result = subprocess.Popen([configuration.get('wpscan','wpscan_path'), '--version'], stdout=subprocess.PIPE).communicate()[0]
         if 'WordPress Security Scanner' in str(result): return 1
         else: return 0
-        #result = check_output(r'./wpscan.rb --batch --url %s' % wp_site, stderr=STDOUT, shell=True, universal_newlines=True)
     except CalledProcessError:
         return 0
 
@@ -44,19 +43,30 @@ def update_wpscan():
 # Run WPScan on defined domains
 def run_scan():
     print("[INFO] Starting scans on configured sites")
-    # os.chdir(wpscan_dir)
     for wp_site in json.loads(configuration.get('wpscan','wp_sites')):
-
+        if 'url' not in wp_site:
+            print("[ERROR] Site must have a 'url' key." + str(wp_site))
+            exit(128)
+        if 'email_report_recepients' not in wp_site: wp_site['email_report_recepients']=[]
+        if 'false_positive_strings' not in wp_site: wp_site['false_positive_strings']=[]
         # Scan ----------------------------------------------------------------
         try:
-            print("[INFO] Scanning '%s'" % wp_site)
-            result = subprocess.Popen([configuration.get('wpscan','wpscan_path')] + json.loads(configuration.get('wpscan','wpscan_args')) + ['--url', wp_site], stdout=subprocess.PIPE).communicate()[0]
-            #result = check_output(r'./wpscan.rb --batch --url %s' % wp_site, stderr=STDOUT, shell=True, universal_newlines=True)
+            print("[INFO] Scanning '%s'" % wp_site['url'])
+
+            process = subprocess.Popen(  [configuration.get('wpscan','wpscan_path')] + 
+                                        json.loads(configuration.get('wpscan','wpscan_args')) + 
+                                        ['--url', wp_site['url']], stdout=subprocess.PIPE )
+            result, _ = process.communicate()
+            if process.returncode :
+                print("[WARNING] WPScan returned with code: " +str(process.returncode) + '\n' + result.decode("utf-8") )
         except CalledProcessError as exc:
             print("[ERROR]", exc.returncode, exc.output)
 
         # Parse the results ---------------------------------------------------
-        (warnings, alerts) = parse_results(result.decode("utf-8") )
+        (warnings, alerts) = parse_results(result.decode("utf-8") , wp_site['false_positive_strings'] )
+        
+        # Print results
+        # print(result.decode("utf-8"))
 
         # Report Options ------------------------------------------------------
         # Email
@@ -66,16 +76,23 @@ def run_scan():
         try:
             with open(configuration.get('wpscan','log_file'), 'a') as log:
                 for warning in warnings:
-                    log.write("%s %s WARNING: %s\n" % (get_timestamp(), wp_site, warning))
+                    log.write("%s %s WARNING: %s\n" % (get_timestamp(), wp_site['url'], warning))
                 for alert in alerts:
-                    log.write("%s %s ALERT: %s\n" % (get_timestamp(), wp_site, alert))
-        except Exception as e:
-            traceback.print_exc()
+                    log.write("%s %s ALERT: %s\n" % (get_timestamp(), wp_site['url'], alert))
+        except Exception:
             print("[ERROR] Cannot write to log file")
 
+# Is the line defined as false positive
+def is_false_positive(string, site_false_positives):
+    # False Positive Detection
+    for fp_string in json.loads(configuration.get('wpscan','false_positive_strings'))+site_false_positives:
+        if fp_string in string:
+            # print fp_string, string
+            return 1
+    return 0
 
 # Parsing the results
-def parse_results(results):
+def parse_results(results, site_false_positives):
 
     warnings = []
     alerts = []
@@ -92,11 +109,11 @@ def parse_results(results):
         # Empty line = end of message
         if line == "" or line.startswith("[+]"):
             if warning_on:
-                if not is_false_positive(warning):
+                if not is_false_positive(warning, site_false_positives):
                     warnings.append(warning)
                 warning_on = False
             if alert_on:
-                if not is_false_positive(alert):
+                if not is_false_positive(alert, site_false_positives):
                     alerts.append(alert)
                 alert_on = False
 
@@ -125,9 +142,9 @@ def parse_results(results):
 # Send email report
 def send_report(wp_site, warnings, alerts, fulloutput=None):
 
-    to_email = json.loads(configuration.get('wpscan','wp_sites'))[wp_site] + ' ' + configuration.get('wpscan','email_report_recepient')
+    to_email = ','.join( wp_site['email_report_recepients'] + json.loads(configuration.get('wpscan','email_report_recepients')) )
 
-    print("[INFO] Sending email report stating items found on %s to %s" % (wp_site, to_email))
+    print("[INFO] Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
 
     try:
         message = "Issues have been detected by WPScan on one of your sites\n"
@@ -146,7 +163,7 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
 
         mime_msg = MIMEText(message)
 
-        mime_msg['Subject'] = 'WPWatcher report on %s - %s' % (wp_site, get_timestamp())
+        mime_msg['Subject'] = 'WPWatcher report on %s - %s' % (wp_site['url'], get_timestamp())
         mime_msg['From'] = configuration.get('wpscan','from_email')
         mime_msg['To'] = to_email
 
@@ -164,17 +181,7 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
         s.quit()
 
     except Exception as e:
-        traceback.print_exc()
-
-
-# Is the line defined as false positive
-def is_false_positive(string):
-    # False Positive Detection
-    for fp_string in json.loads(configuration.get('wpscan','false_positive_strings')):
-        if fp_string in string:
-            # print fp_string, string
-            return 1
-    return 0
+        print("[ERROR] Unable to send mail report.")
 
 
 def get_timestamp():
