@@ -240,7 +240,7 @@ def read_config(configpath):
 def conf(key):
     if configuration:
         # Boolean conf values
-        if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet']:
+        if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet', 'always_send_reports']:
             return configuration.getboolean('wpwatcher', key)
         # JSON lists conf values
         elif key in ['wp_sites', 'email_to', 'wpscan_args', 'false_positive_strings']:
