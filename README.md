@@ -71,7 +71,7 @@ false_positive_strings=[    "You can get a free API token with 50 daily requests
                             "No DB Exports Found.",
                             "No Medias Found." ]
                             
-# Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrapper/wpscan
+# Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
 wpscan_path=wpscan
 
 # Log file
