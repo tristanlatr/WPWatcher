@@ -1,1 +1,2 @@
-wpwatcher.log
+*.log
+*.conf
