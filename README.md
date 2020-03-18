@@ -30,24 +30,30 @@ Version 0.3 is compatible with Python 3.
 
     [wpscan]
     # Monitoerd sites and custom email report recepient
-    # Leave blank string if None
-    wp_sites={ "exemple.com" : "noone@gmail.com" }
-    # Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/bin/wpscan
-    wpscan_path= wpscan
+    wp_sites=   [   
+        {   "url":"exemple.com"  },
+        {   
+            "url":"exemple2.com",
+            "email_report_recepients":["person1@mail.com"], 
+            "false_positive_strings":["this string"]
+        }
+    ]
+    # Default email report recepient, will always receive email report
+    email_report_recepients=["alerts@domain.com"]
     # WPScan arguments. wpscan v3.7
-    wpscan_args=[   "--no-banner", 
+    wpscan_args=[   "--no-banner",
                     "--random-user-agent", 
                     "--format", "cli-no-colour",
                     "--disable-tls-checks",
                     "--enumerate", "vp,vt,cb,dbe,u,m" ]
     # False positive strings
     false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"   ]
+    # Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/bin/wpscan
+    wpscan_path= wpscan
     # Log file
     log_file=./wpwatcher.log
     # Whether not sending emails
     send_email_report=No
-    # Default email report recepient, will always receive email report
-    email_report_recepient=alerts@domain.com
     # Email settings
     smtp_server=mailserver.de:587
     smtp_auth=Yes
@@ -57,11 +63,8 @@ Version 0.3 is compatible with Python 3.
     from_email=wpwatcher@domain.com
 
 
+
 ## Screenshots
-
-### Configuration
-
-![WPWatcher Configuration](/screens/wpwatcher-config.png "WPWacther Config")
 
 ### Scan Run
 
