@@ -132,7 +132,6 @@ def is_false_positive(string, site_false_positives):
 
 # Parsing the results
 def parse_results(results, site_false_positives):
-
     warnings = []
     alerts = []
     warning_on = False
@@ -143,14 +142,7 @@ def parse_results(results, site_false_positives):
         # Remove colorization
         line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
         # [+] = Begin of the message
-        if line.startswith("[+]"):
-            message=str()    
-        # Append message line
-        message+=line
-        # Empty line = end of message
-        if line =="":
-            # log.debug("Parsed message: ")
-            # log.debug(message)
+        if line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]"):
             if warning_on:
                 if not is_false_positive(message, site_false_positives):
                     warnings.append(message)
@@ -159,14 +151,14 @@ def parse_results(results, site_false_positives):
                 if not is_false_positive(message, site_false_positives):
                     alerts.append(message)
                 alert_on = False
-            message=str()
-
+            message=str()        
         # Start Warning/Alert
-        if line.startswith("[i]") or line.startswith("|[i]"):
+        if "[i]" in line:
             warning_on = True
-        if line.startswith("[!]") or line.startswith("|[!]"):
+        if "[!]" in line:
             alert_on = True
-
+        # Append message line
+        message+=line
     return ( warnings, alerts )
 
 
@@ -178,18 +170,19 @@ def send_report(wp_site, warnings, alerts, fulloutput=None):
     log.info("Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
 
     try:
-        message = "Issues have been detected by WPScan on one of your sites\n"
+        if (warnings or alerts) :message = "Issues have been detected by WPScan on one of your sites"
+        else: message = "Here is the last WPScan report of your site"
         
         if alerts:
-            message += "\nAlerts\n"
+            message += "\n\n\tAlerts\n\n"
             message += "\n".join(alerts)
 
         if warnings:
-            message += "\nWarnings\n"
+            message += "\n\n\tWarnings\n\n"
             message += "\n".join(warnings)
 
         if fulloutput:
-            message += "\nFull WPScan output\n"
+            message += "\n\n\tFull WPScan output\n\n"
             message += fulloutput
 
         mime_msg = MIMEText(message)
