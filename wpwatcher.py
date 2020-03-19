@@ -125,7 +125,8 @@ def parse_results(results, site_false_positives, jsonformat=False):
                 warnings.append(message)
             warning_on = False
         else:
-            messages.append(message)
+            if not is_false_positive(message, site_false_positives):
+                messages.append(message)
     else: # --format json
         # Parsing wpscan json ressources
         #           https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
@@ -140,8 +141,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                     # Parsing procedure: on specific key
                     if item == "interesting_findings":
                         for message in parse_json_findings('Interresting findings',data["interesting_findings"]):
-                            if not is_false_positive(message, site_false_positives):
-                                messages.append(message)
+                            messages.append(message)
                     if item == "main_theme":
                         for warn in parse_json_outdated_theme_or_plugin(data['main_theme']):
                             if not is_false_positive(warn, site_false_positives):
@@ -151,8 +151,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                                 alerts.append(alrt)
                     if item == "version":
                         msg=parse_json_header_info(data['version'])
-                        if not is_false_positive(msg, site_false_positives):
-                            messages.append(msg)
+                        messages.append(msg)
                         for warn in parse_json_outdated_wp(data['version']):
                             if not is_false_positive(warn, site_false_positives): warnings.append(warn)
                         for alert in parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]):
@@ -237,7 +236,6 @@ def parse_json_findings(finding_type,findings):
         ####### Individual fields ########
         summary.append("%s %s" % (findingData, refData))
     return(summary)
-        
 
 # Send email report
 def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, emails=None, status=None):
