@@ -136,37 +136,44 @@ def parse_results(results, site_false_positives, jsonformat=False):
         #   
         try :
             data=json.loads(results)
-            if data:
+            if data != None:
                 for item in data:
                     # Parsing procedure: on specific key
                     if item == "interesting_findings":
-                        if not is_false_positive(item, site_false_positives):
-                            for message in parse_json_findings('Interresting findings',data["interesting_findings"]):
-                                messages.append(message)
+                        # Parse informations
+                        tmp_list=parse_json_findings('Interresting findings',data["interesting_findings"])
+                        [ messages.append(message) for message in ( tmp_list if tmp_list else [] ) if not is_false_positive(message, site_false_positives) ]
                     if item == "main_theme":
-                        for warn in parse_json_outdated_theme_or_plugin(data['main_theme']):
-                            if not is_false_positive(warn, site_false_positives):
-                                warnings.append(warn)
-                        for alrt in parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]):
-                            if not is_false_positive(alrt, site_false_positives):
-                                alerts.append(alrt)
+                        # Parse theme warnings
+                        tmp_list=parse_json_outdated_theme_or_plugin(data['main_theme'])
+                        [ warnings.append(warn) for warn in ( tmp_list if tmp_list else [] ) if not is_false_positive(warn, site_false_positives) ]
+                        # Parse Vulnerable themes
+                        tmp_list=parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"])
+                        [ alerts.append(alert) for alert in ( tmp_list if tmp_list else [] )  if not is_false_positive(alert, site_false_positives) ]
                     if item == "version":
+                        # Parse WordPress
                         msg=parse_json_header_info(data['version'])
-                        messages.append(msg)
-                        for warn in parse_json_outdated_wp(data['version']):
-                            if not is_false_positive(warn, site_false_positives): warnings.append(warn)
-                        for alert in parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]):
-                            alerts.append(alert)
+                        if msg and not is_false_positive(msg, site_false_positives):
+                            messages.append(msg)
+                        # Parse outdated WordPress version
+                        tmp_list=parse_json_outdated_wp(data['version'])
+                        [ warnings.append(warn) for warn in ( tmp_list if tmp_list else [] ) if not is_false_positive(warn, site_false_positives) ]
+                        # Parse vulnerable WordPress version
+                        tmp_list=parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"])
+                        [ alerts.append(alert) for alert in (tmp_list if tmp_list else [] ) ]
                     if item == "plugins":
                         plugins = data[item]
                         for plugin in plugins:
-                            [ alerts.append(alert) for alert in parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) if not is_false_positive(alert, site_false_positives) ]
-                            [ warnings.append(warn) for warn in  parse_json_outdated_theme_or_plugin(plugins[plugin]) if not is_false_positive(warn, site_false_positives) ]
+                            # Parse vulnerable plugins
+                            tmp_list=parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"])
+                            [ alerts.append(alert) for alert in (tmp_list if tmp_list else [] ) if not is_false_positive(alert, site_false_positives) ]
+                            # Parse outdated plugins
+                            tmp_list=parse_json_outdated_theme_or_plugin(plugins[plugin])
+                            [ warnings.append(warn) for warn in  (tmp_list if tmp_list else [] ) if not is_false_positive(warn, site_false_positives) ]
             else: 
-                raise Exception("No data in wpscan Json output")
+                raise Exception("No data in wpscan Json output (data=json.loads(results)=None)")
         except Exception as err:
-            log.error("Could not parse wpscan Json output: "+str(err))
-            raise
+            raise Exception("Could not parse wpscan Json output: "+str(err))
     return ( messages, warnings, alerts )
 
 def parse_json_header_info(version):
@@ -386,9 +393,11 @@ def run_scan():
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
             result, _  = process.communicate()
             if process.returncode :
+                # Handle scan error
                 result=result.decode("utf-8")
-                log.error("WPScan failed with exit code: %s. Output: %s" % ( str(process.returncode), " ".join(line.strip() for line in str(result).splitlines()) ) )
-                errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
+                err_string="WPScan failed with exit code for site %s: %s. Output: \n%s" % (wp_site['url'], str(process.returncode), result)
+                log.error(" ".join(line.strip() for line in err_string.splitlines()))
+                errors.append(err_string)
                 exit_code=-1
                 # Skip this failling wpscan if nomail
                 if conf('always_send_reports') == False or conf('send_email_report') == False: 
@@ -398,11 +407,13 @@ def run_scan():
                 result=result.decode("utf-8")
                 log.debug("WPScan raw output:\n"+result)
                 pass
-        except CalledProcessError as exc:
-            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
-            errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
+        except CalledProcessError as err:
+            # Handle scan error
+            result=str(err)
+            err_string="WPScan failed with exit code for site %s: %s. Output: \n%s" % (wp_site['url'], str(process.returncode), result)
+            log.error(" ".join(line.strip() for line in err_string.splitlines()))
+            errors.append(err_string)
             exit_code=-1
-            result=str(exc.output)
             # Skip this failling wpscan if nomail
             if conf('always_send_reports') == False or conf('send_email_report') == False: 
                     continue
@@ -418,13 +429,14 @@ def run_scan():
                 log.debug("Parsing WPScan %s output" % 'json' if is_json else 'cli')
                 (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] , jsonformat=is_json )
             except Exception as err:
-                log.error("Could not parse the results from wpscan command. Error: "+str(err))
-                errors.append("Could not parse the results from wpscan command. Error: "+str(err))
+                err_string="Could not parse the results from wpscan command for site {}. Error: {}".format(wp_site['url'],str(err))
+                log.error(err_string)
+                errors.append(err_string)
                 exit_code=-1
                 # Skip this failling wpscan if nomail
                 if conf('always_send_reports') == False or conf('send_email_report') == False: 
                     continue
-                else: (messages, warnings, alerts) = ([result],[],[])
+                else: errors.append("WPScan output: \n"+result)
             # Report Options ------------------------------------------------------
             # Logfile
             for message in messages:
@@ -443,7 +455,7 @@ def run_scan():
                 if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status="ERROR"):
                     # Send report failed
                     exit_code=-1
-            else: log.info("No WPWatcher ERROR email report have been sent for site %s"%wp_site)
+            else: log.info("No WPWatcher ERROR email report have been sent for site %s."%wp_site)
         # Email -------------------------------------------------------------------
         elif conf('send_email_report'):
             status=None
