@@ -175,7 +175,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             [ alerts.append(alert) for alert in tmp_list ]
                     if item == "plugins":
                         if data["plugins"]==None:
-                            if not is_false_positive("WPScan could not find any WordPress plugins", site_false_positives)
+                            if not is_false_positive("WPScan could not find any WordPress plugins", site_false_positives):
                                 warnings.append("WPScan could not find any WordPress plugins")
                         else:
                             plugins = data[item]
