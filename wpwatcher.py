@@ -141,16 +141,14 @@ def parse_results(results, site_false_positives, jsonformat=False):
                     # Parsing procedure: on specific key
                     if item == "interesting_findings":
                         if data["interesting_findings"]==None:
-                            if not is_false_positive("WPScan could not find any interesting informations", site_false_positives):
-                                warnings.append("WPScan could not find any interesting informations")
+                            messages.append("WPScan did not find any interesting informations")
                         else:
                             # Parse informations
                             tmp_list=parse_json_findings('Interresting findings',data["interesting_findings"])
                             [ messages.append(message) for message in tmp_list if not is_false_positive(message, site_false_positives) ]
                     if item == "main_theme":
                         if data["main_theme"]==None:
-                            if not is_false_positive("WPScan could not find any theme information", site_false_positives):
-                                warnings.append("WPScan could not find any theme information")
+                            messages.append("WPScan did not find any theme information")
                         else:
                             # Parse theme warnings
                             tmp_list=parse_json_outdated_theme_or_plugin(data['main_theme'])
@@ -160,8 +158,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             [ alerts.append(alert) for alert in tmp_list  if not is_false_positive(alert, site_false_positives) ]
                     if item == "version":
                         if data["version"]==None:
-                            if not is_false_positive("WPScan could not find any WordPress version", site_false_positives):
-                                warnings.append("WPScan could not find any WordPress version")
+                            messages.append("WPScan did not find any WordPress version")
                         else:
                             # Parse WordPress version
                             msg=parse_json_header_info(data['version'])
@@ -175,8 +172,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             [ alerts.append(alert) for alert in tmp_list ]
                     if item == "plugins":
                         if data["plugins"]==None:
-                            if not is_false_positive("WPScan could not find any WordPress plugins", site_false_positives):
-                                warnings.append("WPScan could not find any WordPress plugins")
+                            warnings.append("WPScan did not find any WordPress plugins")
                         else:
                             plugins = data[item]
                             for plugin in plugins:
