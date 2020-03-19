@@ -227,7 +227,7 @@ def parse_json_findings(finding_type,findings):
     for finding in findings:
         findingData = ""
         refData = ""
-        title = "(%s) " % finding_type
+        title = "[%s] " % finding_type
         if "title" in finding:
             title += "%s\n" % finding["title"]
         else:
@@ -251,8 +251,8 @@ def parse_json_findings(finding_type,findings):
                 findingData += "Confirmed By: \n"
                 for confirmed_by in finding["confirmed_by"]:
                     findingData += "%s\n" % confirmed_by
-        if len(finding["references"]) > 0:
-            #refData += "References: \n"
+        if "references" in finding and len(finding["references"]) > 0:
+            refData += "References:\n"
             for ref in finding["references"]:
                 refData += "%s:\n" % ref
                 for item in finding["references"][ref]:
