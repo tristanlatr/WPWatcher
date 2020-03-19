@@ -391,6 +391,9 @@ def run_scan():
     log.info("Starting scans on configured sites")
     exit_code=0
     for wp_site in conf('wp_sites'):
+        # Init scan variables
+        errors=[]
+        wordpress_arguments=conf('wpscan_args')+wp_site['wpscan_args']
         # Read the wp_site dict and assing default values if needed ----------
         if 'url' not in wp_site or wp_site['url']=="":
             log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
@@ -399,9 +402,7 @@ def run_scan():
         if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
         if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
         if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-        # Init scan variables
-        errors=[]
-        wordpress_arguments=conf('wpscan_args')+wp_site['wpscan_args']
+        
         # Scan ----------------------------------------------------------------
         try:
             cmd=[conf('wpscan_path')] + wordpress_arguments + ['--url', wp_site['url']]
