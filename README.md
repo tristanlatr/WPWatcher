@@ -100,10 +100,8 @@ send_warnings=Yes
 # Wheter to include Informations in the reports
 send_infos=Yes
 
-# If set to yes, will send reports even is they is alert.
-# Use with verbose=yes to send complete wpscan output by email all the time
+# If set to yes, will send reports even is there is no alert.
 # Will send emails even if wpscan exited with non zero status code
-# Always email wpscan informations
 always_send_reports=No
 
 # Default email report recepients, will always receive email reports of all sites
@@ -127,8 +125,8 @@ from_email=wpwatcher@domain.com
 # Set yes to print only errors and WPScan warnings
 quiet=No
 
-# Set yes to print wpscan out put every time
-# Will email wpscan informations as well
+# Verbose terminal output and logging.
+# Print raw WPScan output
 verbose=No
 ```
 ## Scan Run
