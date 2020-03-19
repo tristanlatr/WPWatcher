@@ -395,6 +395,7 @@ def run_scan():
                 log.error("Could not parse the results from wpscan command. Error: "+str(err))
                 errors.append("Could not parse the results from wpscan command. Error: "+str(err))
                 exit_code=-1
+                # Skip this failling wpscan if nomail
                 if conf('always_send_reports') == False or conf('send_email_report') == False: 
                     continue
                 else: (messages, warnings, alerts) = ([result],[],[])
@@ -407,7 +408,7 @@ def run_scan():
             for alert in alerts:
                 log.warning("** WPScan ALERT %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
         # Email errors -------------------------------------------------------
-        if len(errors)>0:
+        if len(errors)>0 :
             if conf('send_email_report') and len(conf('email_errors_to'))>0:
                 if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=conf('email_errors_to'), status="ERROR"):
                     # Send report failed
@@ -424,14 +425,14 @@ def run_scan():
                 status='WARNING'
             elif len(alerts)>0:
                 status='ALERT'
-            if (conf('always_send_reports') and conf('send_infos')) or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
+            if conf('send_infos') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
                 if not send_report(wp_site, alerts=alerts,
                     warnings=warnings if conf('send_warnings') else None,
                     infos=messages if conf('send_infos') else None,
                     status=status):
                     # Send report failed
                     exit_code=-1
-            else: log.info("No WPWatcher email report have been sent for site %s. If you want to receive emails all the time, set always_send_reports=Yes in the config!"%wp_site)
+            else: log.info("No WPWatcher email report have been sent for site %s. If you want to receive emails all the time, set send_infos=Yes in the config."%wp_site)
     if exit_code == 0:
         log.info("Scans finished successfully.") 
     else:
