@@ -4,15 +4,16 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
 ## In a Nutshell
 
   - Scan multiple sites with WPScan
-  - Define a reporting email address for every configured site individually
-  - Elements are divided in "Warnings" and "Alerts"
-  - Mail is sent if at least 1 warning or 1 alert has been found. Or email can always be sent 
+  - Define a reporting email address for every configured site individually and also a global reporting address
+  - Define false positives strings for every configured site individually and also globally
+  - Elements are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
+  - Mail notification and verbosoty can be configred in config file 
   - Local log file "wpwatcher.log" also lists all the findings (integrate in monitoring)
-  - Parse the results differently if wpscan argument `--format json` is set
+  - Parse the results differently whether wpscan argument `--format` is `json` or `cli`, etc.
 
 ## Prerequisites 
 
-  - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries)
+  - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries). Tested with WPScan 3.4
   - Python 3 (standard libraries)
 
 ## Usage
@@ -101,6 +102,11 @@ always_send_reports=No
 # Must be a valid Json string
 # Can be set to null with email_to=null
 email_to=["alerts@domain.com"]
+
+# Only if always_send_report=Yes
+# If set, will send any error output to this address, 
+#   not the pre configured reports recepients in email_to fields.
+email_errors_to=[""]
 
 # Email settings
 smtp_server=mailserver.de:587
