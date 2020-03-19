@@ -82,10 +82,8 @@ def run_scan():
         if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
         if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
         if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-
         # Scan ----------------------------------------------------------------
         try:
-            
             cmd=[conf('wpscan_path')] + conf('wpscan_args') + wp_site['wpscan_args'] + ['--url', wp_site['url']]
             log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
@@ -98,30 +96,27 @@ def run_scan():
             else:
                 result=result.decode("utf-8")
                 pass
-        
         except CalledProcessError as exc:
             log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
             exit_code=-1
             result=str(exc.output)
             if not conf('always_send_reports'): continue
-
         # Parse the results ---------------------------------------------------
-        (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] )
-
+        (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] , 
+            jsonformat=True if '--format' in conf('wpscan_args') + wp_site['wpscan_args'] and 'json' in conf('wpscan_args') + wp_site['wpscan_args'] else False )
         # Report Options ------------------------------------------------------
         # Email
         if conf('send_email_report') and ( len(warnings)>0 or len(alerts)>0 or conf('always_send_reports')):
             if not send_report(wp_site, warnings, alerts,
                 infos=messages if conf('verbose') or conf('always_send_reports') else None):
                 exit_code=-1
-
         # Logfile
         for message in messages:
-            log.info("** WPScan INFO ** %s %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
+            log.info("** WPScan INFO %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
         for warning in warnings:
-            log.warning("** WPScan WARNING ** %s %s" % (wp_site['url'], " ".join(line.strip() for line in str(warning).splitlines()) ))
+            log.warning("** WPScan WARNING %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(warning).splitlines()) ))
         for alert in alerts:
-            log.warning("** WPScan ALERT ** %s %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
+            log.warning("** WPScan ALERT %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
     if exit_code == 0:
         log.info("Scans finished successfully.") 
     else:
@@ -138,74 +133,160 @@ def is_false_positive(string, site_false_positives):
     return 0
 
 # Parsing the results
-def parse_results(results, site_false_positives):
+def parse_results(results, site_false_positives, jsonformat=False):
     warnings = []
     alerts = []
     messages = []
-    warning_on = False
-    alert_on = False
-    message=""
-    # message_begin=False
-    # Parse the lines
-    for line in results.splitlines():
-        # Remove colorization snd strip
-        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
-        # [+] = Begin of the message
-        # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
-        #     message_begin=True
-        # Toogle Warning/Alert
-        if "| [!]" in line or "[i]" in line:
-            warning_on = True
-        elif "[!]" in line:
-            alert_on = True
-        # Append message line if any
-        if line!="": message+= line if message=="" else '\n'+line
-        # End of the message just a white line. Every while line will be considered as a mesasge separator
-        if line=="":
-            if alert_on:
-                if not is_false_positive(message, site_false_positives):
-                    alerts.append(message)
-                alert_on = False 
-            elif warning_on:
-                if not is_false_positive(message, site_false_positives):
-                    warnings.append(message)
-                warning_on = False
-            else:
-                messages.append(message)
-            message="" 
-
+    if not jsonformat:
+        warning_on = False
+        alert_on = False
+        message=""
+        # Parse the lines
+        for line in results.splitlines():
+            # Remove colorization snd strip
+            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
+            # [+] = Begin of the message
+            # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
+            # Toogle Warning/Alert
+            if "| [!]" in line or "[i]" in line:
+                warning_on = True
+            elif "[!]" in line:
+                alert_on = True
+            # Append message line if any
+            if line!="": 
+                message+= line if message=="" else '\n'+line
+            # End of the message just a white line. Every while line will be considered as a mesasge separator
+            if line=="":
+                if alert_on:
+                    if not is_false_positive(message, site_false_positives):
+                        alerts.append(message)
+                    alert_on = False 
+                elif warning_on:
+                    if not is_false_positive(message, site_false_positives):
+                        warnings.append(message)
+                    warning_on = False
+                else:
+                    messages.append(message)
+                message="" 
+    else:
+        # Parsing wpscan json ressources
+        #           https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
+        #           https://www.thecliguy.co.uk/2019/04/26/wordcamp-london-2019-cli-tools-and-shells/
+        #           https://github.com/statuscope-io/integrations/blob/master/security/check_wordpress_site.sh
+        #           https://github.com/aaronweaver/AppSecPipeline/blob/master/tools/wpscan/parser.py
+        #   
+        try :
+            data=json.loads(results)
+            for item in data:
+                if item == "interesting_findings":
+                    messages.extend(parse_json_findings('Interresting findings',data["interesting_findings"]))
+                if item == "main_theme":
+                    warnings.extend(parse_json_outdated_theme_or_plugin(data['main_theme']))
+                    alerts.extend(parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]))
+                if item == "version":
+                    messages.append(parse_json_header_info(data['version']))
+                    warnings.extend(parse_json_outdated_wp(data['version']))
+                    alerts.extend(parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]))
+                if item == "plugins":
+                    plugins = data[item]
+                    for plugin in plugins:
+                        alerts.extend(parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]))
+                        warnings.extend(parse_json_outdated_theme_or_plugin(plugins[plugin]))
+        except Exception as err:
+            log.error("Could not parse wpscan Json output: "+str(err))
+            raise
     return ( messages, warnings, alerts )
 
+def parse_json_header_info(version):
+    headerInfo = ""
+    if "number" in version:
+        headerInfo += "Running WordPress version: %s\n" % version["number"]
+    if "interesting_entries" in version:
+        if len(version["interesting_entries"]) > 0:
+            headerInfo += "Interesting Entries: \n"
+            for entries in version["interesting_entries"]:
+                headerInfo += "%s\n" % entries
+    return headerInfo
+
+def parse_json_outdated_wp(component):
+    summary=[]
+    findingData=""
+    if 'status' in component and component['status']!="latest":
+        findingData+="The version of your WordPress site is out of date.\n"
+        findingData+="Status %s for WP version %s" % (component['status'], component['number'])
+        summary.append(findingData)
+    return(summary)
+
+def parse_json_outdated_theme_or_plugin(component):
+    summary=[]
+    findingData=""
+    if 'slug' in component:
+        findingData+="%s\n" % component['slug']
+    if 'outdated' in component and component['outdated']==True:
+        findingData+="The version of your plugin or theme is out of date, the latest version is %s" % component["latest_version"]
+        summary.append(findingData)
+    return(summary)
+
+def parse_json_findings(finding_type,findings):
+    summary = []
+    for finding in findings:
+        findingData = ""
+        refData = ""
+        title = "(%s) " % finding_type
+        if "title" in finding:
+            title += "%s\n" % finding["title"]
+        else:
+            title += "%s\n" % finding["found_by"]
+        findingData += "%s\n" % title
+        if "fixed_in" in finding:
+            findingData += "Fixed In: %s\n" % finding["fixed_in"]
+        if "url" in finding:
+            findingData += "URL: %s\n" % finding["url"]
+        if "found_by" in finding:
+            findingData += "Found by: %s\n" % finding["found_by"]
+        if "confidence" in finding:
+            findingData += "Confidence: %s\n" % finding["confidence"]
+        if "interesting_entries" in finding:
+            if len(finding["interesting_entries"]) > 0:
+                findingData += "Interesting Entries: \n"
+                for entries in finding["interesting_entries"]:
+                    findingData += "%s\n" % entries
+        if "comfirmed_by" in finding:
+            if len(finding["confirmed_by"]) > 0:
+                findingData += "Confirmed By: \n"
+                for confirmed_by in finding["confirmed_by"]:
+                    findingData += "%s\n" % confirmed_by
+        if len(finding["references"]) > 0:
+            #refData += "References: \n"
+            for ref in finding["references"]:
+                refData += "%s:\n" % ref
+                for item in finding["references"][ref]:
+                    refData += "%s\n" %  item
+        ####### Individual fields ########
+        summary.append("%s %s" % (findingData, refData))
+    return(summary)
+        
 
 # Send email report
 def send_report(wp_site, warnings, alerts, infos=None):
-
     to_email = ','.join( wp_site['email_to'] + conf('email_to') )
-
     log.info("Sending email report stating items found on %s to %s" % (wp_site['url'], to_email))
-
     try:
         if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
         else: message = "WPScan report\nSite: %s" % (wp_site['url'])
-        
         if alerts:
             message += "\n\n\tAlerts\n\n"
             message += "\n\n".join(alerts)
-
         if warnings:
             message += "\n\n\tWarnings\n\n"
             message += "\n\n".join(warnings)
-
         if infos:
             message += "\n\n\tInformations\n\n"
             message += "\n\n".join(infos)
-
         mime_msg = MIMEText(message)
-
         mime_msg['Subject'] = 'WPWatcher report on %s - %s' % (wp_site['url'], get_timestamp())
         mime_msg['From'] = conf('from_email')
         mime_msg['To'] = to_email
-
         # SMTP Connection
         s = smtplib.SMTP(conf('smtp_server'))
         s.ehlo()
@@ -219,12 +300,10 @@ def send_report(wp_site, warnings, alerts, infos=None):
         s.sendmail(conf('from_email'), to_email, mime_msg.as_string())
         s.quit()
         return(0)
-
     except Exception as err:
         log.error(str(err))
         log.error("Unable to send mail report of " + wp_site['url'] + "to " + to_email)
         return(False)
-
 
 def get_timestamp():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')

@@ -6,8 +6,9 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
   - Scan multiple sites with WPScan
   - Define a reporting email address for every configured site individually
   - Elements are divided in "Warnings" and "Alerts"
-  - Mail is sent if at least 1 warning or 1 alert has been found
+  - Mail is sent if at least 1 warning or 1 alert has been found. Or email can always be sent 
   - Local log file "wpwatcher.log" also lists all the findings (integrate in monitoring)
+  - Parse the results differently if wpscan argument `--format json` is set
 
 ## Prerequisites 
 
@@ -81,6 +82,7 @@ log_file=./wpwatcher.log
 # WPScan arguments. wpscan v3.7
 # Must be a valid Json string
 # Can be set to null with wpscan_args=null
+# Set "--format","json" to use Json parsing feature
 wpscan_args=[   "--no-banner",
                 "--random-user-agent", 
                 "--format", "cli-no-colour",
