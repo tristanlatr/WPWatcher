@@ -7,7 +7,7 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
   - Define a reporting email address for every configured site individually and also a global reporting address
   - Define false positives strings for every configured site individually and also globally
   - Elements are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
-  - Mail notification and verbosoty can be configred in config file 
+  - Mail notification and verbosity can be configred in config file 
   - Local log file "wpwatcher.log" also lists all the findings (integrate in monitoring)
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`, etc.
 
