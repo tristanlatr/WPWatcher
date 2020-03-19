@@ -267,7 +267,7 @@ def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, em
             if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
             else: message = "WPScan report\nSite: %s" % (wp_site['url'])
             if errors:
-                message += "\n\n\t<b>Errors</b>\n\n"
+                message += "\n\n\tErrors\n\n"
                 message += "\n\n".join(errors)
             if alerts:
                 message += "\n\n\tAlerts\n\n"
