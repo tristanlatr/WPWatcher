@@ -1,11 +1,10 @@
-#!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 # -*- coding: utf-8 -*-
 #
 # Wordpress Watcher
 # Automating WPscan to scan and report vulnerable Wordpress sites
-# v0.3
 # DISCLAIMER - USE AT YOUR OWN RISK.
+__version__='0.3'
 
 import os
 import re
@@ -69,95 +68,6 @@ def update_wpscan():
         log.error("WPScan failed: %s" % ( str(err) ) ) 
         log.error("Error updating wpscan")
         exit(-1)
-
-# Run WPScan on defined domains
-def run_scan():
-    log.info("Starting scans on configured sites")
-    exit_code=0
-    for wp_site in conf('wp_sites'):
-        errors=[]
-        # Read the wp_site dict and assing default values if needed ----------
-        if 'url' not in wp_site or wp_site['url']=="":
-            log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
-            exit_code=-1
-            continue
-        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
-        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
-        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-        # Scan ----------------------------------------------------------------
-        try:
-            cmd=[conf('wpscan_path')] + conf('wpscan_args') + wp_site['wpscan_args'] + ['--url', wp_site['url']]
-            log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
-            result, _  = process.communicate()
-            if process.returncode :
-                result=result.decode("utf-8")
-                log.error("WPScan failed with exit code: %s. Output: %s" % ( str(process.returncode), " ".join(line.strip() for line in str(result).splitlines()) ) )
-                errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
-                exit_code=-1
-                # Skip this failling wpscan
-                if conf('always_send_reports') == False or conf('send_email_report') == False: 
-                    continue
-            else:
-                result=result.decode("utf-8")
-                pass
-        except CalledProcessError as exc:
-            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
-            errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
-            exit_code=-1
-            result=str(exc.output)
-            if conf('always_send_reports') == False or conf('send_email_report') == False: 
-                    continue
-        log.debug("WPScan raw output:\n"+result)
-        # Parse the results if no errors with wpscan ---------------------------
-        if len(errors)==0:
-            try:
-                (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] , 
-                    jsonformat=True if '--format json' in " ".join(conf('wpscan_args')+wp_site['wpscan_args']) else False )
-            except Exception as err:
-                log.error("Could not parse the results from wpscan command. Error: "+str(err))
-                errors.append("Could not parse the results from wpscan command. Error: "+str(err))
-                exit_code=-1
-                if conf('always_send_reports') == False or conf('send_email_report') == False: 
-                    continue
-                else: (messages, warnings, alerts) = ([result],[],[])
-            # Report Options ------------------------------------------------------
-            # Logfile
-            for message in messages:
-                log.info("** WPScan INFO %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
-            for warning in warnings:
-                log.warning("** WPScan WARNING %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(warning).splitlines()) ))
-            for alert in alerts:
-                log.warning("** WPScan ALERT %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
-        # Email errors -------------------------------------------------------
-        if len(errors)>0:
-            if conf('send_email_report') and len(conf('email_errors_to'))>0:
-                if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=conf('email_errors_to'), status="ERROR"):
-                    # Send report failed
-                    exit_code=-1
-            elif conf('send_email_report'): 
-                if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status="ERROR"):
-                    # Send report failed
-                    exit_code=-1
-        # Email -------------------------------------------------------------------
-        if conf('send_email_report'):
-            status=None
-            if len(warnings)>0 and len(alerts) == 0:
-                status='WARNING'
-            elif len(alerts)>0:
-                status='ALERT'
-            if conf('always_send_reports') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
-                if not send_report(wp_site, alerts=alerts,
-                    warnings=warnings if conf('send_warnings') else None,
-                    infos=messages if conf('send_infos') else None,
-                    status=status):
-                    # Send report failed
-                    exit_code=-1
-    if exit_code == 0:
-        log.info("Scans finished successfully.") 
-    else:
-        log.info("Scans finished with errors.") 
-    return(exit_code)
 
 # Is the line defined as false positive
 def is_false_positive(string, site_false_positives):
@@ -338,7 +248,7 @@ def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, em
         if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
         else: message = "WPScan report\nSite: %s" % (wp_site['url'])
         if errors:
-            message += "\n\n\Errors\n\n"
+            message += "\n\n\t<b>Errors</b>\n\n"
             message += "\n\n".join(errors)
         if alerts:
             message += "\n\n\tAlerts\n\n"
@@ -400,11 +310,11 @@ def read_config(configpath):
 def conf(key):
     if configuration:
         # Boolean conf values
-        if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet', 'always_send_reports']:
+        if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet', 'always_send_reports', 'send_infos', 'send_warnings']:
             try:
                 val =configuration.getboolean('wpwatcher', key)
             except Exception as err:
-                log.warning("Uable to read option '"+key+"' in the config file. Assinging default value 'False'")
+                log.warning("Uable to read option '"+key+"' in the config file. Assinging default value 'False'. Error was: "+str(err))
                 val=False
             return val
         # JSON lists conf values
@@ -412,14 +322,14 @@ def conf(key):
             try:
                 string_val=configuration.get('wpwatcher', key)
             except Exception as err:
-                log.warning("Uable to read option '"+key+"' in the config file. Assinging default value '[]'")
+                log.warning("Uable to read option '"+key+"' in the config file. Assinging default value '[]'. Error was: "+str(err))
                 loaded=[]
             else:
                 try:
                     loaded=json.loads(string_val)
                 except Exception as err:
                     log.error(err)
-                    log.error("Could not read JSON value of key: %s for string: %s" % (key, configuration.get('wpwatcher',key)))
+                    log.error("Could not read JSON value of key: %s for string: %s. Error: %s" % (key, configuration.get('wpwatcher',key), str(err)))
                     exit(-1)
             return loaded if loaded else []
         # Default conf values
@@ -435,6 +345,99 @@ def parse_args():
     parser.add_argument('--conf', metavar='Config file', help="Path to the config file. Will use ./wpwatcher.conf or ~/wpwatcher.conf if left none")
     args = parser.parse_args()
     return args
+
+# Run WPScan on defined domains
+def run_scan():
+    log.info("Starting scans on configured sites")
+    exit_code=0
+    for wp_site in conf('wp_sites'):
+        errors=[]
+        # Read the wp_site dict and assing default values if needed ----------
+        if 'url' not in wp_site or wp_site['url']=="":
+            log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
+            exit_code=-1
+            continue
+        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
+        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
+        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
+        # Scan ----------------------------------------------------------------
+        try:
+            cmd=[conf('wpscan_path')] + conf('wpscan_args') + wp_site['wpscan_args'] + ['--url', wp_site['url']]
+            log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
+            result, _  = process.communicate()
+            if process.returncode :
+                result=result.decode("utf-8")
+                log.error("WPScan failed with exit code: %s. Output: %s" % ( str(process.returncode), " ".join(line.strip() for line in str(result).splitlines()) ) )
+                errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
+                exit_code=-1
+                # Skip this failling wpscan if nomail
+                if conf('always_send_reports') == False or conf('send_email_report') == False: 
+                    continue
+            else:
+                result=result.decode("utf-8")
+                log.debug("WPScan raw output:\n"+result)
+                pass
+        except CalledProcessError as exc:
+            log.error("WPScan failed with exit code: %s %s" % ( str(exc.returncode), " ".join(line.strip() for line in str(exc.output).splitlines()) ) )
+            errors.append("WPScan failed with exit code: %s. Output: \n%s" % ( str(process.returncode), result) )
+            exit_code=-1
+            result=str(exc.output)
+            # Skip this failling wpscan if nomail
+            if conf('always_send_reports') == False or conf('send_email_report') == False: 
+                    continue
+        
+        # Parse the results if no errors with wpscan ---------------------------
+        if len(errors)==0:
+            try:
+                (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] , 
+                    jsonformat=True if '--format json' in " ".join(conf('wpscan_args')+wp_site['wpscan_args']) else False )
+            except Exception as err:
+                log.error("Could not parse the results from wpscan command. Error: "+str(err))
+                errors.append("Could not parse the results from wpscan command. Error: "+str(err))
+                exit_code=-1
+                if conf('always_send_reports') == False or conf('send_email_report') == False: 
+                    continue
+                else: (messages, warnings, alerts) = ([result],[],[])
+            # Report Options ------------------------------------------------------
+            # Logfile
+            for message in messages:
+                log.info("** WPScan INFO %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
+            for warning in warnings:
+                log.warning("** WPScan WARNING %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(warning).splitlines()) ))
+            for alert in alerts:
+                log.warning("** WPScan ALERT %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
+        # Email errors -------------------------------------------------------
+        if len(errors)>0:
+            if conf('send_email_report') and len(conf('email_errors_to'))>0:
+                if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=conf('email_errors_to'), status="ERROR"):
+                    # Send report failed
+                    exit_code=-1
+            elif conf('send_email_report'): 
+                if not send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status="ERROR"):
+                    # Send report failed
+                    exit_code=-1
+            else: log.info("No WPWatcher email report have been sent for site %s"%wp_site)
+        # Email -------------------------------------------------------------------
+        elif conf('send_email_report'):
+            status=None
+            if len(warnings)>0 and len(alerts) == 0:
+                status='WARNING'
+            elif len(alerts)>0:
+                status='ALERT'
+            if (conf('always_send_reports') and conf('send_infos')) or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
+                if not send_report(wp_site, alerts=alerts,
+                    warnings=warnings if conf('send_warnings') else None,
+                    infos=messages if conf('send_infos') else None,
+                    status=status):
+                    # Send report failed
+                    exit_code=-1
+            else: log.info("No WPWatcher email report have been sent for site %s. If you want to receive emails all the time, set always_send_reports=Yes in the config!"%wp_site)
+    if exit_code == 0:
+        log.info("Scans finished successfully.") 
+    else:
+        log.info("Scans finished with errors.") 
+    return(exit_code)
 
 if __name__ == '__main__':
     init_log()
