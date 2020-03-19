@@ -477,6 +477,8 @@ def run_scan():
                 status='WARNING'
             elif len(alerts)>0:
                 status='ALERT'
+            else:
+                status='INFO'
             if conf('send_infos') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
                 if not send_report(wp_site, alerts=alerts,
                     warnings=warnings if conf('send_warnings') else None,
