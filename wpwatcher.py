@@ -146,9 +146,10 @@ def run_scan():
                 status='WARNING'
             elif len(alerts)>0:
                 status='ALERT'
-            if conf('always_send_reports') or status:
-                if not send_report(wp_site, warnings, alerts,
-                    infos=messages if conf('verbose') or conf('always_send_reports') else None,
+            if conf('always_send_reports') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
+                if not send_report(wp_site, alerts=alerts,
+                    warnings=warnings if conf('send_warnings') else None,
+                    infos=messages if conf('send_infos') else None,
                     status=status):
                     # Send report failed
                     exit_code=-1

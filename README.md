@@ -92,6 +92,14 @@ wpscan_args=[   "--no-banner",
 # Whether not sending emails
 send_email_report=No
 
+# Wheter to include warnings in the reports Alerts
+# If set to No, no reports will be sent if WPScan find only warnings
+#     and always_send_reports=No 
+send_warnings=Yes
+
+# Wheter to include Informations in the reports
+send_infos=Yes
+
 # If set to yes, will send reports even is they is alert.
 # Use with verbose=yes to send complete wpscan output by email all the time
 # Will send emails even if wpscan exited with non zero status code
@@ -103,7 +111,7 @@ always_send_reports=No
 # Can be set to null with email_to=null
 email_to=["alerts@domain.com"]
 
-# Only if always_send_report=Yes
+# Applicable only if always_send_report=Yes
 # If set, will send any error output to this address, 
 #   not the pre configured reports recepients in email_to fields.
 email_errors_to=[""]
