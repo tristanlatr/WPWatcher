@@ -69,6 +69,8 @@ wp_sites=   [
 # False positive strings
 # Must be a valid Json string
 # Can be set to null with false_positive_strings=null
+# You can use this to ignore some infos, warnmings or alerts
+# Use with care
 false_positive_strings=[    "You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up",
                             "No plugins Found.",
                             "No themes Found.",

@@ -140,8 +140,9 @@ def parse_results(results, site_false_positives, jsonformat=False):
                 for item in data:
                     # Parsing procedure: on specific key
                     if item == "interesting_findings":
-                        for message in parse_json_findings('Interresting findings',data["interesting_findings"]):
-                            messages.append(message)
+                        if not is_false_positive(warn, site_false_positives):
+                            for message in parse_json_findings('Interresting findings',data["interesting_findings"]):
+                                messages.append(message)
                     if item == "main_theme":
                         for warn in parse_json_outdated_theme_or_plugin(data['main_theme']):
                             if not is_false_positive(warn, site_false_positives):
