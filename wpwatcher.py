@@ -389,6 +389,7 @@ def run_scan():
     for wp_site in conf('wp_sites'):
         # Init scan variables
         errors=[]
+        (messages, warnings, alerts)=([],[],[])
         # Read the wp_site dict and assing default values if needed ----------
         if 'url' not in wp_site or wp_site['url']=="":
             log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))

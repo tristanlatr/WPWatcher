@@ -127,12 +127,12 @@ email_to=["securityalerts@domain.com"]
 email_errors_to=["admins@domain.com"]
 
 # Email settings
-smtp_server=mailserver.de:587
-smtp_auth=Yes
+smtp_server=mailserver.de:25
+smtp_auth=No
 smtp_user=office
 smtp_pass=p@assw0rd
 smtp_ssl=Yes
-from_email=wpwatcher@domain.com
+from_email=WordPressWatcher@domain.com
 
 # Set yes to print only errors and WPScan warnings
 quiet=No
