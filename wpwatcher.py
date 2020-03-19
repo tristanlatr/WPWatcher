@@ -95,7 +95,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
             # [+] = Begin of the message
             # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
             # Toogle Warning/Alert
-            if "| [!]" in line or "[i]" in line or 'insecure' in line.lower():
+            if "| [!]" in line or 'insecure' in line.lower():
                 warning_on = True
             elif "[!]" in line:
                 alert_on = True
