@@ -1,16 +1,16 @@
 # WPWatcher
-Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
+WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
 ## In a Nutshell
 
   - Scan multiple sites with WPScan
-  - Define a reporting email address for every configured site individually and also a global reporting address
-  - Define false positives strings for every configured site individually and also globally
-  - Define WPScan arguments for every configured site individually and also globally
-  - Elements are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
+  - Define reporting emails addresses for every configured site individually and globally
+  - Mail messages are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
   - Mail notification and verbosity can be configred in config file 
-  - Local log file "wpwatcher.log" also lists all the findings (integrate in monitoring)
-  - Parse the results differently whether wpscan argument `--format` is `json` or `cli`.
+  - Local log file can be configured and also lists all the findings 
+  - Define false positives strings for every configured site individually and globally
+  - Define WPScan arguments for every configured site individually and globally
+  - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
 
 ## Prerequisites 
 
@@ -45,10 +45,14 @@ Tested with WPScan 3.7 on :
 - Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
-If not specified with `--conf <path>` script parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.  
+
+If not specified with `--conf <path>` script parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+
 All options can be missing from config file expect `wp_sites`
 
-#### Basic usage (template)
+#### Basic usage
+
+Template configuration file.
 
 ```ini
 [wpwatcher]
@@ -62,43 +66,43 @@ from_email=WordPressWatcher@exemple.com
 ```
 
 #### Full configuration options
+Listed below all configuration options. 
 ```ini
 [wpwatcher]
 # Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
 # Assume wpscan is in you path by default
 wpscan_path=wpscan
 
-# Monitoerd sites, custom email report recepient, false positives and specific wpscan arguments
+# Monitored sites, custom email report recepients, false positives and specific wpscan arguments
 # Must be a valid Json string
-# Each dictrionnary must contain at least a 'url' key
+# Each dictrionnary must contain at least a "url" key
 wp_sites=   [
         {   
             "url":"exemple.com",
-            "email_to":["site_owner@domain.com","site_wordpress_admins@domain.com"], 
+            "email_to":["site_owner@domain.com"],
             "false_positive_strings":["Vulnerability 123"],
-            "wpscan_args":["--verbose", "--enumerate", "vp,vt,cb,dbe,m"] 
+            "wpscan_args":["--stealthy"]
         },
         {   
-            "url":"exemple.com",
-            "email_to":null, 
-            "false_positive_strings":null,
-            "wpscan_args":null
+            "url":"exemple2.com",
+            "email_to":["site_owner2@domain.com"],
+            "false_positive_strings":["Vulnerability 456"]
         },
         {   
-            "url":"exemple.com"
+            "url":"exemple3.com",
+            "email_to":["site_owner3@domain.com"],
+            "wpscan_args":["--enumerate", "vp,vt,cb,dbe,m"] 
         }
     ]
 
-# False positive strings
+# Global false positive strings
 # Must be a valid Json string
-# You can use this to ignore some warnmings or alerts. False positives will be still processed as info
+# You can use this to ignore some warnmings or alerts.
+# False positives will still be processed as infos
 # Use with care
 false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
 
-# Log file
-log_file=./wpwatcher.log
-
-# WPScan arguments. wpscan v3.7
+# Global WPScan arguments.
 # Must be a valid Json string
 #
 # Set "--format","json" to use Json parsing feature
@@ -115,26 +119,27 @@ wpscan_args=[   "--format", "cli",
 # Whether to send emails
 send_email_report=No
 
-# Wheter to include warnings in the reports
-# If set to No, no reports will be sent if WPScan find warnings
+# Whether to send warnings. 
+# If not, will not send WARNING notifications and will not include warnings in ALERT reports
 send_warnings=Yes
 
 # Wheter to include Informations in the reports
-# If set to Yes, reports will be sent every time
+# Reports will be sent every time
 send_infos=No
 
 # Will send emails even if wpscan exited with non zero status code
 send_errors=No
 
-# Default email report recepients, will always receive email reports of all sites
+# Global email report recepients, will always receive email reports for all sites
 # Must be a valid Json string
 email_to=["securityalerts@domain.com"]
 
 # Applicable only if send_errors=Yes
 # If set, will send any error output to those addresses (not to other)
+# Must be a valid Json string
 email_errors_to=["admins@domain.com"]
 
-# Email settings
+# Email server settings
 smtp_server=mailserver.de:25
 smtp_auth=No
 smtp_user=office
@@ -142,7 +147,10 @@ smtp_pass=p@assw0rd
 smtp_ssl=Yes
 from_email=WordPressWatcher@domain.com
 
-# Set yes to print only errors and WPScan warnings
+# Local log file
+log_file=./wpwatcher.log
+
+# Print only errors and WPScan ALERTs
 quiet=No
 
 # Verbose terminal output and logging.
@@ -150,9 +158,15 @@ quiet=No
 verbose=No
 ```
 
-## Report
+## Email reports
+
+![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
+
+## Output
+
+![WPWatcher Report Output](/screens/wpwatcher-output.png "WPWatcher Output")
 
 ## Questions ?
 If you have any questions, please create a new issue.
