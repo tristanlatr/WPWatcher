@@ -40,10 +40,11 @@ Tested with WPScan 3.7 on
 - Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
-If not specified with `--conf`, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+If not specified with `--conf`, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.  
+All options are optionnal expect `wp_sites`
 
-#### Temnplate basic usage
-Not all options are included in this file
+#### Basic usage (template)
+
 ```ini
 [wpwatcher]
 wp_sites=   [ {"url":"exemple.com"},
@@ -51,11 +52,10 @@ wp_sites=   [ {"url":"exemple.com"},
 send_email_report=Yes
 email_to=["me@exemple.com"]
 smtp_server=mailserver.exemple.com:25
-from_email=WordPressWatcher@domain.com
+from_email=WordPressWatcher@exemple.com
 ```
 
 #### Full configuration options
-All options are optionnal expect `wp_sites`
 ```ini
 [wpwatcher]
 
@@ -82,7 +82,7 @@ wp_sites=   [
 
 # False positive strings
 # Must be a valid Json string
-# You can use this to ignore some infos, warnmings or alerts
+# You can use this to ignore some warnmings or alerts. False positives will be still processed as info
 # Use with care
 false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
                             
@@ -143,10 +143,6 @@ quiet=No
 # Print raw WPScan output before parsing
 verbose=No
 ```
-
-## Scan Run
-
-![WPWatcher Screenshot](/screens/wpwatcher.png "WPWatcher Run")
 
 ## Report
 

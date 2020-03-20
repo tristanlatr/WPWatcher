@@ -105,35 +105,29 @@ def parse_results(results, site_false_positives, jsonformat=False):
             # End of the message just a white line. Every while line will be considered as a mesasge separator
             if line=="":
                 if alert_on:
-                    if not is_false_positive(message, site_false_positives):
-                        alerts.append(message)
+                    alerts.append(message)
                     alert_on = False 
                 elif warning_on:
-                    if not is_false_positive(message, site_false_positives):
-                        warnings.append(message)
+                    warnings.append(message)
                     warning_on = False
                 else:
                     messages.append(message)
                 message="" 
         # Catching last message
         if alert_on:
-            if not is_false_positive(message, site_false_positives):
-                alerts.append(message)
+            alerts.append(message)
             alert_on = False 
         elif warning_on:
-            if not is_false_positive(message, site_false_positives):
-                warnings.append(message)
+            warnings.append(message)
             warning_on = False
         else:
-            if not is_false_positive(message, site_false_positives):
-                messages.append(message)
+            messages.append(message)
     else: # --format json
         # Parsing wpscan json ressources
         #           https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
         #           https://www.thecliguy.co.uk/2019/04/26/wordcamp-london-2019-cli-tools-and-shells/
         #           https://github.com/statuscope-io/integrations/blob/master/security/check_wordpress_site.sh
         #           https://github.com/aaronweaver/AppSecPipeline/blob/master/tools/wpscan/parser.py
-        #   
         try :
             data=json.loads(results)
             if data != None:
@@ -144,32 +138,25 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             messages.append("WPScan did not find any interesting informations")
                         else:
                             # Parse informations
-                            tmp_list=parse_json_findings('Interresting findings',data["interesting_findings"])
-                            [ messages.append(message) for message in tmp_list if not is_false_positive(message, site_false_positives) ]
+                            [ messages.append(message) for message in parse_json_findings('Interresting findings',data["interesting_findings"]) ]
                     if item == "main_theme":
                         if data["main_theme"]==None:
                             messages.append("WPScan did not find any theme information")
                         else:
                             # Parse theme warnings
-                            tmp_list=parse_json_outdated_theme_or_plugin(data['main_theme'])
-                            [ warnings.append(warn) for warn in tmp_list if not is_false_positive(warn, site_false_positives) ]
+                            [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin(data['main_theme']) ]
                             # Parse Vulnerable themes
-                            tmp_list=parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"])
-                            [ alerts.append(alert) for alert in tmp_list  if not is_false_positive(alert, site_false_positives) ]
+                            [ alerts.append(alert) for alert in parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) ]
                     if item == "version":
                         if data["version"]==None:
                             messages.append("WPScan did not find any WordPress version")
                         else:
                             # Parse WordPress version
-                            msg=parse_json_header_info(data['version'])
-                            if msg and not is_false_positive(msg, site_false_positives):
-                                messages.append(msg)
+                            messages.append(parse_json_header_info(data['version']))
                             # Parse outdated WordPress version
-                            tmp_list=parse_json_outdated_wp(data['version'])
-                            [ warnings.append(warn) for warn in tmp_list if not is_false_positive(warn, site_false_positives) ]
+                            [ warnings.append(warn) for warn in parse_json_outdated_wp(data['version']) ]
                             # Parse vulnerable WordPress version
-                            tmp_list=parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"])
-                            [ alerts.append(alert) for alert in tmp_list ]
+                            [ alerts.append(alert) for alert in parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) ]
                     if item == "plugins":
                         if data["plugins"]==None:
                             warnings.append("WPScan did not find any WordPress plugins")
@@ -177,15 +164,23 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             plugins = data[item]
                             for plugin in plugins:
                                 # Parse vulnerable plugins
-                                tmp_list=parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"])
-                                [ alerts.append(alert) for alert in tmp_list if not is_false_positive(alert, site_false_positives) ]
+                                [ alerts.append(alert) for alert in parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) ]
                                 # Parse outdated plugins
-                                tmp_list=parse_json_outdated_theme_or_plugin(plugins[plugin])
-                                [ warnings.append(warn) for warn in tmp_list if not is_false_positive(warn, site_false_positives) ]
+                                [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin(plugins[plugin]) ]
             else: 
-                raise Exception("No data in wpscan Json output (data=json.loads(results)=None)")
+                raise Exception("No data in wpscan Json output (None)")
         except Exception as err:
             raise Exception("Could not parse wpscan Json output: "+str(err))
+    #Process false positives
+    for alert in alerts:
+        if is_false_positive(alert, site_false_positives):
+            alerts.remove(alert)
+            messages.append("[False positive]\n"+alert)
+    for warn in warnings:
+        if is_false_positive(warn, site_false_positives):
+            warnings.remove(warn)
+            messages.append("[False positive]\n"+warn)
+    
     return ( messages, warnings, alerts )
 
 def parse_json_header_info(version):
