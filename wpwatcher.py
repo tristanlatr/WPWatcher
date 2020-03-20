@@ -13,6 +13,7 @@ import smtplib
 import traceback
 import subprocess
 import logging
+import shutil
 from subprocess import CalledProcessError
 import argparse
 import configparser
@@ -510,6 +511,8 @@ if __name__ == '__main__':
         exit(-1)
     else:
         update_wpscan()
+        log.info("Deleting temp WPScan files in /tmp/wpscan/")
+        shutil.rmtree('/tmp/wpscan')
     if conf('wp_sites') and type(conf('wp_sites')) is list and len(conf('wp_sites'))>0:
         # Run Scan
         exit(run_scan())

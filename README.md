@@ -21,8 +21,8 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
 
   1. Save script on server system
   2. Save template config file and configure script
-  4. Configure cron to run WPWatcher frequently
-  5. Configure email alerting to administrators if script fails.
+  3. Configure cron to run WPWatcher frequently
+  4. Configure email alerting to administrators if script fails.
 
     $ python3 ./wpwatcher.py
     # or
@@ -33,14 +33,19 @@ Return non zero status code if :
 - unable to send one or more email report
 - other errors
 
+#### Notes
+
+- Will automatically delete all temp wpscan files in `/tmp/wpscan` before starting
+- Set "--format","json" in  `wpscan_args` config option to have more consice email output
+
 ## Compatibility
 
-Tested with WPScan 3.7 on
+Tested with WPScan 3.7 on :
 - MacOS (WPScan install wil `HomeBrew`) and 
 - Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
-If not specified with `--conf`, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.  
+If not specified with `--conf <path>` script parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.  
 All options can be missing from config file expect `wp_sites`
 
 #### Basic usage (template)
