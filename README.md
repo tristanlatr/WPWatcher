@@ -17,21 +17,29 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
   - Python 3 (standard libraries)
 
-## Usage
+## Install
 
-  1. Save script on server system
-  2. Save template config file and configure script
-  3. Configure cron to run WPWatcher frequently
-  4. Configure email alerting to administrators if script fails.
+    $ pip3 install git+https://github.com/tristanlatr/WPWatcher.git
 
-    $ python3 ./wpwatcher.py
-    # or
-    $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
+#### Configure
+- Save template config file and configure script
+- Configure cron to run WPWatcher frequently
+- Configure email alerting to administrators if script fails.
+
+#### Execute
+
+From CLI
+
+    $ wpwatcher --conf ~/configs/wpwatcher.conf
+
+Or add following line in your crontab to run a scan every day
+
+    0 0 * * * wpwatcher --conf ~/configs/wpwatcher.conf
 
 Return non zero status code if :
-- Code `255`/`-1`: One or more WPScan command failed
-- Code `12` unable to send one or more email report
-- other errors
+- One or more WPScan command failed
+- Unable to send one or more email report
+- Other errors
 
 ## Compatibility
 
