@@ -33,10 +33,9 @@ Return non zero status code if :
 - unable to send one or more email report
 - other errors
 
-#### Notes
+#### Tips
 
-- Will automatically delete all temp wpscan files in `/tmp/wpscan` before starting
-- Set "--format","json" in  `wpscan_args` config option to have more consice email output
+- Set `"--format","json"` in  `wpscan_args` config option to have more consice email output
 
 ## Compatibility
 
@@ -46,13 +45,13 @@ Tested with WPScan 3.7 on :
 
 ## Configuration
 
-If not specified with `--conf <path>` script parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+The script must use a configuration file. If not specified with `--conf <path>` parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
 
 All options can be missing from config file expect `wp_sites`
 
 #### Basic usage
 
-Template configuration file.
+Simple template configuration file.
 
 ```ini
 [wpwatcher]
@@ -66,16 +65,20 @@ from_email=WordPressWatcher@exemple.com
 ```
 
 #### Full configuration options
-Listed below all configuration options. 
+
+Template below lists all configuration options with explanatory comments.
+
 ```ini
 [wpwatcher]
 # Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
-# Assume wpscan is in you path by default
+# If missing , assume wpscan is in you path
 wpscan_path=wpscan
 
-# Monitored sites, custom email report recepients, false positives and specific wpscan arguments
-# Must be a valid Json string
+# Monitored sites:
+# List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments
 # Each dictrionnary must contain at least a "url" key
+# Must be a valid Json string
+# Cannot be missing
 wp_sites=   [
         {   
             "url":"exemple.com",
@@ -96,10 +99,9 @@ wp_sites=   [
     ]
 
 # Global false positive strings
-# Must be a valid Json string
 # You can use this to ignore some warnmings or alerts.
-# False positives will still be processed as infos
-# Use with care
+# False positives will still be processed as infos: Use with care !
+# Must be a valid Json string
 false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
 
 # Global WPScan arguments.
@@ -107,7 +109,7 @@ false_positive_strings=["You can get a free API token with 50 daily requests by 
 #
 # Set "--format","json" to use Json parsing feature
 # The list of warnings, alerts and infos might differ when using json 
-#   The outpout is more concice. 
+#   Email outpout will be more concice. 
 #   But not all informations are logged. 
 # Using "--format", "cli" will parse full WPScan output with [!] etc
 #   Logs all informations
@@ -117,17 +119,21 @@ wpscan_args=[   "--format", "cli",
                 "--disable-tls-checks" ]
 
 # Whether to send emails
+# If missing, default to No
 send_email_report=No
 
 # Whether to send warnings. 
 # If not, will not send WARNING notifications and will not include warnings in ALERT reports
+# If missing, default to Yes
 send_warnings=Yes
 
 # Wheter to include Informations in the reports
 # Reports will be sent every time
+# If missing, default to No
 send_infos=No
 
 # Will send emails even if wpscan exited with non zero status code
+# If missing, default to No
 send_errors=No
 
 # Global email report recepients, will always receive email reports for all sites
@@ -139,20 +145,24 @@ email_to=["securityalerts@domain.com"]
 # Must be a valid Json string
 email_errors_to=["admins@domain.com"]
 
-# Email server settings
-smtp_server=mailserver.de:25
-smtp_auth=No
-smtp_user=office
-smtp_pass=p@assw0rd
-smtp_ssl=Yes
+# Send email reports as
 from_email=WordPressWatcher@domain.com
+
+# SMTP Email server settings
+smtp_server=mailserver.de:25
+# SMTP Use authentication. If missing, default to No
+smtp_auth=No
+# SMTP Username
+smtp_user=office
+# SMTP Password
+smtp_pass=p@assw0rd
+# SMTP Use SSL
+smtp_ssl=Yes
 
 # Local log file
 log_file=./wpwatcher.log
-
 # Print only errors and WPScan ALERTs
 quiet=No
-
 # Verbose terminal output and logging.
 # Print raw WPScan output before parsing
 verbose=No
@@ -167,6 +177,9 @@ verbose=No
 ## Output
 
 ![WPWatcher Report Output](/screens/wpwatcher-output.png "WPWatcher Output")
+
+## Notes
+- The script will automatically try to delete all temp wpscan files in `/tmp/wpscan` before starting scans
 
 ## Questions ?
 If you have any questions, please create a new issue.
