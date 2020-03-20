@@ -100,7 +100,7 @@ log_file=./wpwatcher.log
 #   The outpout is more concice. 
 #   But not all informations are logged. 
 # Using "--format", "cli" will parse full WPScan output with [!] etc
-#   Lgs all informations
+#   Logs all informations
 wpscan_args=[   "--format", "cli",
                 "--no-banner",
                 "--random-user-agent", 
@@ -110,11 +110,11 @@ wpscan_args=[   "--format", "cli",
 send_email_report=No
 
 # Wheter to include warnings in the reports
-# If set to No, no reports will be sent if WPScan find only warnings
+# If set to No, no reports will be sent if WPScan find warnings
 send_warnings=Yes
 
 # Wheter to include Informations in the reports
-# If set to No, no reports will be sent if WPScan find only infos
+# If set to Yes, reports will be sent every time
 send_infos=No
 
 # Will send emails even if wpscan exited with non zero status code

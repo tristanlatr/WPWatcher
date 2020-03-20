@@ -463,7 +463,7 @@ def run_scan():
                         if len(warnings)>0 and len(alerts) == 0: status='WARNING'
                         elif len(alerts)>0: status='ALERT'
                         else: status='INFO'
-                        if ( status=='INFO' and conf('send_infos') ) or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
+                        if conf('send_infos') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
                             send_report(wp_site, alerts=alerts,
                                 warnings=warnings if conf('send_warnings') else None,
                                 infos=messages if conf('send_infos') else None,
@@ -491,12 +491,12 @@ if __name__ == '__main__':
         configpath=args.conf
     else:
         if not find_config_file():
-            log.error("Could not find config file")
+            log.error("Could not find config file ./wpwatcher.conf or ~/wpwatcher.conf. Please use '--conf <path>'")
             exit(-1)
         else:
             configpath=find_config_file()
     if not read_config(configpath):
-        log.error("Could not read config " + str(configpath))
+        log.error("Could not read config " + str(configpath) + ". Make sure the file exists, the format is OK and you have correct access right.")
         exit(-1)
     # Init logger with config
     init_log(verbose=conf('verbose'),
@@ -506,7 +506,7 @@ if __name__ == '__main__':
 
     # Check if WPScan exists
     if not is_wpscan_installed():
-        log.error("WPScan not installed.\nPlease install wpscan on your system.\nSee https://wpscan.org for installation steps.")
+        log.error("WPScan not installed. Please install wpscan on your system. See https://wpscan.org for installation steps.")
         exit(-1)
     else:
         update_wpscan()
