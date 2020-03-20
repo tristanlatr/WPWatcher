@@ -19,9 +19,8 @@ Wordpress Watcher is a wrapper for [WPScan](http://wpscan.org/) that manages sca
 
 ## Usage
 
-Best Practice:
   1. Save script on server system
-  2. Configure script in the config file
+  2. Save template config file and configure script
   4. Configure cron to run WPWatcher frequently
   5. Configure email alerting to administrators if script fails.
 
@@ -36,12 +35,27 @@ Return non zero status code if :
 
 ## Compatibility
 
-Tested on 
-- MacOS (WPScan install wil HomeBrew) and 
-- Linux CentOS 7 (installed with RubyGems)
+Tested with WPScan 3.7 on
+- MacOS (WPScan install wil `HomeBrew`) and 
+- Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
-If not specified with `--conf`, will use `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+If not specified with `--conf`, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+
+#### Temnplate basic usage
+Not all options are included in this file
+```ini
+[wpwatcher]
+wp_sites=   [ {"url":"exemple.com"},
+              {"url":"exemple2.com"}  ]
+send_email_report=Yes
+email_to=["me@exemple.com"]
+smtp_server=mailserver.exemple.com:25
+from_email=WordPressWatcher@domain.com
+```
+
+#### Full configuration options
+All options are optionnal expect `wp_sites`
 ```ini
 [wpwatcher]
 
@@ -68,33 +82,25 @@ wp_sites=   [
 
 # False positive strings
 # Must be a valid Json string
-# Can be set to null with false_positive_strings=null
 # You can use this to ignore some infos, warnmings or alerts
 # Use with care
-false_positive_strings=[    "You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up",
-                            "No plugins Found.",
-                            "No themes Found.",
-                            "No Config Backups Found.", 
-                            "No DB Exports Found.",
-                            "No Medias Found." ]
+false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
                             
-# Path to wpscan. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
+# Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
 wpscan_path=wpscan
 
 # Log file
-# Can be /dev/null
 log_file=./wpwatcher.log
 
 # WPScan arguments. wpscan v3.7
 # Must be a valid Json string
-# Can be set to null with wpscan_args=null
 #
 # Set "--format","json" to use Json parsing feature
 # The list of warnings, alerts and infos might differ when using json 
-#   The outpout is more concice and less false positives 
+#   The outpout is more concice. 
 #   But not all informations are logged. 
 # Using "--format", "cli" will parse full WPScan output with [!] etc
-#   Generates more false positives but logs all information
+#   Lgs all informations
 wpscan_args=[   "--format", "cli",
                 "--no-banner",
                 "--random-user-agent", 
@@ -103,27 +109,23 @@ wpscan_args=[   "--format", "cli",
 # Whether to send emails
 send_email_report=No
 
-# Wheter to include warnings in the reports Alerts
+# Wheter to include warnings in the reports
 # If set to No, no reports will be sent if WPScan find only warnings
-#     and always_send_reports=No 
 send_warnings=Yes
 
 # Wheter to include Informations in the reports
-send_infos=Yes
+# If set to No, no reports will be sent if WPScan find only infos
+send_infos=No
 
-# If set to yes, will send reports even is there is no alert.
 # Will send emails even if wpscan exited with non zero status code
-# Will NOT send emails if there is no alerts and both send_warnings and send_infos are False
-always_send_reports=No
+send_errors=No
 
 # Default email report recepients, will always receive email reports of all sites
 # Must be a valid Json string
-# Can be set to null with email_to=null
 email_to=["securityalerts@domain.com"]
 
-# Applicable only if always_send_report=Yes
-# If set, will send any error output to this address, 
-#   not the pre configured reports recepients in email_to fields.
+# Applicable only if send_errors=Yes
+# If set, will send any error output to those addresses (not to other)
 email_errors_to=["admins@domain.com"]
 
 # Email settings
@@ -141,6 +143,7 @@ quiet=No
 # Print raw WPScan output before parsing
 verbose=No
 ```
+
 ## Scan Run
 
 ![WPWatcher Screenshot](/screens/wpwatcher.png "WPWatcher Run")
@@ -164,4 +167,4 @@ If you like the project and think you could help with making it better, there ar
 
 ## Authors
 - Florian Roth
-- Tristan 
+- Tristan Landès
