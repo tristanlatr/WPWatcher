@@ -258,8 +258,7 @@ def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, em
     if emails: to_email=','.join( emails )
     else: to_email = ','.join( wp_site['email_to'] + conf('email_to') )
     if to_email != "":
-        log.info("Sending WPWatcher email report of %s to %s" % (wp_site['url'], to_email))
-        # try:
+        # Building message
         if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
         else: message = "WPScan report\nSite: %s" % (wp_site['url'])
         if errors:
@@ -278,6 +277,8 @@ def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, em
         mime_msg['Subject'] = 'WPWatcher%s report on %s - %s' % (' '+status if status else '',wp_site['url'], get_timestamp())
         mime_msg['From'] = conf('from_email')
         mime_msg['To'] = to_email
+        # Connecting and sending
+        log.info("Sending %s to %s" % (mime_msg['Subject'], to_email))
         # SMTP Connection
         s = smtplib.SMTP(conf('smtp_server'))
         s.ehlo()
@@ -291,11 +292,8 @@ def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, em
         s.sendmail(conf('from_email'), to_email, mime_msg.as_string())
         s.quit()
         return(True)
-        # except Exception as err:
-        #     log.error("Unable to send mail report on site " + wp_site['url'] + "to " + to_email + ". Error: "+str(err))
-        #     return(False)
     else:
-        log.warning("Not sending email report since no email are configured")
+        log.warning("Not sending WPWatcher email report because no email are configured")
         return(True)
 
 def get_timestamp():
@@ -451,11 +449,14 @@ def run_scan():
         if conf('send_email_report'):
             try:
                 # Email errors -------------------------------------------------------
-                if len(errors)>0 and conf('send_errors'):
-                    if len(conf('email_errors_to'))>0:
-                        send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=conf('email_errors_to'), status="ERROR")
-                    else: 
-                        send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status="ERROR")
+                if len(errors)>0:
+                    if conf('send_errors'):
+                        if len(conf('email_errors_to'))>0:
+                            send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=conf('email_errors_to'), status="ERROR")
+                        else: 
+                            send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status="ERROR")
+                    else:
+                        log.info("No WPWatcher ERROR email report have been sent for site %s. If you want to receive error emails, set send_errors=Yes in the config."%(wp_site['url']))
                 # Email -------------------------------------------------------------------
                 else:
                     status=None
@@ -464,7 +465,7 @@ def run_scan():
                     else: status='INFO'
                     if conf('send_infos') or ( status=="WARNING" and conf('send_warnings') ) or status=='ALERT':
                         send_report(wp_site, alerts=alerts,
-                            warnings=warnings if conf('send_warnings') else None,
+                            warnings=warnings if conf('send_warnings') or conf('send_infos') else None,
                             infos=messages if conf('send_infos') else None,
                             status=status)
                     else: 
