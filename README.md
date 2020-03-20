@@ -41,12 +41,13 @@ Tested with WPScan 3.7 on
 
 ## Configuration
 If not specified with `--conf`, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.  
-All options are optionnal expect `wp_sites`
+All options can be missing from config file expect `wp_sites`
 
 #### Basic usage (template)
 
 ```ini
 [wpwatcher]
+wpscan_path=wpscan
 wp_sites=   [ {"url":"exemple.com"},
               {"url":"exemple2.com"}  ]
 send_email_report=Yes
@@ -58,6 +59,9 @@ from_email=WordPressWatcher@exemple.com
 #### Full configuration options
 ```ini
 [wpwatcher]
+# Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
+# Assume wpscan is in you path by default
+wpscan_path=wpscan
 
 # Monitoerd sites, custom email report recepient, false positives and specific wpscan arguments
 # Must be a valid Json string
@@ -85,9 +89,6 @@ wp_sites=   [
 # You can use this to ignore some warnmings or alerts. False positives will be still processed as info
 # Use with care
 false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
-                            
-# Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
-wpscan_path=wpscan
 
 # Log file
 log_file=./wpwatcher.log
