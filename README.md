@@ -22,21 +22,21 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
     $ pip3 install git+https://github.com/tristanlatr/WPWatcher.git
 
 #### Configure
-- Save template config file and configure script
-- Configure cron to run WPWatcher frequently
-- Configure email alerting to administrators if script fails.
+Copy template config file on you system and configure script.  
+Loads `~/wpwatcher.conf` as the default config file
 
 #### Execute
 
-From CLI
+    $ wpwatcher
 
-    $ wpwatcher --conf ~/configs/wpwatcher.conf
+`wpwatcher` command can only takes one argument: `--conf <path>` 
 
-Or add following line in your crontab to run a scan every day
+#### Crontab
+Add the following line to crontab to run WPWatcher every day. You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.
 
-    0 0 * * * wpwatcher --conf ~/configs/wpwatcher.conf
+    0 0 * * * wpwatcher
 
-Return non zero status code if :
+#### Return non zero status code if :
 - One or more WPScan command failed
 - Unable to send one or more email report
 - Other errors
@@ -49,7 +49,7 @@ Tested with WPScan 3.7 on :
 
 ## Configuration
 
-The script must use a configuration file. If not specified with `--conf <path>` parameter, will try to load `./wpwatcher.conf` or `~/wpwatcher.conf` by default.
+The script must read a configuration file. If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
 
 All options can be missing from config file expect `wp_sites`
 

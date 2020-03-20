@@ -494,7 +494,7 @@ def wpwatcher():
         configpath=args.conf
     else:
         if not find_config_file():
-            log.error("Could not find config file ./wpwatcher.conf or ~/wpwatcher.conf. Please use '--conf <path>'")
+            log.error("Could not find config file ./wpwatcher.conf or ~/wpwatcher.conf. Please make sure the file exist or use '--conf <path>' to define custom config file.")
             exit(-1)
         else:
             configpath=find_config_file()
