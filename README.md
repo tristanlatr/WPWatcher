@@ -29,13 +29,9 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
     $ python3 ./wpwatcher.py --conf ~/configs/wpwatcher.conf
 
 Return non zero status code if :
-- one or more WPScan command failed
-- unable to send one or more email report
+- Code `255`/`-1`: One or more WPScan command failed
+- Code `12` unable to send one or more email report
 - other errors
-
-#### Tips
-
-- Set `"--format","json"` in  `wpscan_args` config option to have more consice email output
 
 ## Compatibility
 
@@ -118,21 +114,21 @@ wpscan_args=[   "--format", "cli",
                 "--random-user-agent", 
                 "--disable-tls-checks" ]
 
-# Whether to send emails
+# Whether to send emails for alerting of the WPScan result (ALERT or other)
 # If missing, default to No
 send_email_report=No
 
 # Whether to send warnings. 
-# If not, will not send WARNING notifications and will not include warnings in ALERT reports
+# Will send WARNING notifications and will include warnings in ALERT reports
 # If missing, default to Yes
 send_warnings=Yes
 
 # Wheter to include Informations in the reports
-# Reports will be sent every time
+# Will send INFO notifications if no warnings or alerts are found
 # If missing, default to No
 send_infos=No
 
-# Will send emails even if wpscan exited with non zero status code
+# Will send ERROR notifications if wpscan exited with non zero status code
 # If missing, default to No
 send_errors=No
 
@@ -170,13 +166,49 @@ verbose=No
 
 ## Email reports
 
+One report is generated per site and the reports are sent individually when finished scanning a website.
+
+Emails can have 4 status: `ALERT`, `WARNIG`, `INFO` and `ERROR`.  
+
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
+
+
+Tip: set `"--format","json"` in  `wpscan_args` config option to have more consice email output
+
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
 
 ## Output
 
-![WPWatcher Report Output](/screens/wpwatcher-output.png "WPWatcher Output")
+Log file and stdout outputs are easily grepable with the following log levels and keywords:
+  - `CRITICAL`: Only used for `WPScan ALERT`
+  - `ERROR`:  WPScan failed, send report failed or other errors
+  - `WARNING`: Only used for `WPScan WARNING`
+  - `INFO`: Used for info output and `WPScan INFO`
+  - `DEBUG`: Used for debug outup and raw WPScan output. 
+
+```log
+% python3 wpwatcher.py --conf ./test.conf
+INFO - Read config file ./test.conf
+INFO - Updating WPScan
+INFO - Starting scans on configured sites
+INFO - Scanning 'wp.exemple.com' with command: wpscan --format cli --no-banner --random-user-agent --disable-tls-checks --url wp.exemple.com
+INFO - ** WPScan INFO wp.exemple.com ** [+] URL: http://wp.exemple.com/ [104.31.70.16] [+] Effective URL: https://wp.exemple.com/ [+] Started: Fri Mar 20 17:52:59 2020
+INFO - ** WPScan INFO wp.exemple.com ** Interesting Finding(s):
+INFO - ** WPScan INFO wp.exemple.com ** [+] Headers | Interesting Entries: |  - cf-cache-status: DYNAMIC |  - expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct" |  - server: cloudflare |  - cf-ray: 5772a9d14da0ca63-YUL | Found By: Headers (Passive Detection) | Confidence: 100%
+INFO - ** WPScan INFO wp.exemple.com ** [+] This site seems to be a multisite | Found By: Direct Access (Aggressive Detection) | Confidence: 100% | Reference: http://codex.wordpress.org/Glossary#Multisite
+INFO - ** WPScan INFO wp.exemple.com ** [+] WordPress theme in use: julesr-aeets | Location: http://wp.exemple.com/wordpress/wp-content/themes/julesr-aeets/ | Style URL: http://wp.exemple.com/wordpress/wp-content/themes/julesr-aeets/style.css | | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | | The version could not be determined.
+INFO - ** WPScan INFO wp.exemple.com ** [+] Enumerating All Plugins (via Passive Methods)
+INFO - ** WPScan INFO wp.exemple.com ** [i] No plugins Found.
+INFO - ** WPScan INFO wp.exemple.com ** [+] Enumerating Config Backups (via Passive and Aggressive Methods)
+INFO - ** WPScan INFO wp.exemple.com ** Checking Config Backups -: |=======================================================================================|
+INFO - ** WPScan INFO wp.exemple.com ** [i] No Config Backups Found.
+INFO - ** WPScan INFO wp.exemple.com ** [+] Finished: Fri Mar 20 17:53:05 2020 [+] Requests Done: 55 [+] Cached Requests: 4 [+] Data Sent: 17.677 KB [+] Data Received: 153.06 KB [+] Memory used: 204.426 MB [+] Elapsed time: 00:00:06
+INFO - ** WPScan INFO wp.exemple.com ** [False positive] [!] No WPVulnDB API Token given, as a result vulnerability data has not been output. [!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+WARNING - ** WPScan WARNING wp.exemple.com ** [+] WordPress version 5.1.1 identified (Insecure, released on 2019-03-13). | Found By: Meta Generator (Passive Detection) |  - https://wp.exemple.com/, Match: 'WordPress 5.1.1' | Confirmed By: Most Common Wp Includes Query Parameter In Homepage (Passive Detection) |  - https://wp.exemple.com/wordpress/wp-includes/css/dist/block-library/style.min.css?ver=5.1.1
+INFO - No WPWatcher email report have been sent for site wp.exemple.com. If you want to receive emails, set send_email_report=Yes in the config.
+INFO - Scans finished successfully.
+```
 
 ## Notes
 - The script will automatically try to delete all temp wpscan files in `/tmp/wpscan` before starting scans
