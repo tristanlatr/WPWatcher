@@ -352,14 +352,18 @@ def conf(key):
     if configuration:
         # Boolean conf values
         if key in ['send_email_report', 'smtp_auth', 'smtp_ssl', 'verbose', 'quiet', 'send_errors', 'send_infos', 'send_warnings']:
-            return configuration.getboolean('wpwatcher', key)
+            try:
+                return configuration.getboolean('wpwatcher', key)
+            except Exception as err:
+                log.error("Could not read boolean value in config for key: '{}' and string '{}' must be Yes/No. Comment it to use defaults. Error: {}".format(key, configuration.get('wpwatcher',key), err))
+                exit(-1)
         # JSON lists conf values
         elif key in ['wp_sites', 'email_to', 'wpscan_args', 'false_positive_strings', 'email_errors_to']:
             string_val=configuration.get('wpwatcher', key)
             try:
                 loaded=json.loads(string_val)
             except Exception as err:
-                log.error("Could not read JSON value of key: %s for string: %s. Error: %s" % (key, configuration.get('wpwatcher',key), str(err)))
+                log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, configuration.get('wpwatcher',key), str(err)))
                 exit(-1)
             return loaded if loaded else []
         # Default conf values
@@ -481,7 +485,7 @@ def run_scan():
         log.info("Scans finished with errors.") 
     return(exit_code)
 
-if __name__ == '__main__':
+def wpwatcher():
     init_log()
     args=parse_args()
     # Read config
@@ -518,3 +522,6 @@ if __name__ == '__main__':
     else:
         log.error("No site to monitor. Please configure monitored sites in the config file: wp_sites")
         exit(-1)
+
+if __name__ == '__main__':
+    wpwatcher()
