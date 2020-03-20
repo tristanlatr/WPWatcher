@@ -470,10 +470,12 @@ def run_scan():
                                 infos=messages if conf('send_infos') else None,
                                 status=status)
                         else: 
-                            log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails all the time, set send_infos=Yes in the config."%(status,wp_site))
+                            log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, set send_infos=Yes or send_warnings=Yes in the config."%(status,wp_site['url']))
                 except Exception as err:
                     log.error("Unable to send mail report on site " + wp_site['url'] + ". Error: "+str(err))
                     exit_code=12
+            else:
+                log.info("No WPWatcher email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(status,wp_site['url']))
     else:
         log.error("You must configure 'wp_sites' list in the config file.")
         exit_code=-1
