@@ -16,32 +16,30 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Python 3 (standard libraries)
 
 ## Install
-### With PyPi
-    pip3 install git+https://github.com/tristanlatr/WPWatcher.git
-
-### Manually
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
 #### Configure
-Copy template config file on you system and configure script.  
+Copy template config file on your system and configure script.  
 Loads `~/wpwatcher.conf` as the default config file
 
 #### Execute
 
-    $ wpwatcher
+    wpwatcher
 `wpwatcher` command only takes one argument: `--conf <path>` 
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
-    python3 ./WPWatcher/wpwatcher.py
+    python3 wpwatcher.py
 
 #### Crontab
-Add the following line to crontab to run WPWatcher every day. You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.  
+Add the following line to crontab to run WPWatcher every day.  
+You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.  OR your could use cron `MAILTO` feature if configured send alerts.
 
-    0 0 * * * wpwatcher
+    0 0 * * * wpwatcher | grep 'CRITICAL\|ERROR'
+
 #### Return non zero status code if :
 - One or more WPScan command failed
 - Unable to send one or more email report
@@ -58,7 +56,17 @@ The script must read a configuration file. If not specified with `--conf <path>`
 
 All options can be missing from config file except `wp_sites`
 
-#### Basic usage
+#### No mail report
+
+Minimalist template config file
+```ini
+[wpwatcher]
+wpscan_path=wpscan
+wp_sites=   [ {"url":"exemple.com"},
+              {"url":"exemple2.com"}  ]
+```
+
+#### Basic usage with mail report
 
 Simple template configuration file.
 

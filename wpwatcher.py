@@ -8,6 +8,7 @@
 __version__='0.3'
 
 import os
+import sys
 import re
 import json
 import smtplib
@@ -32,8 +33,9 @@ def init_log(verbose=False, quiet=False, logfile=None):
     if verbose : verb_level=logging.DEBUG
     elif quiet : verb_level=logging.ERROR
     else : verb_level=logging.INFO
+    # Add stdout: configurable
     log.setLevel(verb_level)
-    std = logging.StreamHandler()
+    std = logging.StreamHandler(sys.stdout)
     std.setLevel(verb_level)
     std.setFormatter(logging.Formatter(format_string_cli))
     log.handlers=[]
