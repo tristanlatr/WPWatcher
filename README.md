@@ -22,7 +22,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ### Manually
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
-python3 WPWatcher/setup.py install
+cd WPWatcher && python3 setup.py install
 ```
 
 #### Configure
