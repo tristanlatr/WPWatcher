@@ -2,7 +2,6 @@
 WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
 ## In a Nutshell
-
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
   - Mail messages are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
@@ -13,13 +12,18 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
 
 ## Prerequisites 
-
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
   - Python 3 (standard libraries)
 
 ## Install
+### With PyPi
+    pip3 install git+https://github.com/tristanlatr/WPWatcher.git
 
-    $ pip3 install git+https://github.com/tristanlatr/WPWatcher.git
+### Manually
+```bash
+git clone https://github.com/tristanlatr/WPWatcher.git
+python3 WPWatcher/setup.py install
+```
 
 #### Configure
 Copy template config file on you system and configure script.  
@@ -28,21 +32,22 @@ Loads `~/wpwatcher.conf` as the default config file
 #### Execute
 
     $ wpwatcher
-
 `wpwatcher` command can only takes one argument: `--conf <path>` 
 
+The command should be in your `PATH` but you can always run the python script directly  
+                
+    python3 ./WPWatcher/wpwatcher.py
+
 #### Crontab
-Add the following line to crontab to run WPWatcher every day. You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.
+Add the following line to crontab to run WPWatcher every day. You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.  
 
     0 0 * * * wpwatcher
-
 #### Return non zero status code if :
 - One or more WPScan command failed
 - Unable to send one or more email report
 - Other errors
 
 ## Compatibility
-
 Tested with WPScan 3.7 on :
 - MacOS (WPScan install wil `HomeBrew`) and 
 - Linux CentOS 7 (WPScan installed with `RubyGems`)
