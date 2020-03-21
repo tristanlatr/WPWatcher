@@ -21,29 +21,34 @@ git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
-#### Configure
+### Configure
 Copy template config file on your system and configure script.  
-
-    curl https://raw.githubusercontent.com/tristanlatr/WPWatcher/master/template_config.txt > ~/wpwatcher.conf
-    vim ~/wpwatcher.conf
-
+```bash
+curl https://raw.githubusercontent.com/tristanlatr/WPWatcher/master/template_config.txt > ~/wpwatcher.conf
+vim ~/wpwatcher.conf
+```
 Loads `~/wpwatcher.conf` as the default config file
 
-#### Execute
+### Execute
 
     wpwatcher
-    
+
 `wpwatcher` command only takes one argument: `--conf <path>` 
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
-    python3 wpwatcher.py
+    python3 ./wpwatcher.py
 
-#### Crontab
-Add the following line to crontab to run WPWatcher every day.  
-You migh want to use `quiet=Yes` in your config to avoid sending Crontab emails all the time.  OR your could use cron `MAILTO` feature if configured send alerts.
+### Crontab
+Add the following line to crontab to run WPWatcher every day and ignore errors.  
 
-    0 0 * * * wpwatcher | grep 'CRITICAL\|ERROR'
+    0 0 * * * wpwatcher 2> /dev/null
+
+In you want to receive email alert with cron `MAILTO` feature.
+
+    0 0 * * * wpwatcher | grep 'CRITICAL'
+
+You can supress INFO, DEBUG and WARNING and print only errors and WPScan ALERTs by setting `quiet=Yes` in your config.
 
 #### Return non zero status code if :
 - One or more WPScan command failed
