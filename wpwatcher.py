@@ -511,8 +511,9 @@ def wpwatcher():
         exit(-1)
     else:
         update_wpscan()
-        log.info("Deleting temp WPScan files in /tmp/wpscan/")
-        try: shutil.rmtree('/tmp/wpscan')
+        try: 
+            shutil.rmtree('/tmp/wpscan')
+            log.info("Deleted temp WPScan files in /tmp/wpscan/")
         except FileNotFoundError: pass
     if conf('wp_sites') and type(conf('wp_sites')) is list and len(conf('wp_sites'))>0:
         # Run Scan
