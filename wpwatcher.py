@@ -222,34 +222,29 @@ def parse_json_findings(finding_type,findings):
         refData = ""
         title = "[%s] " % finding_type
         if "title" in finding:
-            title += "%s\n" % finding["title"]
-        else:
-            title += "%s\n" % finding["found_by"]
-        findingData += "%s\n" % title
+            title += "%s" % finding["title"]
+        findingData += "%s" % title
         if "fixed_in" in finding:
-            findingData += "Fixed In: %s\n" % finding["fixed_in"]
+            findingData += "\nFixed In: %s" % finding["fixed_in"]
         if "url" in finding:
-            findingData += "URL: %s\n" % finding["url"]
+            findingData += "\nURL: %s" % finding["url"]
         if "found_by" in finding:
-            findingData += "Found by: %s\n" % finding["found_by"]
+            findingData += "\nFound by: %s" % finding["found_by"]
         if "confidence" in finding:
-            findingData += "Confidence: %s\n" % finding["confidence"]
+            findingData += "\nConfidence: %s" % finding["confidence"]
         if "interesting_entries" in finding:
             if len(finding["interesting_entries"]) > 0:
-                findingData += "Interesting Entries: \n"
-                for entries in finding["interesting_entries"]:
-                    findingData += "%s\n" % entries
+                findingData += "\nInteresting Entries:\n"
+                findingData+="\n- ".join(finding["interesting_entries"])
         if "comfirmed_by" in finding:
             if len(finding["confirmed_by"]) > 0:
-                findingData += "Confirmed By: \n"
-                for confirmed_by in finding["confirmed_by"]:
-                    findingData += "%s\n" % confirmed_by
+                findingData += "\nConfirmed By:\n"
+                findingData+="\n- ".join(finding["confirmed_by"])
         if "references" in finding and len(finding["references"]) > 0:
-            refData += "References:\n"
+            refData += "\nReferences:\n"
             for ref in finding["references"]:
-                refData += "%s:\n" % ref
-                for item in finding["references"][ref]:
-                    refData += "%s\n" %  item
+                refData += "%s: " % ref
+                refData += "\n- ".join(finding["references"][ref])
         ####### Individual fields ########
         summary.append("%s %s" % (findingData, refData))
     return(summary)
