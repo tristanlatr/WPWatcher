@@ -146,7 +146,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                             messages.append("WPScan did not find any theme information")
                         else:
                             # Parse theme warnings
-                            [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin(data['main_theme']) ]
+                            [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin('theme',data['main_theme']) ]
                             # Parse Vulnerable themes
                             [ alerts.append(alert) for alert in parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) ]
                     if item == "version":
@@ -168,7 +168,7 @@ def parse_results(results, site_false_positives, jsonformat=False):
                                 # Parse vulnerable plugins
                                 [ alerts.append(alert) for alert in parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) ]
                                 # Parse outdated plugins
-                                [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin(plugins[plugin]) ]
+                                [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin('plugin',plugins[plugin]) ]
             else: 
                 raise Exception("No data in wpscan Json output (None)")
         except Exception as err:
@@ -205,13 +205,13 @@ def parse_json_outdated_wp(component):
         summary.append(findingData)
     return(summary)
 
-def parse_json_outdated_theme_or_plugin(component):
+def parse_json_outdated_theme_or_plugin(component_type,component):
     summary=[]
     findingData=""
     if 'slug' in component:
         findingData+="%s\n" % component['slug']
     if 'outdated' in component and component['outdated']==True:
-        findingData+="The version of your plugin or theme is out of date, the latest version is %s" % component["latest_version"]
+        findingData+="The version of your %s is out of date, the latest version is %s" % (component_type,component["latest_version"])
         summary.append(findingData)
     return(summary)
 
