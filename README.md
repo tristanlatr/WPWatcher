@@ -68,7 +68,7 @@ All options can be missing from config file except `wp_sites`
 
 #### No mail report
 
-Minimalist template config file
+Minimalist configuration file
 ```ini
 [wpwatcher]
 wpscan_path=wpscan
@@ -78,7 +78,7 @@ wp_sites=   [ {"url":"exemple.com"},
 
 #### Basic usage with mail report
 
-Simple template configuration file.
+Simple configuration file
 
 ```ini
 [wpwatcher]
@@ -93,7 +93,7 @@ from_email=WordPressWatcher@exemple.com
 
 #### Full configuration options
 
-Template below lists all configuration options with explanatory comments.
+File below lists all configuration options with explanatory comments.
 
 ```ini
 [wpwatcher]
