@@ -56,7 +56,7 @@ Tested with WPScan 3.7 on :
 
 The script must read a configuration file. If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
 
-All options can be missing from config file expect `wp_sites`
+All options can be missing from config file except `wp_sites`
 
 #### Basic usage
 
