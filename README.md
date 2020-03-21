@@ -32,7 +32,7 @@ Loads `~/wpwatcher.conf` as the default config file
 #### Execute
 
     $ wpwatcher
-`wpwatcher` command can only takes one argument: `--conf <path>` 
+`wpwatcher` command only takes one argument: `--conf <path>` 
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
