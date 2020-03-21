@@ -181,7 +181,11 @@ verbose=No
 
 One report is generated per site and the reports are sent individually when finished scanning a website.
 
-Emails can have 4 status: `ALERT`, `WARNIG`, `INFO` and `ERROR`.  
+Email notification can have 4 status: 
+- `ALERT`: You have a vulnerable Wordpress, theme or plugin
+- `WARNING`: You have an oudated Wordpress, theme or plugin
+- `INFO`: WPScan did not find any issues with your site
+- `ERROR`: WPScan failed
 
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
