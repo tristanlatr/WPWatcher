@@ -12,21 +12,21 @@ wpscan_args=[   "--format", "cli",
                 "--no-banner",
                 "--random-user-agent", 
                 "--disable-tls-checks" ]
-#Email settings
+# Email settings
 send_email_report=No
 send_warnings=Yes
 send_infos=No
 send_errors=No
-email_to=[""]
-email_errors_to=[""]
+email_to=["you@domain"]
 from_email=WordPressWatcher@domain.com
+#email_errors_to=["admins@domain"]
 # Mail server settigns
 smtp_server=mailserver.de:25
 smtp_auth=No
-smtp_user=office
-smtp_pass=p@assw0rd
+smtp_user=
+smtp_pass=
 smtp_ssl=Yes
 # Output
-log_file=./wpwatcher.log
+log_file=
 quiet=No
 verbose=No
