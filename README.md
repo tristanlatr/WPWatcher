@@ -24,7 +24,7 @@ cd WPWatcher && python3 setup.py install
 ### Configure
 Copy template config file on your system and configure script.  
 ```bash
-curl https://raw.githubusercontent.com/tristanlatr/WPWatcher/master/template_config.txt > ~/wpwatcher.conf
+cp ./template_config.txt ~/wpwatcher.conf
 vim ~/wpwatcher.conf
 ```
 Loads `~/wpwatcher.conf` as the default config file
