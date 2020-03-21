@@ -2,3 +2,4 @@
 *.conf
 build
 dist
+wpwatcher.egg-info
