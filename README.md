@@ -21,8 +21,14 @@ git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
+#### Update
+```bash
+git pull && python3 setup.py install
+```
+
 ### Configure
 Copy template config file on your system and configure script.  
+See *Configuration* bellow to learn more about options.
 ```bash
 cp ./template_config.txt ~/wpwatcher.conf
 vim ~/wpwatcher.conf
@@ -42,7 +48,7 @@ The command should be in your `PATH` but you can always run the python script di
 ### Crontab
 Add the following line to crontab to run WPWatcher every day and ignore errors.  
 
-    0 0 * * * wpwatcher 2> /dev/null
+    0 0 * * * wpwatcher >/dev/null 2>&1
 
 If you want to receive email alerts when script fail with cron `MAILTO` feature.
 
