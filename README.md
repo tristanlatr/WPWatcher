@@ -39,7 +39,9 @@ Loads `~/wpwatcher.conf` as the default config file
 
     wpwatcher
 
-`wpwatcher` command only takes one argument: `--conf <path>` 
+`wpwatcher` command only takes one argument: `--conf <path>`.  
+
+Log messages are printed to `stdout`
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
