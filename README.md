@@ -44,9 +44,9 @@ Add the following line to crontab to run WPWatcher every day and ignore errors.
 
     0 0 * * * wpwatcher 2> /dev/null
 
-If you want to receive email alerts with cron `MAILTO` feature.
+If you want to receive email alerts when script fail with cron `MAILTO` feature.
 
-    0 0 * * * wpwatcher | grep 'CRITICAL'
+    0 0 * * * wpwatcher | grep 'ERROR'
 
 To print only ERRORS and WPScan ALERTS, set `quiet=Yes` in your config.
 
