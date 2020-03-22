@@ -256,8 +256,11 @@ def run_scan():
                     is_json=wordpress_arguments[format_index+1]=='json'
                 else: is_json=False
                 log.debug("Parsing WPScan %s output" % 'json' if is_json else 'cli')
-                # Call parse_result from wpscanparser.py --------
-                (messages, warnings, alerts) = parse_results(wpscan_output , conf('false_positive_strings')+wp_site['false_positive_strings'] , is_json )
+                
+                # Call parse_result from wpscan_parser.py --------
+                (messages, warnings, alerts) = parse_results(wpscan_output , 
+                    conf('false_positive_strings')+wp_site['false_positive_strings'] , 
+                    is_json )
 
             except Exception as err:
                 err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output: {}".format(wp_site['url'],str(err), wpscan_output)

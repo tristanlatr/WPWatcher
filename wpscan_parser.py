@@ -383,15 +383,16 @@ if __name__ == '__main__':
     ( messages, warnings, alerts ) = ([],[],[])
     args=parse_args()
     if args.input:
+        # Parse file
         with open(args.input) as wpout:
             (infos, warnings, alerts)=parse_results( wpout.read() , [] )
     else:
-        stdin=""
+        # Parse stdin
         lines = sys.stdin.readlines()
         for i in range(len(lines)):
             lines[i] = lines[i].replace('\n','')
         (infos, warnings, alerts)=parse_results( '\n'.join(lines) , [] )
-        #print('\n'.join(lines))
+        
     # Building message
     if (warnings or alerts) :message = "Issues have been detected by WPScan.\n"
     else: message = "WPScan report\n"
