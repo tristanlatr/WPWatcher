@@ -44,7 +44,7 @@ def parse_json(wpscan_output):
         # Do a sanity check to confirm the data is ok
         if data and 'target_url' in data and data['target_url']:
 
-            messages.append("Target URL: {}\nIP: {}\n Effective URL: {}".format(
+            messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
                 data['target_url'],
                 data["target_ip"],
                 data["effective_url"]))
@@ -62,7 +62,7 @@ def parse_json(wpscan_output):
                     messages.append("WPScan did not find any interesting informations")
                 else:
                     # Parse informations
-                    messages.extend(parse_findings('Interesting findings', data["interesting_findings"]) )
+                    messages.extend(parse_findings('Interesting finding', data["interesting_findings"]) )
             
             if "main_theme" in data:
                 if data["main_theme"]==None:
@@ -232,7 +232,7 @@ def parse_a_finding(finding_type,finding):
     # Finding can be a vulnerability or other
     findingData = ""
     refData = ""
-    title = "%s\n" % finding_type
+    title = "%s: " % finding_type
 
     if type(finding) is dict:
 
@@ -249,13 +249,12 @@ def parse_a_finding(finding_type,finding):
         # if "found_by" in finding:
         #     findingData += "\nFound by: %s" % finding["found_by"]
 
-        if "confidence" in finding:
-            findingData += "\nConfidence: %s" % finding["confidence"]
+        # if "confidence" in finding:
+        #     findingData += "\nConfidence: %s" % finding["confidence"]
 
         if "interesting_entries" in finding:
             if len(finding["interesting_entries"]) > 0:
-                findingData += "\nInteresting Entries:\n"
-                findingData+="\n- ".join(finding["interesting_entries"])
+                findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
 
         # if "comfirmed_by" in finding:
         #     if len(finding["confirmed_by"]) > 0:
@@ -273,8 +272,7 @@ def parse_a_finding(finding_type,finding):
                 elif ref == 'wpvulndb': 
                     for wpvulndb in finding["references"][ref]: refData+="\n- WPVulnDB(%s): https://wpvulndb.com/vulnerabilities/%s" %(wpvulndb,wpvulndb)
                 else:
-                    refData += "\n%s: " % ref
-                    refData += "\n- ".join(finding["references"][ref])
+                    refData += "\n  %s: %s" % (ref, ", ".join(finding["references"][ref]) )
 
     else: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
     return ("%s %s" % (findingData, refData) )
@@ -294,10 +292,9 @@ def parse_version_info(version):
         headerInfo += "Running WordPress version: %s\n" % version["number"]
 
     if "interesting_entries" in version:
-        if len(version["interesting_entries"]) > 0:
-            headerInfo += "Interesting Entries: \n"
-            for entries in version["interesting_entries"]:
-                headerInfo += "%s\n" % entries
+            if len(version["interesting_entries"]) > 0:
+                headerInfo += "\nInteresting Entries: %s" % (", ".join(version["interesting_entries"]))
+
     return headerInfo
 
 def parse_warning_wordpress(finding):
@@ -315,10 +312,9 @@ def parse_warning_wordpress(finding):
     if "confidence" in finding:
         findingData += "\nConfidence: %s" % finding["confidence"]
 
-    # if "interesting_entries" in finding:
-    #     if len(finding["interesting_entries"]) > 0:
-    #         findingData += "\nInteresting Entries:\n"
-    #         findingData+="\n- ".join(finding["interesting_entries"])
+    if "interesting_entries" in finding:
+            if len(finding["interesting_entries"]) > 0:
+                findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
 
     if warn: summary.append(findingData)
     return(summary)
@@ -353,8 +349,7 @@ def parse_warning_theme_or_plugin(name,finding):
 
     if "interesting_entries" in finding:
         if len(finding["interesting_entries"]) > 0:
-            findingData += "\nInteresting Entries:\n"
-            findingData+="\n- ".join(finding["interesting_entries"])
+            findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
 
     if warn: summary.append(findingData)
     return(summary)
