@@ -1,28 +1,32 @@
 #! /usr/bin/env python3
 # -*- coding: iso-8859-1 -*-
 # -*- coding: utf-8 -*-
-#
-# WPScan output parser
-# DISCLAIMER - USE AT YOUR OWN RISK.
-
 import json
 import re
 import sys
 import argparse
-
-# Parsing the wpscan_output
-# Can be used like 
+# WPScan output parser
+# DISCLAIMER - USE AT YOUR OWN RISK.
+# 
+# Some infos are intentionally ignored when parsing Json to have shorter output.
+# You can use --format cli to show all informations with Infos, Warnings and Alerts
+# 
+# Exemple stdin usage:
 #   $ wpscan --url https://exemple.com --format json | python3 ./wpscan_parser.py
-#   Or --format cli . 
 #
-#   With param --input :
+# With param --input :
 #   $ python3 ./wpscan_parser.py --input wpscan.log
 #
-#   Or you can import this package into your application and call `parse_results` method.
-#
-# Parse and return ( messages, warnings, alerts )
+# Or you can import this package into your application and call `parse_results` method.
+#   from wpscan_parser import parse_results
+#   (messages, warnings, alerts) = parse_results(wpscan_output_string)
 
 """
+All the WPScan fields for the JSON output in the views/json folders at:
+
+https://github.com/wpscanteam/CMSScanner/tree/master/app/views/json
+https://github.com/wpscanteam/wpscan/tree/master/app/views/json
+
 Here are some other inspirational ressources found about parsing wpscan json
 
 Generates a nice table output (Rust code) 
@@ -39,7 +43,7 @@ Dradis ruby json Parser
     No warnings neither but probably the clearest code
 """
 
-def parse_results(wpscan_output, false_positives, is_json=True):
+def parse_results(wpscan_output, false_positives=[], is_json=True):
     # Init scan messages
     ( messages, warnings, alerts ) = ([],[],[])
 
@@ -77,20 +81,23 @@ def parse_json(wpscan_output):
             if "banner" in data:
                 messages.append("Scanned with WPScan version {}".format(data['banner']['version']))
 
+            if "last_db_update" in data:
+                messages.append("Last WPScan database update: {}".format(data['last_db_update']))
+
             # Parse know vulnerabilities
             # Parse vulnerability data and make more human readable.
             # NOTE: You need an API token for the WPVulnDB vulnerability data.
 
 
             if "interesting_findings" in data:
-                if data["interesting_findings"]==None:
+                if data["interesting_findings"]==None or len(data["interesting_findings"])==0:
                     messages.append("WPScan did not find any interesting informations")
                 else:
                     # Parse informations
                     messages.extend(parse_findings('Interesting finding', data["interesting_findings"]) )
             
             if "main_theme" in data:
-                if data["main_theme"]==None:
+                if data["main_theme"]==None or len(data["main_theme"])==0:
                     messages.append("WPScan did not find any main theme information")
                 else:
                     # Parse theme warnings
@@ -105,7 +112,7 @@ def parse_json(wpscan_output):
                         alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
             
             if "version" in data:
-                if data["version"]==None:
+                if data["version"]==None or len(data["version"])==0:
                     messages.append("WPScan did not find any WordPress version")
                 else:
                     # Parse WordPress version
@@ -116,7 +123,7 @@ def parse_json(wpscan_output):
                     alerts.extend(parse_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
             
             if "themes" in data:
-                if data["themes"]==None:
+                if data["themes"]==None or len(data["themes"])==0:
                     messages.append("WPScan did not find any theme information")
                 else:
                     for theme in data["themes"]:
@@ -126,7 +133,7 @@ def parse_json(wpscan_output):
                         alerts.extend(parse_findings('Vulnerable theme',theme["vulnerabilities"]) )
             
             if "plugins" in data:
-                if data["plugins"]==None:
+                if data["plugins"]==None or len(data["plugins"])==0:
                     messages.append("WPScan did not find any WordPress plugins")
                 else:
                     plugins = data["plugins"]
@@ -137,7 +144,7 @@ def parse_json(wpscan_output):
                         warnings.extend(parse_warning_theme_or_plugin('plugin',plugins[plugin]) )
 
             if "users" in data:
-                if data["users"]==None:
+                if data["users"]==None or len(data["users"])==0:
                     messages.append("WPScan did not find any WordPress users")
                 else:
                     users = data["users"]
@@ -146,37 +153,36 @@ def parse_json(wpscan_output):
                         warnings.append( 'WordPress user found: %s'%name )
             
             if "config_backups" in data:
-                if data["config_backups"]==None:
+                if data["config_backups"]==None or len(data["config_backups"])==0:
                     messages.append("WPScan did not find any WordPress config backups")
                 else:
                     for url in data['config_backups']:
                         alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
 
             if "db_exports" in data :
-                if data['db_exports']==None:
+                if data['db_exports']==None or len(data['db_exports'])==0:
                     messages.append("WPScan did not find any WordPress db exports")
                 else:
-                    for db in data['db_exports']:
-                        alerts.append("WordPress Database Export Found\nURL: %s"%str(db) )
+                    alerts.extend(parse_findings("WordPress Database Export Found", data['db_exports'] ))
 
             if "timthumbs" in data :
-                if data['timthumbs']==None:
+                if data['timthumbs']==None or len(data['timthumbs']==0):
                     messages.append("WPScan did not find any WordPress timthumbs")
                 else:
                     for tt in data['timthumbs']:
-                        if "vulnerabilities" in tt and tt["vulnerabilities"]:
+                        if "vulnerabilities" in tt and tt["vulnerabilities"]!=None:
                             alerts.extend(parse_findings("WordPress timthumbs Vulnerability",data['timthumbs'][tt]["vulnerabilities"]) )
                         messages.extend(parse_findings("WordPress timthumb" , data['timthumbs'][tt]) )
 
             if "password_attack" in data :
-                if data['password_attack']==None:
-                    messages.append("WPScan did not find any login / password")
+                if data['password_attack']==None or len(data['password_attack'])==0:
+                    messages.append("WPScan did not find any username / password")
                 else:
                     for passwd in data['password_attack']:
                         alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
 
             if "medias" in data :
-                if data['medias']==None:
+                if data['medias']==None or len(data['medias']==0):
                     messages.append("WPScan did not find any medias")
                 else:
                     warnings.extend(parse_findings("WordPress Media found", data['medias'] ))
@@ -284,6 +290,7 @@ def parse_a_finding(finding_type,finding):
     else: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
     return ("%s %s" % (findingData, refData) )
 
+# Wrapper to parse findings can take list or dict type
 def parse_findings(finding_type,findings):
     summary = []
     if type(findings) is list:
