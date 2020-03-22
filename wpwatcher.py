@@ -5,7 +5,6 @@
 # Wordpress Watcher
 # Automating WPscan to scan and report vulnerable Wordpress sites
 # DISCLAIMER - USE AT YOUR OWN RISK.
-__version__='0.3'
 
 import os
 import sys
