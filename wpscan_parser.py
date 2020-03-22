@@ -337,33 +337,34 @@ def parse_warning_wordpress(finding):
     if warn: summary.append(findingData)
     return(summary)
 
-def parse_warning_theme_or_plugin(name,finding):
+def parse_warning_theme_or_plugin(finding_type,finding):
     summary=[]
     warn=False
     findingData=""
 
     if 'slug' in finding:
         findingData+="%s\n" % finding['slug']
-
-    if 'name' in finding:
-        findingData+="%s\n" % finding['name']
+    
+    if "location" in finding:
+            findingData += "\nLocation: %s" % finding["location"]
 
     if 'outdated' in finding and finding['outdated']==True:
-        findingData+="The version of your %s is out of date. The latest version is %s." % (name,finding["latest_version"])
+        findingData+="The version of your %s is out of date. The latest version is %s." % (finding_type,finding["latest_version"])
         warn=True
 
     if "directory_listing" in finding and finding['directory_listing']:
-        findingData+="The %s allows directory listing: %s" % (name,finding["location"])
+        findingData+="The %s allows directory listing: %s" % (finding_type,finding["location"])
         warn=True
 
-    if "url" in finding:
-            findingData += "\nURL: %s" % finding["url"]
+    if "error_log_url" in finding and finding['error_log_url']:
+        findingData+="The %s error log accessible: %s" % (finding_type,finding["error_log_url"])
+        warn=True
 
     # if "found_by" in finding:
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
-    if "confidence" in finding:
-        findingData += "\nConfidence: %s" % finding["confidence"]
+    # if "confidence" in finding:
+    #     findingData += "\nConfidence: %s" % finding["confidence"]
 
     if "interesting_entries" in finding:
         if len(finding["interesting_entries"]) > 0:
