@@ -139,8 +139,9 @@ def parse_json(wpscan_output):
                     messages.append("WPScan did not find any WordPress timthumbs")
                 else:
                     for tt in data['timthumbs']:
-                        alerts.extend(parse_findings("WordPress timthumbs Vulnerability\nURL: %s"%url, data['timthumbs'][tt]["vulnerabilities"]) )
-                        messages.extend(parse_findings("WordPress timthumbs \nURL: %s"%url, data['timthumbs'][tt]) )
+                        if "vulnerabilities" in tt and tt["vulnerabilities"]:
+                            alerts.extend(parse_findings("WordPress timthumbs Vulnerability",data['timthumbs'][tt]["vulnerabilities"]) )
+                        messages.extend(parse_findings("WordPress timthumb" , data['timthumbs'][tt]) )
 
             if "password_attack" in data :
                 if data['password_attack']==None:
@@ -148,6 +149,13 @@ def parse_json(wpscan_output):
                 else:
                     for passwd in data['password_attack']:
                         alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
+
+            if "medias" in data :
+                if data['medias']==None:
+                    messages.append("WPScan did not find any medias")
+                else:
+                    warnings.extend(parse_findings("WordPress Media found", data ))
+
 
         else: 
             raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, ouput: \n"+wpscan_output)
@@ -337,8 +345,8 @@ def parse_warning_theme_or_plugin(name,finding):
     if "url" in finding:
             findingData += "\nURL: %s" % finding["url"]
 
-    if "found_by" in finding:
-        findingData += "\nFound by: %s" % finding["found_by"]
+    # if "found_by" in finding:
+    #     findingData += "\nFound by: %s" % finding["found_by"]
 
     if "confidence" in finding:
         findingData += "\nConfidence: %s" % finding["confidence"]
