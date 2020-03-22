@@ -167,16 +167,16 @@ def parse_json(wpscan_output):
 
             if "timthumbs" in data :
                 if data['timthumbs']==None or len(data['timthumbs']==0):
-                    messages.append("WPScan did not find any WordPress timthumbs")
+                    messages.append("WPScan did not find any timthumbs")
                 else:
                     for tt in data['timthumbs']:
                         if "vulnerabilities" in tt and tt["vulnerabilities"]!=None:
-                            alerts.extend(parse_findings("WordPress timthumbs Vulnerability",data['timthumbs'][tt]["vulnerabilities"]) )
-                        messages.extend(parse_findings("WordPress timthumb" , data['timthumbs'][tt]) )
+                            alerts.extend(parse_findings("Timthumbs Vulnerability",data['timthumbs'][tt]["vulnerabilities"]) )
+                        messages.extend(parse_findings("Timthumb" , data['timthumbs'][tt]) )
 
             if "password_attack" in data :
                 if data['password_attack']==None or len(data['password_attack'])==0:
-                    messages.append("WPScan did not find any username / password")
+                    messages.append("WPScan did not find any valid passwords")
                 else:
                     for passwd in data['password_attack']:
                         alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
@@ -213,17 +213,20 @@ def parse_cli(wpscan_output):
         for line in wpscan_output.splitlines():
             # Remove colorization snd strip
             line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
-            # Could work with [+] etc too
-            # [+] = Begin of the message
-            # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
+
             # Toogle Warning/Alert
-            if "| [!]" in line or 'insecure' in line.lower():
+            if (    "[!]" in line and 
+                        any([m in line for m in [   "The version is out of date",
+                                                    "No WPVulnDB API Token given",
+                                                    "You can get a free API token"]]) 
+                    or 'insecure' in line.lower() ):
                 warning_on = True
             elif "[!]" in line:
                 alert_on = True
+            
             # Append message line if any
-            if line!="": 
-                message+= line if message=="" else '\n'+line
+            if line!="": message+= line if message=="" else '\n'+line
+            
             # End of the message just a white line. Every while line will be considered as a mesasge separator
             if line=="":
                 if alert_on: alerts.append(message)
@@ -232,6 +235,7 @@ def parse_cli(wpscan_output):
                 message=""
                 alert_on = False  
                 warning_on = False
+
         # Catching last message
         if alert_on: alerts.append(message)
         elif warning_on: warnings.append(message)
@@ -321,14 +325,14 @@ def parse_warning_wordpress(finding):
     findingData=""
     if 'status' in finding and finding['status']!="latest":
         findingData+="The version of your WordPress site is out of date.\n"
-        findingData+="Status %s for WP version %s" % (finding['status'], finding['number'])
+        findingData+="Status %s for version %s" % (finding['status'], finding['number'])
         warn=True
 
     # if "found_by" in finding:
     #         findingData += "\nFound by: %s" % finding["found_by"]
 
-    if "confidence" in finding:
-        findingData += "\nConfidence: %s" % finding["confidence"]
+    # if "confidence" in finding:
+    #     findingData += "\nConfidence: %s" % finding["confidence"]
 
     # if "interesting_entries" in finding:
     #         if len(finding["interesting_entries"]) > 0:
