@@ -179,7 +179,7 @@ def parse_json(wpscan_output):
                 if data['medias']==None:
                     messages.append("WPScan did not find any medias")
                 else:
-                    warnings.extend(parse_findings("WordPress Media found", data ))
+                    warnings.extend(parse_findings("WordPress Media found", data['medias'] ))
 
             if "not_fully_configured" in data and data['not_fully_configured']!=None :
                 warnings.append("The WordPress is not fully configured and currently in install mode")
@@ -291,7 +291,11 @@ def parse_findings(finding_type,findings):
     if type(findings) is list:
         for finding in findings:
             summary.append(parse_a_finding(finding_type,finding))
-    else: raise TypeError("Must be a list, method parse_findings() for data: {}".format(findings)) 
+    elif type(findings) is dict:
+        for finding in findings:
+            summary.append(parse_a_finding(finding_type,findings[finding]))
+    else:
+        raise TypeError("Must be a list or dict, method parse_findings() for data: {}".format(findings)) 
     return(summary)
 
 def parse_version_info(version):
