@@ -156,6 +156,9 @@ def parse_json(wpscan_output):
                 else:
                     warnings.extend(parse_findings("WordPress Media found", data ))
 
+            if "not_fully_configured" in data and data['not_fully_configured']!=None :
+                warnings.append("The WordPress is not fully configured and currently in install mode")
+
 
         else: 
             raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, ouput: \n"+wpscan_output)
