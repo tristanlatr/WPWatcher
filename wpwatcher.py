@@ -23,6 +23,9 @@ import io
 from email.mime.text import MIMEText
 from datetime import datetime
 
+# Local module
+from wpscanparser import parse_results
+
 configuration=None
 log = logging.getLogger('wpwatcher')
 
@@ -52,8 +55,8 @@ def init_log(verbose=False, quiet=False, logfile=None):
 # Check if WPScan is installed
 def is_wpscan_installed():
     try:
-        result = subprocess.Popen([conf('wpscan_path'), '--version'], stdout=subprocess.PIPE).communicate()[0]
-        if 'WordPress Security Scanner' in str(result): return 1
+        wpscan_output = subprocess.Popen([conf('wpscan_path'), '--version'], stdout=subprocess.PIPE).communicate()[0]
+        if 'WordPress Security Scanner' in str(wpscan_output): return 1
         else: return 0
     except CalledProcessError:
         return 0
@@ -63,193 +66,15 @@ def update_wpscan():
     log.info("Updating WPScan")
     try:
         process = subprocess.Popen([conf('wpscan_path'), '--update'], stdout=subprocess.PIPE)
-        result, _  = process.communicate()
+        wpscan_output, _  = process.communicate()
         if process.returncode :
-            log.error("WPScan failed with exit code: %s \n %s" % ( str(process.returncode), str(result.decode("utf-8") ) ) )
+            log.error("WPScan failed with exit code: %s \n %s" % ( str(process.returncode), str(wpscan_output.decode("utf-8") ) ) )
             log.error("Error updating wpscan")
             exit(-1)
     except CalledProcessError as err:
         log.error("WPScan failed: %s" % ( str(err) ) ) 
         log.error("Error updating wpscan")
         exit(-1)
-
-# Is the line defined as false positive
-def is_false_positive(string, site_false_positives):
-    # False Positive Detection
-    for fp_string in conf('false_positive_strings')+site_false_positives:
-        if fp_string in string:
-            # print fp_string, string
-            return 1
-    return 0
-
-# Parsing the results
-def parse_results(results, site_false_positives, jsonformat=False):
-    warnings = []
-    alerts = []
-    messages = []
-    # --format cli
-    if not jsonformat:
-        warning_on = False
-        alert_on = False
-        message=""
-        # Parse the lines
-        for line in results.splitlines():
-            # Remove colorization snd strip
-            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
-            # [+] = Begin of the message
-            # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
-            # Toogle Warning/Alert
-            if "| [!]" in line or 'insecure' in line.lower():
-                warning_on = True
-            elif "[!]" in line:
-                alert_on = True
-            # Append message line if any
-            if line!="": 
-                message+= line if message=="" else '\n'+line
-            # End of the message just a white line. Every while line will be considered as a mesasge separator
-            if line=="":
-                if alert_on:
-                    alerts.append(message)
-                    alert_on = False 
-                elif warning_on:
-                    warnings.append(message)
-                    warning_on = False
-                else:
-                    messages.append(message)
-                message="" 
-        # Catching last message
-        if alert_on:
-            alerts.append(message)
-            alert_on = False 
-        elif warning_on:
-            warnings.append(message)
-            warning_on = False
-        else:
-            messages.append(message)
-    else: # --format json
-        # Parsing wpscan json ressources
-        #           https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
-        #           https://www.thecliguy.co.uk/2019/04/26/wordcamp-london-2019-cli-tools-and-shells/
-        #           https://github.com/statuscope-io/integrations/blob/master/security/check_wordpress_site.sh
-        #           https://github.com/aaronweaver/AppSecPipeline/blob/master/tools/wpscan/parser.py
-        try :
-            data=json.loads(results)
-            if data != None:
-                for item in data:
-                    # Parsing procedure: on specific key
-                    if item == "interesting_findings":
-                        if data["interesting_findings"]==None:
-                            messages.append("WPScan did not find any interesting informations")
-                        else:
-                            # Parse informations
-                            [ messages.append(message) for message in parse_json_findings('Interresting findings',data["interesting_findings"]) ]
-                    if item == "main_theme":
-                        if data["main_theme"]==None:
-                            messages.append("WPScan did not find any theme information")
-                        else:
-                            # Parse theme warnings
-                            [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin('theme',data['main_theme']) ]
-                            # Parse Vulnerable themes
-                            [ alerts.append(alert) for alert in parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) ]
-                    if item == "version":
-                        if data["version"]==None:
-                            messages.append("WPScan did not find any WordPress version")
-                        else:
-                            # Parse WordPress version
-                            messages.append(parse_json_header_info(data['version']))
-                            # Parse outdated WordPress version
-                            [ warnings.append(warn) for warn in parse_json_outdated_wp(data['version']) ]
-                            # Parse vulnerable WordPress version
-                            [ alerts.append(alert) for alert in parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) ]
-                    if item == "plugins":
-                        if data["plugins"]==None:
-                            warnings.append("WPScan did not find any WordPress plugins")
-                        else:
-                            plugins = data[item]
-                            for plugin in plugins:
-                                # Parse vulnerable plugins
-                                [ alerts.append(alert) for alert in parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) ]
-                                # Parse outdated plugins
-                                [ warnings.append(warn) for warn in parse_json_outdated_theme_or_plugin('plugin',plugins[plugin]) ]
-            else: 
-                raise Exception("No data in wpscan Json output (None)")
-        except Exception as err:
-            raise Exception("Could not parse wpscan Json output: "+str(err))
-    #Process false positives
-    for alert in alerts:
-        if is_false_positive(alert, site_false_positives):
-            alerts.remove(alert)
-            messages.append("[False positive]\n"+alert)
-    for warn in warnings:
-        if is_false_positive(warn, site_false_positives):
-            warnings.remove(warn)
-            messages.append("[False positive]\n"+warn)
-    
-    return ( messages, warnings, alerts )
-
-def parse_json_header_info(version):
-    headerInfo = ""
-    if "number" in version:
-        headerInfo += "Running WordPress version: %s\n" % version["number"]
-    if "interesting_entries" in version:
-        if len(version["interesting_entries"]) > 0:
-            headerInfo += "Interesting Entries: \n"
-            for entries in version["interesting_entries"]:
-                headerInfo += "%s\n" % entries
-    return headerInfo
-
-def parse_json_outdated_wp(component):
-    summary=[]
-    findingData=""
-    if 'status' in component and component['status']!="latest":
-        findingData+="The version of your WordPress site is out of date.\n"
-        findingData+="Status %s for WP version %s" % (component['status'], component['number'])
-        summary.append(findingData)
-    return(summary)
-
-def parse_json_outdated_theme_or_plugin(component_type,component):
-    summary=[]
-    findingData=""
-    if 'slug' in component:
-        findingData+="%s\n" % component['slug']
-    if 'outdated' in component and component['outdated']==True:
-        findingData+="The version of your %s is out of date, the latest version is %s" % (component_type,component["latest_version"])
-        summary.append(findingData)
-    return(summary)
-
-def parse_json_findings(finding_type,findings):
-    summary = []
-    for finding in findings:
-        findingData = ""
-        refData = ""
-        title = "[%s] " % finding_type
-        if "title" in finding:
-                title += "%s" % finding["title"]
-        findingData += "%s" % title
-        if "fixed_in" in finding:
-            findingData += "\nFixed In: %s" % finding["fixed_in"]
-        if "url" in finding:
-            findingData += "\nURL: %s" % finding["url"]
-        if "found_by" in finding:
-            findingData += "\nFound by: %s" % finding["found_by"]
-        if "confidence" in finding:
-            findingData += "\nConfidence: %s" % finding["confidence"]
-        if "interesting_entries" in finding:
-            if len(finding["interesting_entries"]) > 0:
-                findingData += "\nInteresting Entries:\n"
-                findingData+="\n- ".join(finding["interesting_entries"])
-        if "comfirmed_by" in finding:
-            if len(finding["confirmed_by"]) > 0:
-                findingData += "\nConfirmed By:\n"
-                findingData+="\n- ".join(finding["confirmed_by"])
-        if "references" in finding and len(finding["references"]) > 0:
-            refData += "\nReferences:"
-            for ref in finding["references"]:
-                refData += "\n%s: " % ref
-                refData += "\n- ".join(finding["references"][ref])
-        ####### Individual fields ########
-        summary.append("%s %s" % (findingData, refData))
-    return(summary)
 
 # Send email report
 def send_report(wp_site, warnings=None, alerts=None, infos=None, errors=None, emails=None, status=None):
@@ -401,24 +226,24 @@ def run_scan():
             cmd=[conf('wpscan_path')] + wordpress_arguments + ['--url', wp_site['url']]
             log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
-            result, _  = process.communicate()
+            wpscan_output, _  = process.communicate()
             if process.returncode :
                 # Handle scan error
-                result=result.decode("utf-8")
-                err_string="WPScan failed with exit code for site %s: %s. WPScan output: \n%s" % (wp_site['url'], str(process.returncode), result)
+                wpscan_output=wpscan_output.decode("utf-8")
+                err_string="WPScan failed with exit code for site %s: %s. WPScan output: \n%s" % (wp_site['url'], str(process.returncode), wpscan_output)
                 log.error(" ".join(line.strip() for line in err_string.splitlines()))
                 errors.append(err_string)
                 exit_code=-1
             
             else:
                 # Scan success
-                result=result.decode("utf-8")
-                log.debug("WPScan raw output:\n"+result)
+                wpscan_output=wpscan_output.decode("utf-8")
+                log.debug("WPScan raw output:\n"+wpscan_output)
                 pass
         except CalledProcessError as err:
             # Handle scan error
-            result=str(err)
-            err_string="WPScan failed with exit code for site %s: %s. WPScan Output: \n%s" % (wp_site['url'], str(process.returncode), result)
+            wpscan_output=str(err)
+            err_string="WPScan failed with exit code for site %s: %s. WPScan Output: \n%s" % (wp_site['url'], str(process.returncode), wpscan_output)
             log.error(" ".join(line.strip() for line in err_string.splitlines()))
             errors.append(err_string)
             exit_code=-1
@@ -432,9 +257,11 @@ def run_scan():
                     is_json=wordpress_arguments[format_index+1]=='json'
                 else: is_json=False
                 log.debug("Parsing WPScan %s output" % 'json' if is_json else 'cli')
-                (messages, warnings, alerts) = parse_results(result , wp_site['false_positive_strings'] , jsonformat=is_json )
+                # Call parse_result from wpscanparser.py --------
+                (messages, warnings, alerts) = parse_results(wpscan_output , conf('false_positive_strings')+wp_site['false_positive_strings'] , is_json )
+
             except Exception as err:
-                err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output: {}".format(wp_site['url'],str(err), result)
+                err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output: {}".format(wp_site['url'],str(err), wpscan_output)
                 log.error(err_string)
                 errors.append(err_string)
                 exit_code=-1
