@@ -143,7 +143,7 @@ def parse_json(wpscan_output):
                     users = data["users"]
                     for name in users:
                         # Parse users users
-                        warnings.append( 'WordPress Username was found: %s'%name )
+                        warnings.append( 'WordPress user found: %s'%name )
             
             if "config_backups" in data:
                 if data["config_backups"]==None:
