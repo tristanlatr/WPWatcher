@@ -17,6 +17,9 @@ import argparse
 #
 #   With param --input :
 #   $ python3 ./wpscan_parser.py --input wpscan.log
+#
+#   Or you can import this package into your application and call `parse_results` method.
+#
 # Parse and return ( messages, warnings, alerts )
 
 """
@@ -35,6 +38,28 @@ Dradis ruby json Parser
     https://github.com/dradis/dradis-wpscan/blob/master/lib/dradis/plugins/wpscan/importer.rb : 
     No warnings neither but probably the clearest code
 """
+
+def parse_results(wpscan_output, false_positives, is_json=True):
+    # Init scan messages
+    ( messages, warnings, alerts ) = ([],[],[])
+
+    if is_json:
+        (messages, warnings, alerts)=parse_json(wpscan_output)
+    else: 
+        (messages, warnings, alerts)=parse_cli(wpscan_output)
+    #Process false positives
+    for alert in alerts:
+        if is_false_positive(alert, false_positives):
+            alerts.remove(alert)
+            messages.append("[False positive]\n"+alert)
+
+    for warn in warnings:
+        if is_false_positive(warn, false_positives):
+            warnings.remove(warn)
+            messages.append("[False positive]\n"+warn)
+    
+    return (( messages, warnings, alerts ))
+
 def parse_json(wpscan_output):
      # Init scan messages
     ( messages, warnings, alerts ) = ([],[],[])
@@ -118,7 +143,7 @@ def parse_json(wpscan_output):
                     users = data["users"]
                     for name in users:
                         # Parse users users
-                        warnings.append( parse_a_finding('User found: %s'%name,users[name]) )
+                        warnings.append( 'WordPress Username was found: %s'%name )
             
             if "config_backups" in data:
                 if data["config_backups"]==None:
@@ -210,26 +235,7 @@ def parse_cli(wpscan_output):
     else: messages.append(message)
     return (( messages, warnings, alerts ))
 
-def parse_results(wpscan_output, false_positives, is_json=True):
-    # Init scan messages
-    ( messages, warnings, alerts ) = ([],[],[])
 
-    if is_json:
-        (messages, warnings, alerts)=parse_json(wpscan_output)
-    else: 
-        (messages, warnings, alerts)=parse_cli(wpscan_output)
-    #Process false positives
-    for alert in alerts:
-        if is_false_positive(alert, false_positives):
-            alerts.remove(alert)
-            messages.append("[False positive]\n"+alert)
-
-    for warn in warnings:
-        if is_false_positive(warn, false_positives):
-            warnings.remove(warn)
-            messages.append("[False positive]\n"+warn)
-    
-    return (( messages, warnings, alerts ))
 
 def parse_a_finding(finding_type,finding):
     # Finding can be a vulnerability or other
