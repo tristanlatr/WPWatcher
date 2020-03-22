@@ -190,51 +190,49 @@ def parse_json(wpscan_output):
     
     except Exception as err:
         # Default parsing is json, if fails will try cli
-        if "[+]" in wpscan_output:
-            try:
-                (messages, warnings, alerts)=parse_cli(wpscan_output)
-            except:
-                raise Exception("Could not parse wpscan CLI output. "+str(err))
-
-        else: raise Exception("Could not parse wpscan Json output and the file does not seem to be a WPScan log.\n"+str(err))
+        try: (messages, warnings, alerts)=parse_cli(wpscan_output)
+        except Exception as err: 
+            raise Exception("Could not parse wpscan Json output.\n"+str(err))
 
     return (( messages, warnings, alerts ))
 
 def parse_cli(wpscan_output):
     # Init scan messages
-    ( messages, warnings, alerts ) = ([],[],[])
-    warning_on = False
-    alert_on = False
-    message=""
-    # Parse the lines
-    for line in wpscan_output.splitlines():
-        # Remove colorization snd strip
-        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
-        # Could work with [+] etc too
-        # [+] = Begin of the message
-        # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
-        # Toogle Warning/Alert
-        if "| [!]" in line or 'insecure' in line.lower():
-            warning_on = True
-        elif "[!]" in line:
-            alert_on = True
-        # Append message line if any
-        if line!="": 
-            message+= line if message=="" else '\n'+line
-        # End of the message just a white line. Every while line will be considered as a mesasge separator
-        if line=="":
-            if alert_on: alerts.append(message)
-            elif warning_on: warnings.append(message)
-            else: messages.append(message)
-            message=""
-            alert_on = False  
-            warning_on = False
-    # Catching last message
-    if alert_on: alerts.append(message)
-    elif warning_on: warnings.append(message)
-    else: messages.append(message)
-    return (( messages, warnings, alerts ))
-
+    if "[+]" in wpscan_output:
+        ( messages, warnings, alerts ) = ([],[],[])
+        warning_on = False
+        alert_on = False
+        message=""
+        # Parse the lines
+        for line in wpscan_output.splitlines():
+            # Remove colorization snd strip
+            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
+            # Could work with [+] etc too
+            # [+] = Begin of the message
+            # if message=="" and (line.startswith("[+]") or line.startswith("[i]") or line.startswith("[!]") ):
+            # Toogle Warning/Alert
+            if "| [!]" in line or 'insecure' in line.lower():
+                warning_on = True
+            elif "[!]" in line:
+                alert_on = True
+            # Append message line if any
+            if line!="": 
+                message+= line if message=="" else '\n'+line
+            # End of the message just a white line. Every while line will be considered as a mesasge separator
+            if line=="":
+                if alert_on: alerts.append(message)
+                elif warning_on: warnings.append(message)
+                else: messages.append(message)
+                message=""
+                alert_on = False  
+                warning_on = False
+        # Catching last message
+        if alert_on: alerts.append(message)
+        elif warning_on: warnings.append(message)
+        else: messages.append(message)
+        return (( messages, warnings, alerts ))
+    else: 
+        raise Exception("Could not parse wpscan CLI output. The file does not seem to be a WPScan log.")
 
 
 def parse_a_finding(finding_type,finding):
