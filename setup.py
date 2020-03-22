@@ -12,7 +12,7 @@ setup(
     maintainer='Florian Roth, Tristan Landès',
     version='0.3',
     entry_points = {'console_scripts': ['wpwatcher=wpwatcher:wpwatcher'],},
-    scripts=['wpwatcher.py','wpscanparser.py'],
+    scripts=['wpwatcher.py','wpscan_parser.py'],
     classifiers=["Programming Language :: Python :: 3"],
     license='Apache License 2.0',
     long_description=README,
