@@ -323,9 +323,9 @@ def parse_warning_wordpress(finding):
     if "confidence" in finding:
         findingData += "\nConfidence: %s" % finding["confidence"]
 
-    if "interesting_entries" in finding:
-            if len(finding["interesting_entries"]) > 0:
-                findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    # if "interesting_entries" in finding:
+    #         if len(finding["interesting_entries"]) > 0:
+    #             findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
 
     if warn: summary.append(findingData)
     return(summary)
