@@ -9,6 +9,7 @@ import json
 import re
 
 # Parsing the wpscan_output
+# Parse and return ( messages, warnings, alerts )
 def parse_results(wpscan_output, false_positives, is_json):
     warnings = []
     alerts = []
@@ -70,30 +71,30 @@ def parse_results(wpscan_output, false_positives, is_json):
                         messages.append("WPScan did not find any interesting informations")
                     else:
                         # Parse informations
-                        messages.extend(parse_json_findings('Interesting findings', data["interesting_findings"]) )
+                        messages.extend(parse_findings('Interesting findings', data["interesting_findings"]) )
                 
                 if "main_theme" in data:
                     if data["main_theme"]==None:
                         messages.append("WPScan did not find any main theme information")
                     else:
                         # Parse theme warnings
-                        warnings.extend(parse_json_outdated_theme_or_plugin('main theme',data['main_theme']) )
+                        warnings.extend(parse_warning_theme_or_plugin('main theme',data['main_theme']) )
                         # Parse Vulnerable themes
-                        alerts.extend(parse_json_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) )
+                        alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) )
                         if "version" in data["main_theme"] and data["main_theme"]["version"] != None:
                             # Parse vulnerable theme version
-                            alerts.extend(parse_json_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
+                            alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
                 
                 if "version" in data:
                     if data["version"]==None:
                         messages.append("WPScan did not find any WordPress version")
                     else:
                         # Parse WordPress version
-                        messages.append(parse_json_header_info(data['version']))
+                        messages.append(parse_version_info(data['version']))
                         # Parse outdated WordPress version
-                        warnings.extend(parse_json_outdated_wp(data['version']) )
+                        warnings.extend(parse_warning_wordpress(data['version']) )
                         # Parse vulnerable WordPress version
-                        alerts.extend(parse_json_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
+                        alerts.extend(parse_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
                 
                 if "themes" in data:
                     if data["themes"]==None:
@@ -101,9 +102,9 @@ def parse_results(wpscan_output, false_positives, is_json):
                     else:
                         for theme in data["themes"]:
                             # Parse secondary theme warnings
-                            warnings.extend(parse_json_outdated_theme_or_plugin('theme',theme) )
+                            warnings.extend(parse_warning_theme_or_plugin('theme',theme) )
                             # Parse secondary Vulnerable themes
-                            alerts.extend(parse_json_findings('Vulnerable theme',theme["vulnerabilities"]) )
+                            alerts.extend(parse_findings('Vulnerable theme',theme["vulnerabilities"]) )
                 
                 if "plugins" in data:
                     if data["plugins"]==None:
@@ -112,9 +113,9 @@ def parse_results(wpscan_output, false_positives, is_json):
                         plugins = data["plugins"]
                         for plugin in plugins:
                             # Parse vulnerable plugins
-                            alerts.extend(parse_json_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) )
+                            alerts.extend(parse_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) )
                             # Parse outdated plugins
-                            warnings.extend(parse_json_outdated_theme_or_plugin('plugin',plugins[plugin]) )
+                            warnings.extend(parse_warning_theme_or_plugin('plugin',plugins[plugin]) )
 
                 if "users" in data:
                     if data["users"]==None:
@@ -144,8 +145,8 @@ def parse_results(wpscan_output, false_positives, is_json):
                         messages.append("WPScan did not find any WordPress timthumbs")
                     else:
                         for tt in data['timthumbs']:
-                            alerts.extend(parse_json_findings("WordPress timthumbs Vulnerability\nURL: %s"%url, data['timthumbs'][tt]["vulnerabilities"]) )
-                            messages.extend(parse_json_findings("WordPress timthumbs \nURL: %s"%url, data['timthumbs'][tt]) )
+                            alerts.extend(parse_findings("WordPress timthumbs Vulnerability\nURL: %s"%url, data['timthumbs'][tt]["vulnerabilities"]) )
+                            messages.extend(parse_findings("WordPress timthumbs \nURL: %s"%url, data['timthumbs'][tt]) )
 
                 if "password_attack" in data :
                     if data['password_attack']==None:
@@ -201,10 +202,10 @@ def parse_a_finding(finding_type,finding):
                 findingData += "\nInteresting Entries:\n"
                 findingData+="\n- ".join(finding["interesting_entries"])
 
-        if "comfirmed_by" in finding:
-            if len(finding["confirmed_by"]) > 0:
-                findingData += "\nConfirmed By:\n"
-                findingData+="\n- ".join(finding["confirmed_by"])
+        # if "comfirmed_by" in finding:
+        #     if len(finding["confirmed_by"]) > 0:
+        #         findingData += "\nConfirmed By:\n"
+        #         findingData+="\n- ".join(finding["confirmed_by"])
 
         if "evidence" in finding:
             findingData+='Evidence: %s' % finding['evidence']
@@ -221,18 +222,17 @@ def parse_a_finding(finding_type,finding):
                     refData += "\n- ".join(finding["references"][ref])
 
     else: raise TypeError("Must be a dict, method parse_a_finding()") 
-
     return ("%s %s" % (findingData, refData) )
 
-def parse_json_findings(finding_type,findings):
+def parse_findings(finding_type,findings):
     summary = []
     if type(findings) is list:
         for finding in findings:
             summary.append(parse_a_finding(finding_type,finding))
-    else: raise TypeError("Must be a list, method parse_json_findings() for data: {}".format(findings)) 
+    else: raise TypeError("Must be a list, method parse_findings() for data: {}".format(findings)) 
     return(summary)
 
-def parse_json_header_info(version):
+def parse_version_info(version):
     headerInfo = ""
 
     if "number" in version:
@@ -245,7 +245,7 @@ def parse_json_header_info(version):
                 headerInfo += "%s\n" % entries
     return headerInfo
 
-def parse_json_outdated_wp(finding):
+def parse_warning_wordpress(finding):
     summary=[]
     warn=False
     findingData=""
@@ -268,7 +268,7 @@ def parse_json_outdated_wp(finding):
     if warn: summary.append(findingData)
     return(summary)
 
-def parse_json_outdated_theme_or_plugin(name,finding):
+def parse_warning_theme_or_plugin(name,finding):
     summary=[]
     warn=False
     findingData=""

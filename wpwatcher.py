@@ -24,7 +24,7 @@ from email.mime.text import MIMEText
 from datetime import datetime
 
 # Local module
-from wpscanparser import parse_results
+from wpscan_parser import parse_results
 
 configuration=None
 log = logging.getLogger('wpwatcher')
