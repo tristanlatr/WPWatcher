@@ -218,7 +218,7 @@ Email notification can have 4 status:
 
 Tip: set `"--format","json"` in  `wpscan_args` config option to use the json parsing feature. 
 
-`wpwatcher` will use the `wpscan_parser.py` to parse WPScan output messages. Alerts, Warnings and Infos might differ whether you're using cli of json format.
+`wpwatcher` will use the `wpscan_parser.py` to parse WPScan output messages. Alerts, Warnings and Infos might differ whether you're using cli or json format.
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
 
