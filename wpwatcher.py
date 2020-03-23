@@ -142,7 +142,7 @@ def read_config(configpath):
         configuration.read_dict({
                 'wpwatcher':{
                         'wp_sites' :'null',
-                        'false_positive_strings' : """["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]""",                        
+                        'false_positive_strings' : 'null',                        
                         'wpscan_path':'wpscan',
                         'log_file':"",
                         'wpscan_args':'null',
@@ -177,7 +177,7 @@ def conf(key):
             try:
                 return configuration.getboolean('wpwatcher', key)
             except Exception as err:
-                log.error("Could not read boolean value in config for key: '{}' and string '{}' must be Yes/No. Comment it to use defaults. Error: {}".format(key, configuration.get('wpwatcher',key), err))
+                log.error("Could not read boolean value in config for key: '{}' and string '{}' must be Yes/No. Comment the config line to use defaults. Error: {}".format(key, configuration.get('wpwatcher',key), err))
                 exit(-1)
         # JSON lists conf values
         elif key in ['wp_sites', 'email_to', 'wpscan_args', 'false_positive_strings', 'email_errors_to']:
@@ -247,20 +247,13 @@ def run_scan():
             errors.append(err_string)
             exit_code=-1
         
-        # Parse the results if no errors with wpscan ---------------------------
+        # Parse the results if no errors with wpscan -----------------------------
         if len(errors)==0:
             try:
-                # Test if Json selectted in wpscan args, get last '--format' element occurrence and check if the next parameter is 'json'
-                if '--format' in wordpress_arguments: 
-                    format_index=len(wordpress_arguments) - 1 - wordpress_arguments[::-1].index('--format')
-                    is_json=wordpress_arguments[format_index+1]=='json'
-                else: is_json=False
-                log.debug("Parsing WPScan %s output" % 'json' if is_json else 'cli')
-                
-                # Call parse_result from wpscan_parser.py --------
+                log.debug("Parsing WPScan output")
+                # Call parse_result from wpscan_parser.py ------------------------
                 (messages, warnings, alerts) = parse_results(wpscan_output , 
-                    conf('false_positive_strings')+wp_site['false_positive_strings'] , 
-                    is_json )
+                    conf('false_positive_strings')+wp_site['false_positive_strings'] )
 
             except Exception as err:
                 err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output: {}".format(wp_site['url'],str(err), wpscan_output)
@@ -268,8 +261,7 @@ def run_scan():
                 errors.append(err_string)
                 exit_code=-1
                 
-            # Report Options ------------------------------------------------------
-            # Logfile
+            # Logfile ------------------------------------------------------
             for message in messages:
                 log.info("** WPScan INFO %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
             for warning in warnings:

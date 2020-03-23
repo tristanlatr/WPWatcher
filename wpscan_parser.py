@@ -31,8 +31,8 @@ Here are some other inspirational ressources found about parsing wpscan json
 
 Generates a nice table output (Rust code) 
     https://github.com/lukaspustina/wpscan-analyze
-Parser code: 
-    https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
+    Parser code: 
+        https://github.com/lukaspustina/wpscan-analyze/blob/master/src/analyze.rs
 Python parser (do not parse for vulnerable theme or outdated warnings) 
     https://github.com/aaronweaver/AppSecPipeline/blob/master/tools/wpscan/parser.py
 Vulcan wpscan (Go) 
@@ -41,6 +41,9 @@ Vulcan wpscan (Go)
 Dradis ruby json Parser 
     https://github.com/dradis/dradis-wpscan/blob/master/lib/dradis/plugins/wpscan/importer.rb : 
     No warnings neither but probably the clearest code
+
+Ressource PArsing CLI output:
+    List of all icons: https://github.com/wpscanteam/CMSScanner/blob/master/app/formatters/cli.rb
 """
 
 def parse_results(wpscan_output, false_positives=[], is_json=True):
@@ -150,7 +153,7 @@ def parse_json(wpscan_output):
                     users = data["users"]
                     for name in users:
                         # Parse users users
-                        warnings.append( 'WordPress user found: %s'%name )
+                        messages.append( 'WordPress user found: %s'%name )
             
             if "config_backups" in data:
                 if data["config_backups"]==None or len(data["config_backups"])==0:
@@ -182,14 +185,17 @@ def parse_json(wpscan_output):
                         alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
 
             if "medias" in data :
-                if data['medias']==None or len(data['medias']==0):
+                if data['medias']==None or len(data['medias'])==0:
                     messages.append("WPScan did not find any medias")
                 else:
                     warnings.extend(parse_findings("WordPress Media found", data['medias'] ))
 
-            if "not_fully_configured" in data and data['not_fully_configured']!=None :
-                warnings.append("The WordPress is not fully configured and currently in install mode")
+            if "vuln_api" in data :
+                if "error" in data['vuln_api']:
+                    warnings.append(data['vuln_api']["error"])
 
+            if "not_fully_configured" in data and data['not_fully_configured']!=None :
+                alerts.append(data['not_fully_configured'])
 
         else: 
             raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, ouput: \n"+wpscan_output)
@@ -197,64 +203,92 @@ def parse_json(wpscan_output):
     except Exception as err:
         # Default parsing is json, if fails will try cli
         try: (messages, warnings, alerts)=parse_cli(wpscan_output)
-        except Exception as err: 
-            raise Exception("Could not parse wpscan Json output.\n"+str(err))
+        except Exception as err2: 
+            raise Exception("Could not parse wpscan Json output. Error:\n"+str(err)+"\nCould not parse neither CLI output: "+str(err2))
 
     return (( messages, warnings, alerts ))
 
 def parse_cli(wpscan_output):
-    # Init scan messages
     if "[+]" in wpscan_output:
+        # Init scan messages
         ( messages, warnings, alerts ) = ([],[],[])
+        # Init messages toogles
         warning_on = False
         alert_on = False
-        message=""
-        # Parse the lines
+        # Test if cli_with_colors
+        cli_with_colors= ( "32m[+]" in wpscan_output )
+        message="" # Every blank ("") line will be considered as a message separator
         for line in wpscan_output.splitlines():
-            # Remove colorization snd strip
-            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line).strip()
 
-            # Toogle Warning/Alert
-            if (    "[!]" in line and 
-                        any([m in line for m in [   "The version is out of date",
-                                                    "No WPVulnDB API Token given",
-                                                    "You can get a free API token"]]) 
-                    or 'insecure' in line.lower() ):
-                warning_on = True
-            elif "[!]" in line:
-                alert_on = True
-            
-            # Append message line if any
-            if line!="": message+= line if message=="" else '\n'+line
-            
-            # End of the message just a white line. Every while line will be considered as a mesasge separator
-            if line=="":
-                if alert_on: alerts.append(message)
-                elif warning_on: warnings.append(message)
-                else: messages.append(message)
-                message=""
-                alert_on = False  
-                warning_on = False
+            # Parse all output lines and build infos, warnings and alerts
+            line=line.strip()
 
-        # Catching last message
+            # Append line to message line if line is not ignored : empty content lines are ignored
+            if line!="" and line!="|":   
+
+                # Toogle Warning/Alert if specific match in any line of the message
+                if cli_with_colors==False:
+
+                    # Method 1 : No color. Warnings string are hard coded here
+                    # Remove colorization
+                    # line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+                    if "[!]" in line and any([m in line for m in [   
+                        "The version is out of date",
+                        "No WPVulnDB API Token given",
+                        "You can get a free API token"]]) :
+                        warning_on = True
+                    elif "[!]" in line :
+                        alert_on = True
+
+                else: # Cli with colors parsing
+                    if "33m[!]" in line: warning_on=True
+                    if "31m[!]" in line: alert_on = True
+                    # Remove colorization anyway after parsing
+                    line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+
+                # Warning for insecure Wordpress
+                if 'insecure' in line.lower(): warning_on = True
+
+                # Append line to message. Handle the begin of the message case
+                message+= line if message=="" else '\n'+line 
+
+            # End of the message just a white line.
+            elif line=="":
+                # Append messages to list of infos, warns and alerts
+                #   only if the message if not empty
+                if message.strip() != "":
+                    if alert_on: alerts.append(message)
+                    elif warning_on: warnings.append(message)
+                    else: messages.append(message)
+                    message=""
+                    alert_on = False  
+                    warning_on = False
+
+        # Catching last message after loop
         if alert_on: alerts.append(message)
         elif warning_on: warnings.append(message)
         else: messages.append(message)
         return (( messages, warnings, alerts ))
     else: 
-        raise Exception("Could not parse wpscan CLI output. The file does not seem to be a WPScan log.")
+        raise Exception("The file does not seem to be a WPScan CLI log.")
 
 
 def parse_a_finding(finding_type,finding):
     # Finding can be a vulnerability or other
     findingData = ""
     refData = ""
-    title = "%s: " % finding_type
+    title = "%s:" % finding_type
 
     if type(finding) is dict:
+        if "type" in finding:
+            title += " [%s]" % finding["type"]
 
         if "title" in finding:
-                title += "%s" % finding["title"]
+            title += " %s" % finding["title"]
+
+        if "to_s" in finding:
+            title += " %s" % finding["to_s"]
+
         findingData += "%s" % title
 
         if "fixed_in" in finding:
