@@ -39,9 +39,9 @@ Loads `~/wpwatcher.conf` as the default config file
 
     wpwatcher
 
-`wpwatcher` command only takes one argument: `--conf <path>`.  
+`wpwatcher` command takes some arguments: `--conf <path>` is the main one, other arguments will simply overwrite config values. See *Command arguments* section below for more inforamation.  
 
-Log messages are printed to `stdout`
+Messages are printed to `stdout`
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
@@ -70,29 +70,25 @@ Tested with WPScan 3.7 on :
 
 ## Configuration
 
-The script must read a configuration file. If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
+The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments will have default values. 
+Setup mail server settings in the config file if you want to receive reports.  
+If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
 
-All options can be missing from config file except `wp_sites`
-
-#### No mail report
-
-Minimalist configuration file
-```ini
-[wpwatcher]
-wpscan_path=wpscan
-wp_sites=   [ {"url":"exemple.com"},
-              {"url":"exemple2.com"}  ]
-```
+All options can be missing from config file.
 
 #### Basic usage with mail report
 
-Simple configuration file
+Simple configuration file without SMTP authentication 
 
 ```ini
 [wpwatcher]
 wpscan_path=wpscan
 wp_sites=   [ {"url":"exemple.com"},
               {"url":"exemple2.com"}  ]
+wpscan_args=[   "--format", "json",
+                "--no-banner",
+                "--random-user-agent", 
+                "--disable-tls-checks" ]
 send_email_report=Yes
 email_to=["me@exemple.com"]
 smtp_server=mailserver.exemple.com:25
@@ -101,7 +97,7 @@ from_email=WordPressWatcher@exemple.com
 
 #### Full configuration options
 
-File below lists all configuration options with explanatory comments.
+All configuration options with explanatory comments.
 
 ```ini
 [wpwatcher]
@@ -202,6 +198,25 @@ quiet=No
 # Print raw WPScan output before parsing
 verbose=No
 ```
+
+#### Command arguments
+
+Some config arguments can be passed to the `wpwatcher` command.   
+Warning: it will overwrite previous values from config file.
+```
+  -h, --help            show this help message and exit
+  --conf File path [File path ...]
+  --send_email_report
+  --send_infos
+  --send_errors
+  --wp_sites URL [URL ...]
+  --email_to Email [Email ...]
+  --email_errors_to Email [Email ...]
+  --false_positive_strings String [String ...]
+  -v, --verbose
+  -q, --quiet
+```
+
 
 ## Email reports
 
