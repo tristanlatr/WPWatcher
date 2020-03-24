@@ -30,7 +30,7 @@ from wpscan_parser import parse_results
 
 class WPWatcher():
 
-    # WPWatcher must use a configuration dict
+    # WPWatcher must use a configuration: could be WPWatcherConfig object but can also be a simple dict
     def __init__(self, conf):
         self.conf=conf
 
@@ -41,7 +41,7 @@ class WPWatcher():
 
         # Check if WPScan exists
         if not self.is_wpscan_installed():
-            log.error("WPScan not installed. Please install wpscan on your system. See https://wpscan.org for installation steps.")
+            log.error("There is an issue with your WPScan installation or WPScan not installed. Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
 
         # Update wpscan database
@@ -51,30 +51,58 @@ class WPWatcher():
         try: 
             shutil.rmtree('/tmp/wpscan')
             log.info("Deleted temp WPScan files in /tmp/wpscan/")
-        except FileNotFoundError: pass
+        except (FileNotFoundError, OSError, Exception): pass
+
+    # Helper method: actually wraps wpscan
+    def wpscan(self,*args):
+        (exit_code, output)=(0,"")
+        # WPScan arguments
+        cmd=[self.conf['wpscan_path']] + list(args) 
+        log.debug("Running WPScan command: %s" % ' '.join(cmd) )
+        # Run wpscan -------------------------------------------------------------------
+        try:
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
+            wpscan_output, _  = process.communicate()
+            wpscan_output=wpscan_output.decode("utf-8")
+
+            # Error when wpscan failed, except exit code 5: means the target has at least one vulnerability.
+            #   See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
+            if process.returncode not in [0,5]:
+                # Handle error
+                err_string="WPScan failed with exit code %s. WPScan output: \n%s" % (str(process.returncode), wpscan_output)
+                log.error(self.oneline(err_string))
+                (exit_code, output)=(process.returncode, wpscan_output)
+            else :
+                # WPScan comamnd success
+                log.debug("WPScan raw output:\n"+wpscan_output)
+                (exit_code, output)=(process.returncode, wpscan_output)
+
+        except CalledProcessError as err:
+            # Handle error --------------------------------------------------
+            wpscan_output=str(err.output)
+            err_string="WPScan failed with exit code %s. WPScan output: \n%s" % (str(process.returncode), wpscan_output)
+            log.error(self.oneline(err_string))
+            (exit_code, output)=(err.returncode, wpscan_output)
+
+        return((exit_code, output))
+
+    # Helper method that transform multiline string to one line for grepable output
+    @staticmethod
+    def oneline(string):
+        return( " ".join(line.strip() for line in string.splitlines()) )
 
     # Check if WPScan is installed
     def is_wpscan_installed(self):
-        try:
-            wpscan_output = subprocess.Popen([self.conf['wpscan_path'], '--version'], stdout=subprocess.PIPE).communicate()[0]
-            if 'WordPress Security Scanner' in str(wpscan_output): return 1
-            else: return 0
-        except CalledProcessError:
-            return 0
+        exit_code, _ = self.wpscan("--version")
+        if exit_code!=0: return False
+        else: return True
 
     # Update WPScan database
     def update_wpscan(self):
         log.info("Updating WPScan")
-        try:
-            process = subprocess.Popen([self.conf['wpscan_path'], '--update'], stdout=subprocess.PIPE)
-            wpscan_output, _  = process.communicate()
-            if process.returncode :
-                log.error("WPScan failed with exit code: %s \n %s" % ( str(process.returncode), str(wpscan_output.decode("utf-8") ) ) )
-                log.error("Error updating wpscan")
-                exit(-1)
-        except CalledProcessError as err:
-            log.error("WPScan failed: %s" % ( str(err) ) ) 
-            log.error("Error updating wpscan")
+        exit_code, _ = self.wpscan("--update")
+        if exit_code!=0: 
+            log.error("Error updating WPScan")
             exit(-1)
 
     # Send email report with status and timestamp
@@ -85,18 +113,7 @@ class WPWatcher():
             # Building message
             if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
             else: message = "WPScan report\nSite: %s" % (wp_site['url'])
-            if errors:
-                message += "\n\n\tErrors\n\n"
-                message += "\n\n".join(errors)
-            if alerts:
-                message += "\n\n\tAlerts\n\n"
-                message += "\n\n".join(alerts)
-            if warnings:
-                message += "\n\n\tWarnings\n\n"
-                message += "\n\n".join(warnings)
-            if infos:
-                message += "\n\n\tInformations\n\n"
-                message += "\n\n".join(infos)
+            message=self.build_message(warnings, alerts, infos, errors)
             mime_msg = MIMEText(message)
             mime_msg['Subject'] = 'WPWatcher%s report on %s - %s' % (   ' '+status if status else '',
                                                                         wp_site['url'],
@@ -119,8 +136,24 @@ class WPWatcher():
             s.quit()
             return(True)
         else:
-            log.warning("Not sending WPWatcher %s email report because no email are configured for site %s"%(status,wp_site['url']))
+            log.info("Not sending WPWatcher %s email report because no email are configured for site %s"%(status,wp_site['url']))
             return(True)
+
+    def build_message(self, warnings=None, alerts=None, infos=None, errors=None):
+        message=""
+        if errors:
+            message += "\n\n\tErrors\n\n"
+            message += "\n\n".join(errors)
+        if alerts:
+            message += "\n\n\tAlerts\n\n"
+            message += "\n\n".join(alerts)
+        if warnings:
+            message += "\n\n\tWarnings\n\n"
+            message += "\n\n".join(warnings)
+        if infos:
+            message += "\n\n\tInformations\n\n"
+            message += "\n\n".join(infos)
+        return message
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
@@ -141,41 +174,21 @@ class WPWatcher():
             if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
             
             # WPScan arguments
-            wpscan_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']
-            cmd=[self.conf['wpscan_path']] + wpscan_arguments + ['--url', wp_site['url']]
-            log.info("Scanning site %s with command: %s" % (wp_site['url'], ' '.join(cmd)))
+            wpscan_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']+['--url', wp_site['url']]
+            log.info("Scanning site %s"%wp_site['url'] )
             
             # Scan -------------------------------------------------------------------
-            try:
-                # Launch wpscan command
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
-                wpscan_output, _  = process.communicate()
-                wpscan_output=wpscan_output.decode("utf-8")
-                log.debug("WPScan raw output:\n"+wpscan_output)
+            (wpscan_exit_code, wpscan_output) = self.wpscan(*wpscan_arguments)
 
-                # The target has at least one vulnerability.
-                # Currently, the interesting findings do not count as vulnerable things
-                # Vulnerable WordPress See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
-
-                if process.returncode in [1,2,3,4]:
-                    # Handle scan error
-                    err_string="WPScan failed with exit code %s for site: %s. WPScan output: \n%s" % (str(process.returncode), wp_site['url'], wpscan_output)
-                    log.error(" ".join(line.strip() for line in err_string.splitlines()))
-                    errors.append(err_string)
-                    exit_code=-1
-
-                # Even is the scan is a success, WPScan can return code 0 or 5 (vulnerable)
-
-            except CalledProcessError as err:
-                # Handle scan error --------------------------------------------------
-                wpscan_output=str(err.output)
-                err_string="Failed to launch WPScan command with exit code %s for site: %s. WPScan output: \n%s"  % (str(process.returncode), wp_site['url'], wpscan_output)
-                log.error(" ".join(line.strip() for line in err_string.splitlines()))
-                errors.append(err_string)
+            # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
+            if wpscan_exit_code not in [0,5]:
+                # Handle scan error
+                log.error("Could not scan site %s"%wp_site['url'])
+                errors.append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: %s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wpscan_output)))
                 exit_code=-1
             
             # Parse the results if no errors with wpscan -----------------------------
-            if len(errors)==0:
+            else:
                 try:
                     log.debug("Parsing WPScan output")
                     # Call parse_result from wpscan_parser.py ------------------------
@@ -190,11 +203,13 @@ class WPWatcher():
                     
                 # Logfile ------------------------------------------------------
                 for message in messages:
-                    log.info("** WPScan INFO %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(message).splitlines())))
+                    log.info(self.oneline("** WPScan INFO %s ** %s" % (wp_site['url'], message )))
                 for warning in warnings:
-                    log.warning("** WPScan WARNING %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(warning).splitlines()) ))
+                    log.warning(self.oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
                 for alert in alerts:
-                    log.critical("** WPScan ALERT %s ** %s" % (wp_site['url'], " ".join(line.strip() for line in str(alert).splitlines())))
+                    log.critical(self.oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
+                
+                log.debug("Full parsed report:\n%s"%self.build_message(warnings, alerts, messages))
             
             # Determining status ------------------------------------------------
             status=None
@@ -209,9 +224,9 @@ class WPWatcher():
                     if len(errors)>0:
                         if self.conf['send_errors']:
                             if len(self.conf['email_errors_to'])>0:
-                                self.send_report(wp_site, warnings, alerts, infos=messages, errors=errors, emails=self.conf['email_errors_to'], status=status)
+                                self.send_report(wp_site, errors=errors, emails=self.conf['email_errors_to'], status=status)
                             else: 
-                                self.send_report(wp_site, warnings, alerts, infos=messages, errors=errors, status=status)
+                                self.send_report(wp_site, errors=errors, status=status)
                         else:
                             log.info("No WPWatcher ERROR email report have been sent for site %s. If you want to receive error emails, set send_errors=Yes in the config."%(wp_site['url']))
                     # Email -------------------------------------------------------------------
@@ -225,6 +240,7 @@ class WPWatcher():
                         else: 
                             # No report notice
                             log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config."%(status,wp_site['url']))
+                
                 # Handle send mail error
                 except Exception as err:
                     log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: "+str(err))
@@ -385,7 +401,7 @@ def init_log(verbose=False, quiet=False, logfile=None):
         fh.setFormatter(logging.Formatter(format_string))
         log.addHandler(fh)
     if verbose and quiet :
-        log.warning("Verbose and quiet values are both set to True. By default, verbose value has priority.")
+        log.info("Verbose and quiet values are both set to True. By default, verbose value has priority.")
     return (log)
 
 # Arguments can overwrite config file values
