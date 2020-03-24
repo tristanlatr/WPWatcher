@@ -147,19 +147,22 @@ class WPWatcher():
                 log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
                 wpscan_output, _  = process.communicate()
-                if process.returncode :
+                wpscan_output=wpscan_output.decode("utf-8")
+                log.debug("WPScan raw output:\n"+wpscan_output)
+                # The target has at least one vulnerability.
+                # Currently, the interesting findings do not count as vulnerable things
+                # Vulnerable WordPress See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
+                if process.returncode==5:
+                    pass
+                    # log.info("WPScan exited with status code 5. This means the WordPress site is vulnerable")
+
+                elif process.returncode!=0:
                     # Handle scan error
-                    wpscan_output=wpscan_output.decode("utf-8")
                     err_string="WPScan failed with exit code for site %s: %s. WPScan output: \n%s" % (wp_site['url'], str(process.returncode), wpscan_output)
                     log.error(" ".join(line.strip() for line in err_string.splitlines()))
                     errors.append(err_string)
                     exit_code=-1
-                
-                else:
-                    # Scan success --------------------------------------------------
-                    wpscan_output=wpscan_output.decode("utf-8")
-                    log.debug("WPScan raw output:\n"+wpscan_output)
-                    pass
+
             except CalledProcessError as err:
                 # Handle scan error --------------------------------------------------
                 wpscan_output=str(err)
