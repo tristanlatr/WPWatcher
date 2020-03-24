@@ -253,7 +253,6 @@ INFO - Updating WPScan
 INFO - Deleted temp WPScan files in /tmp/wpscan/
 INFO - Starting scans on configured sites
 INFO - Scanning 'wp.exemple.com' with command: wpscan --format json --no-banner --random-user-agent --disable-tls-checks --enumerate cb,dbe,u,m --api-token HqarfnE6e4FpowFAGyS9rVcqGte2SL7vJtmYWcl5gIc --url wp.exemple.com
-CRITICAL - WPScan exited with status code 5. This means the WordPress site is vulnerable
 INFO - ** WPScan INFO wp.exemple.com ** Target URL: http://wp.exemple.com/ IP: 104.31.70.16 Effective URL: https://wp.exemple.com/
 INFO - ** WPScan INFO wp.exemple.com ** Interesting finding: [headers] Headers URL: https://wp.exemple.com/ Interesting Entries: cf-cache-status: DYNAMIC, expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct", server: cloudflare, cf-ray: 578db0a64b7b3f7b-YUL
 INFO - ** WPScan INFO wp.exemple.com ** Interesting finding: [multisite] This site seems to be a multisite URL: http://wp.exemple.com/wordpress/wp-signup.php References: url: http://codex.wordpress.org/Glossary#Multisite
