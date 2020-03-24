@@ -113,9 +113,9 @@ class WPWatcher():
             # Building message
             if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
             else: message = "WPScan report\nSite: %s" % (wp_site['url'])
-            message=self.build_message(warnings, alerts, infos, errors)
+            message+=self.build_message(warnings, alerts, infos, errors)
             mime_msg = MIMEText(message)
-            mime_msg['Subject'] = 'WPWatcher%s report on %s - %s' % (   ' '+status if status else '',
+            mime_msg['Subject'] = 'WPWatcher %s report on %s - %s' % (  status,
                                                                         wp_site['url'],
                                                                         datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             mime_msg['From'] = self.conf['from_email']
@@ -138,8 +138,9 @@ class WPWatcher():
         else:
             log.info("Not sending WPWatcher %s email report because no email are configured for site %s"%(status,wp_site['url']))
             return(True)
-
-    def build_message(self, warnings=None, alerts=None, infos=None, errors=None):
+    
+    @staticmethod
+    def build_message(warnings=None, alerts=None, infos=None, errors=None):
         message=""
         if errors:
             message += "\n\n\tErrors\n\n"
@@ -211,7 +212,7 @@ class WPWatcher():
                 
                 log.debug("Full parsed report:\n%s"%self.build_message(warnings, alerts, messages))
             
-            # Determining status ------------------------------------------------
+            #  Status ------------------------------------------------
             status=None
             if len(errors)>0:status="ERROR"
             elif len(warnings)>0 and len(alerts) == 0: status='WARNING'
