@@ -39,8 +39,6 @@ Loads `~/wpwatcher.conf` as the default config file
 
     wpwatcher
 
-`wpwatcher` command takes some arguments: `--conf <path>` is the main one, other arguments will simply overwrite config values. See *Command arguments* section below for more inforamation.  
-
 Messages are printed to `stdout`
 
 The command should be in your `PATH` but you can always run the python script directly  
@@ -70,9 +68,12 @@ Tested with WPScan 3.7 on :
 
 ## Configuration
 
-The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments will have default values. 
+The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments will have default values.  
 Setup mail server settings in the config file if you want to receive reports.  
-If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
+
+`wpwatcher` command takes some arguments: `--conf <path>` is the main one, other arguments will simply overwrite config values. See *Command arguments* section below to see list of configurables values with CLI arguments. 
+
+If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
 
 All options can be missing from config file.
 
