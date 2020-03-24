@@ -169,7 +169,7 @@ def parse_json(wpscan_output):
                     alerts.extend(parse_findings("WordPress Database Export Found", data['db_exports'] ))
 
             if "timthumbs" in data :
-                if data['timthumbs']==None or len(data['timthumbs']==0):
+                if data['timthumbs']==None or len(data['timthumbs'])==0:
                     messages.append("WPScan did not find any timthumbs")
                 else:
                     for tt in data['timthumbs']:
