@@ -196,7 +196,8 @@ log_file=./wpwatcher.log
 # Print only errors and WPScan ALERTs
 quiet=No
 # Verbose terminal output and logging.
-# Print raw WPScan output before parsing
+# Print WPScan raw output 
+# Print parsed WPScan results
 verbose=No
 ```
 
