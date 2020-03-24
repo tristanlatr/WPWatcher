@@ -10,7 +10,7 @@ setup(
     description="WordPress Watcher is a Python wrapper for WPScan",
     url='https://github.com/tristanlatr/WPWatcher',
     maintainer='Florian Roth, Tristan Landès',
-    version='0.4.1',
+    version='0.4.2',
     py_modules=['wpscan_parser'],
     entry_points = {'console_scripts': ['wpwatcher=wpwatcher:wpwatcher'],},
     scripts=['wpwatcher.py','wpscan_parser.py'],
