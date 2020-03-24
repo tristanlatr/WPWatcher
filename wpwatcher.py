@@ -139,34 +139,37 @@ class WPWatcher():
             if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
             if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
             if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-            wordpress_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']
+            
+            # WPScan arguments
+            wpscan_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']
+            cmd=[self.conf['wpscan_path']] + wpscan_arguments + ['--url', wp_site['url']]
+            log.info("Scanning site %s with command: %s" % (wp_site['url'], ' '.join(cmd)))
             
             # Scan -------------------------------------------------------------------
             try:
-                cmd=[self.conf['wpscan_path']] + wordpress_arguments + ['--url', wp_site['url']]
-                log.info("Scanning '%s' with command: %s" % (wp_site['url'], ' '.join(cmd)))
+                # Launch wpscan command
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
                 wpscan_output, _  = process.communicate()
                 wpscan_output=wpscan_output.decode("utf-8")
                 log.debug("WPScan raw output:\n"+wpscan_output)
+
                 # The target has at least one vulnerability.
                 # Currently, the interesting findings do not count as vulnerable things
                 # Vulnerable WordPress See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
-                if process.returncode==5:
-                    pass
-                    # log.info("WPScan exited with status code 5. This means the WordPress site is vulnerable")
 
-                elif process.returncode!=0:
+                if process.returncode in [1,2,3,4]:
                     # Handle scan error
-                    err_string="WPScan failed with exit code for site %s: %s. WPScan output: \n%s" % (wp_site['url'], str(process.returncode), wpscan_output)
+                    err_string="WPScan failed with exit code %s for site: %s. WPScan output: \n%s" % (str(process.returncode), wp_site['url'], wpscan_output)
                     log.error(" ".join(line.strip() for line in err_string.splitlines()))
                     errors.append(err_string)
                     exit_code=-1
 
+                # Even is the scan is a success, WPScan can return code 0 or 5 (vulnerable)
+
             except CalledProcessError as err:
                 # Handle scan error --------------------------------------------------
-                wpscan_output=str(err)
-                err_string="WPScan failed with exit code for site %s: %s. WPScan Output: \n%s" % (wp_site['url'], str(process.returncode), wpscan_output)
+                wpscan_output=str(err.output)
+                err_string="Failed to launch WPScan command with exit code %s for site: %s. WPScan output: \n%s"  % (str(process.returncode), wp_site['url'], wpscan_output)
                 log.error(" ".join(line.strip() for line in err_string.splitlines()))
                 errors.append(err_string)
                 exit_code=-1
@@ -220,11 +223,14 @@ class WPWatcher():
                                 infos=messages if self.conf['send_infos'] else None,
                                 status=status)
                         else: 
+                            # No report notice
                             log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config."%(status,wp_site['url']))
+                # Handle send mail error
                 except Exception as err:
                     log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: "+str(err))
                     exit_code=12
             else:
+                # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(status, wp_site['url']))
         
         if exit_code == 0:
@@ -289,7 +295,6 @@ class WPWatcherConfig(collections.abc.Mapping):
             self._conf = {
                 'wp_sites' :self.getjson(conf_parser,'wp_sites'),
                 'false_positive_strings' : self.getjson(conf_parser,'false_positive_strings'), 
-                'log_file':conf_parser.get('wpwatcher','log_file'),
                 'wpscan_args':self.getjson(conf_parser,'wpscan_args'),
                 'send_email_report':self.getbool(conf_parser, 'send_email_report'),
                 'send_errors':self.getbool(conf_parser, 'send_errors'),
@@ -300,6 +305,7 @@ class WPWatcherConfig(collections.abc.Mapping):
                 'quiet':self.getbool(conf_parser, 'quiet'),
                 'verbose':self.getbool(conf_parser, 'verbose'),
                 # not configurable with cli params
+                'log_file':conf_parser.get('wpwatcher','log_file'),
                 'wpscan_path':conf_parser.get('wpwatcher','wpscan_path'),
                 'smtp_server':conf_parser.get('wpwatcher','smtp_server'),
                 'smtp_auth':self.getbool(conf_parser, 'smtp_auth'),
@@ -382,32 +388,29 @@ def init_log(verbose=False, quiet=False, logfile=None):
         log.warning("Verbose and quiet values are both set to True. By default, verbose value has priority.")
     return (log)
 
+# Arguments can overwrite config file values
 def parse_args():
     parser = argparse.ArgumentParser(description='WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email. Some config arguments can be passed to the command. Warning: it will overwrite previous values from config file. Check https://github.com/tristanlatr/WPWatcher for more informations.')
     parser.add_argument('--conf', metavar='File path', help="Path to the config file(s). You can specify multiple files. Will try ./wpwatcher.conf or ~/wpwatcher.conf if left none. If no config file is found, mail server settings, WPScan path and arguments will have default values.", nargs='+', default=[])
-    
     parser.add_argument('--send_email_report', help="", action='store_true')
     parser.add_argument('--send_infos', help="", action='store_true')
     parser.add_argument('--send_errors', help="", action='store_true')
     parser.add_argument('--wp_sites',  metavar="URL", help="", nargs='+', default=[])
     parser.add_argument('--email_to',  metavar="Email", help="", nargs='+', default=[])
     parser.add_argument('--email_errors_to', metavar="Email", help="", nargs='+', default=[])
-    # parser.add_argument('--wpscan_args', metavar="Argument", help="", nargs='+', default=[])
     parser.add_argument('--false_positive_strings',  metavar="String", help="", nargs='+', default=[])
-    
     parser.add_argument('-v','--verbose', help="", action='store_true')
     parser.add_argument('-q','--quiet', help="", action='store_true')
-
     args = parser.parse_args()
-
     return(args)
 
 # Main program
 def wpwatcher():
     init_log()
-
     args=parse_args()
-
+    # Config file
+    conf_files=args.conf
+    # Parse config from args
     conf_from_args={}
     if args.quiet:
         conf_from_args['quiet']=True
@@ -421,23 +424,19 @@ def wpwatcher():
         conf_from_args['send_infos']=True
     if args.send_errors:
         conf_from_args['send_errors']=True
-    # if len(args.wpscan_args)>0:
-    #     conf_from_args['wpscan_args']=args.wpscan_args
     if len(args.wp_sites)>0:
-        conf_from_args['wp_sites']=[ {"url":site} for site in args.wp_sites]
+        conf_from_args['wp_sites']=[ {"url":site} for site in args.wp_sites ]
     if len(args.false_positive_strings)>0:
         conf_from_args['false_positive_strings']=args.false_positive_strings
     if len(args.email_to)>0:
         conf_from_args['email_to']=args.email_to
     if len(args.email_errors_to)>0:
         conf_from_args['email_errors_to']=args.email_errors_to
-    
-    conf_files=args.conf
-
+    # Init config dict: read config file and overwrite with config params
     conf=WPWatcherConfig(files=conf_files, conf=conf_from_args)
-
+    # Create main object
     wpwatcher=WPWatcher(conf)
-    
+    # Launch scans and quit
     exit(wpwatcher.run_scans_and_notify())
 
 if __name__ == '__main__':
