@@ -72,12 +72,17 @@ Tested with WPScan 3.7 on :
 
 ## Configuration
 
-The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments will have default values.  
+The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
+
 Setup mail server settings in the config file if you want to receive reports.  
 
-`wpwatcher` command takes some arguments: `--conf <path>` is the main one, other arguments will simply overwrite config values. See *Command arguments* section below to see list of configurables values with CLI arguments. 
+`wpwatcher` command takes some arguments: `--conf <File path>` is the main one, other arguments will simply overwrite config values.  
 
-If not specified with `--conf <path>` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
+You can specify multiple files `--conf File path [File path ...]`. Will overwrites the keys with each successive file.
+
+See *Command arguments* section below to see list of configurables values with CLI arguments. 
+
+If not specified with `--conf` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
 
 All options can be missing from config file.
 
@@ -267,7 +272,7 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `INFO`: Used for info output and `WPScan INFO`
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
-In addition to log messages, the readable report is printed to stdout
+In addition to log messages, the readable report, same as email report, is printed to stdout.
 
 ```log
 % python3 ./wpwatcher.py --conf ./test.conf

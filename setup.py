@@ -7,10 +7,10 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 setup(
     name='wpwatcher',
-    description="WordPress Watcher is a Python wrapper for WPScan",
+    description="WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.",
     url='https://github.com/tristanlatr/WPWatcher',
     maintainer='Florian Roth, Tristan Landès',
-    version='0.4.4',
+    version='0.5',
     py_modules=['wpscan_parser'],
     entry_points = {'console_scripts': ['wpwatcher=wpwatcher:wpwatcher'],},
     scripts=['wpwatcher.py','wpscan_parser.py'],
