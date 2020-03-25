@@ -202,6 +202,10 @@ quiet=No
 # Print WPScan raw output 
 # Print parsed WPScan results
 verbose=No
+
+# Raise exception and exit when WPScan failed or parsing error
+# Default behaviour is too log error, continue scans and return non zero status code
+fail_fast=No
 ```
 
 #### Command arguments
@@ -215,6 +219,7 @@ Warning: it will overwrite previous values from config file.
   --send_infos
   --send_errors
   --attach_wpscan_output
+  --fail_fast
   --wp_sites URL [URL ...]
   --email_to Email [Email ...]
   --email_errors_to Email [Email ...]

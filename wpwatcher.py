@@ -143,7 +143,7 @@ class WPWatcher():
             # Attachment log if attach_wpscan_output
             if wpscan_output and self.conf['attach_wpscan_output']:
                 # Remove color
-                wpscan_output = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',wpscan_output)
+                wpscan_output = re.sub('(\x1b|\[[0-9][0-9]?m)','',str(wpscan_output))
 
                 attachment=io.BytesIO(wpscan_output.encode())
                 part = MIMEBase("application", "octet-stream")
@@ -225,6 +225,7 @@ class WPWatcher():
                 log.error("Could not scan site %s"%wp_site['url'])
                 errors.append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: %s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wpscan_output)))
                 exit_code=-1
+                if self.conf['fail_fast']: raise Exception("WPScan failed")
             
             # Parse the results if no errors with wpscan -----------------------------
             else:
@@ -239,6 +240,7 @@ class WPWatcher():
                     log.error(err_string)
                     errors.append(err_string)
                     exit_code=-1
+                    if self.conf['fail_fast']: raise
                     
                 # Logfile ------------------------------------------------------
                 for message in messages:
@@ -291,6 +293,7 @@ class WPWatcher():
                 except Exception as err:
                     log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: "+str(err))
                     exit_code=12
+                    if self.conf['fail_fast']: raise
             else:
                 # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(status, wp_site['url']))
@@ -333,7 +336,8 @@ class WPWatcherConfig(collections.abc.Mapping):
                             'smtp_ssl':'No',
                             'from_email':"",
                             'quiet':'No',
-                            'verbose':'No'
+                            'verbose':'No',
+                            'fail_fast':'No'
                     }
             })
             # Search ~/wpwatcher.conf if file is not specified
@@ -376,7 +380,8 @@ class WPWatcherConfig(collections.abc.Mapping):
                 'smtp_user':conf_parser.get('wpwatcher','smtp_user'),
                 'smtp_pass':conf_parser.get('wpwatcher','smtp_pass'),
                 'smtp_ssl':self.getbool(conf_parser, 'smtp_ssl'),
-                'from_email':conf_parser.get('wpwatcher','from_email')
+                'from_email':conf_parser.get('wpwatcher','from_email'),
+                'fail_fast':self.getbool(conf_parser, 'fail_fast')
             }
 
             # WPWatcherConfig conf Args
@@ -460,6 +465,7 @@ def parse_args():
     parser.add_argument('--send_infos', help="", action='store_true')
     parser.add_argument('--send_errors', help="", action='store_true')
     parser.add_argument('--attach_wpscan_output', help="", action='store_true')
+    parser.add_argument('--fail_fast', help="", action='store_true')
     parser.add_argument('--wp_sites',  metavar="URL", help="", nargs='+', default=[])
     parser.add_argument('--email_to',  metavar="Email", help="", nargs='+', default=[])
     parser.add_argument('--email_errors_to', metavar="Email", help="", nargs='+', default=[])
