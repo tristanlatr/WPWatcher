@@ -32,3 +32,4 @@ smtp_ssl=Yes
 log_file=
 quiet=No
 verbose=No
+fail_fast=No

@@ -47,7 +47,7 @@ The command should be in your `PATH` but you can always run the python script di
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
-- You might want to use `--fast_fail` when you're setting up and configuring the script
+- You might want to use `--fail_fast` when you're setting up and configuring the script
 
 ### Crontab
 Add the following line to crontab to run WPWatcher every day and ignore errors.  
