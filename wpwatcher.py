@@ -20,6 +20,9 @@ import argparse
 import configparser
 import io
 import collections.abc
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
 
@@ -106,22 +109,44 @@ class WPWatcher():
             exit(-1)
 
     # Send email report with status and timestamp
-    def send_report(self, wp_site, warnings=None, alerts=None, infos=None, errors=None, emails=None, status=None):
+    def send_report(self, wp_site, warnings=None, alerts=None, infos=None, errors=None, emails=None, status=None, wpscan_output=None):
+        # To
         if emails: to_email=','.join( emails )
         else: to_email = ','.join( wp_site['email_to'] + self.conf['email_to'] )
+
         if to_email != "":
             # Building message
-            if (warnings or alerts) :message = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
-            else: message = "WPScan report\nSite: %s" % (wp_site['url'])
-            message+=self.build_message(warnings, alerts, infos, errors)
-            mime_msg = MIMEText(message)
-            mime_msg['Subject'] = 'WPWatcher %s report on %s - %s' % (  status,
+            message = MIMEMultipart("alternative")
+            message['Subject'] = 'WPWatcher %s report on %s - %s' % (  status,
                                                                         wp_site['url'],
                                                                         datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            mime_msg['From'] = self.conf['from_email']
-            mime_msg['To'] = to_email
+            message['From'] = self.conf['from_email']
+            message['To'] = to_email
+
+            # Email body
+            body=""
+            if (warnings or alerts) :body = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
+            else: body = "WPScan report\nSite: %s" % (wp_site['url'])
+            body+=self.build_message(warnings, alerts, infos, errors)
+            message.attach(MIMEText(body, "plain"))
+            
+            # Attachment log if attach_wpscan_output
+            if wpscan_output and self.conf['attach_wpscan_output']:
+                attachment=io.BytesIO(b'%s'%wpscan_output)
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+                # Encode file in ASCII characters to send by email    
+                encoders.encode_base64(part)
+                # Add header as key/value pair to attachment part
+                part.add_header(
+                    "Content-Disposition",
+                    "attachment; filename=%s"%(message['Subject']+".txt"),
+                )
+                message.attach(part)
+
             # Connecting and sending
-            log.info("Sending %s to %s" % (mime_msg['Subject'], to_email))
+            log.info("Sending %s to %s" % (message['Subject'], to_email))
+
             # SMTP Connection
             s = smtplib.SMTP(self.conf['smtp_server'])
             s.ehlo()
@@ -132,7 +157,7 @@ class WPWatcher():
             if self.conf['smtp_auth']:
                 s.login(self.conf['smtp_user'], self.conf['smtp_pass'])
             # Send Email
-            s.sendmail(self.conf['from_email'], to_email, mime_msg.as_string())
+            s.sendmail(self.conf['from_email'], to_email, message.as_string())
             s.quit()
             return(True)
         else:
@@ -210,7 +235,7 @@ class WPWatcher():
                 for alert in alerts:
                     log.critical(self.oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
                 
-                log.debug("Full parsed report:\n%s"%self.build_message(warnings, alerts, messages))
+                log.debug("Readable parsed report:\n%s"%self.build_message(warnings, alerts, messages))
             
             #  Status ------------------------------------------------
             status=None
@@ -225,9 +250,16 @@ class WPWatcher():
                     if len(errors)>0:
                         if self.conf['send_errors']:
                             if len(self.conf['email_errors_to'])>0:
-                                self.send_report(wp_site, errors=errors, emails=self.conf['email_errors_to'], status=status)
+                                self.send_report(wp_site, 
+                                    errors=errors, 
+                                    emails=self.conf['email_errors_to'], 
+                                    status=status, 
+                                    wpscan_output=wpscan_output)
                             else: 
-                                self.send_report(wp_site, errors=errors, status=status)
+                                self.send_report(wp_site, 
+                                    errors=errors, 
+                                    status=status, 
+                                    wpscan_output=wpscan_output)
                         else:
                             log.info("No WPWatcher ERROR email report have been sent for site %s. If you want to receive error emails, set send_errors=Yes in the config."%(wp_site['url']))
                     # Email -------------------------------------------------------------------
@@ -237,7 +269,7 @@ class WPWatcher():
                             self.send_report(wp_site, alerts=alerts,
                                 warnings=warnings if self.conf['send_warnings'] or self.conf['send_infos'] else None,
                                 infos=messages if self.conf['send_infos'] else None,
-                                status=status)
+                                status=status, wpscan_output=wpscan_output)
                         else: 
                             # No report notice
                             log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config."%(status,wp_site['url']))
@@ -280,6 +312,7 @@ class WPWatcherConfig(collections.abc.Mapping):
                             'email_errors_to':'null',
                             'send_warnings':'Yes',
                             'send_infos':'No',
+                            'attach_wpscan_output':'No',
                             'smtp_server':"",
                             'smtp_auth':'No',
                             'smtp_user':"",
@@ -321,6 +354,7 @@ class WPWatcherConfig(collections.abc.Mapping):
                 'send_infos':self.getbool(conf_parser, 'send_infos'),
                 'quiet':self.getbool(conf_parser, 'quiet'),
                 'verbose':self.getbool(conf_parser, 'verbose'),
+                'attach_wpscan_output':self.getbool(conf_parser, 'attach_wpscan_output'),
                 # not configurable with cli params
                 'log_file':conf_parser.get('wpwatcher','log_file'),
                 'wpscan_path':conf_parser.get('wpwatcher','wpscan_path'),
@@ -412,6 +446,7 @@ def parse_args():
     parser.add_argument('--send_email_report', help="", action='store_true')
     parser.add_argument('--send_infos', help="", action='store_true')
     parser.add_argument('--send_errors', help="", action='store_true')
+    parser.add_argument('--attach_wpscan_output', help="", action='store_true')
     parser.add_argument('--wp_sites',  metavar="URL", help="", nargs='+', default=[])
     parser.add_argument('--email_to',  metavar="Email", help="", nargs='+', default=[])
     parser.add_argument('--email_errors_to', metavar="Email", help="", nargs='+', default=[])
@@ -441,6 +476,8 @@ def wpwatcher():
         conf_from_args['send_infos']=True
     if args.send_errors:
         conf_from_args['send_errors']=True
+    if args.attach_wpscan_output:
+        conf_from_args['attach_wpscan_output']=True
     if len(args.wp_sites)>0:
         conf_from_args['wp_sites']=[ {"url":site} for site in args.wp_sites ]
     if len(args.false_positive_strings)>0:

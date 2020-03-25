@@ -18,6 +18,7 @@ send_email_report=No
 send_warnings=Yes
 send_infos=No
 send_errors=No
+attach_wpscan_output=No
 email_to=["you@domain"]
 from_email=WordPressWatcher@domain.com
 # email_errors_to=["admins@domain"]

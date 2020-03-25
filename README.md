@@ -168,6 +168,9 @@ send_infos=No
 # If missing, default to No
 send_errors=No
 
+# Will attach text output file with raw WPScan output when sending a report
+attach_wpscan_output=No
+
 # Global email report recepients, will always receive email reports for all sites
 # Must be a valid Json string
 email_to=["securityalerts@domain.com"]
@@ -211,6 +214,7 @@ Warning: it will overwrite previous values from config file.
   --send_email_report
   --send_infos
   --send_errors
+  --attach_wpscan_output
   --wp_sites URL [URL ...]
   --email_to Email [Email ...]
   --email_errors_to Email [Email ...]
