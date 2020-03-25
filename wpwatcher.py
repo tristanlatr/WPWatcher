@@ -132,7 +132,7 @@ class WPWatcher():
             
             # Attachment log if attach_wpscan_output
             if wpscan_output and self.conf['attach_wpscan_output']:
-                attachment=io.BytesIO(b'%s'%wpscan_output)
+                attachment=io.BytesIO(wpscan_output.encode())
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(attachment.read())
                 # Encode file in ASCII characters to send by email    
