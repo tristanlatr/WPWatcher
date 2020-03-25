@@ -156,7 +156,7 @@ class WPWatcher():
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
-                    "attachment; filename=%s"%(self.get_valid_filename('WPScan_report_%s_%s' % (wp_site['url'], datetimenow))),
+                    "attachment; filename=%s.txt"%(self.get_valid_filename('WPScan_report_%s_%s' % (wp_site['url'], datetimenow))),
                 )
                 message.attach(part)
 
