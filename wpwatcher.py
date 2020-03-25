@@ -67,7 +67,12 @@ class WPWatcher():
         (exit_code, output)=(0,"")
         # WPScan arguments
         cmd=[self.conf['wpscan_path']] + list(args) 
-        log.debug("Running WPScan command: %s" % ' '.join(cmd) )
+        # Log wpscan command without api token
+        logged_cmd=[self.conf['wpscan_path']] + list(args) 
+        # Replace --api-token param with *** for safe logging
+        if "--api-token" in logged_cmd :
+            logged_cmd[logged_cmd.index("--api-token")+1]="***"
+        log.debug("Running WPScan command: %s" % ' '.join(logged_cmd) )
         # Run wpscan -------------------------------------------------------------------
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
@@ -185,12 +190,11 @@ class WPWatcher():
     @staticmethod
     def build_message(warnings=None, alerts=None, infos=None, errors=None, site=None):
         
-        message="Hello,\n\n"
-        message+="This is your WordPress security scan report report for site: %s\n\n" % (site)
+        message="WordPress security scan report for site: %s\n\n" % (site)
         
-        if errors : message += "An error occurred, probably with WPScan."
+        if errors : message += "An error occurred."
         elif alerts : message += "Issues have been detected by WPScan. Your WordPress site is vulnerable."
-        elif warnings: message += "Issues have been detected by WPScan. Probably a plugin, theme or WordPress itself require a upgrade."
+        elif warnings: message += "Issues have been detected by WPScan."
         else: message += "WPScan found some informations."
         
         if errors:
@@ -236,6 +240,10 @@ class WPWatcher():
             
             # Scan -------------------------------------------------------------------
             (wpscan_exit_code, wpscan_output) = self.wpscan(*wpscan_arguments)
+
+            # Replace --api-token param with *** for safe logging
+            if "--api-token" in wpscan_arguments:
+                wpscan_arguments[wpscan_arguments.index("--api-token")+1]="***"
 
             # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
             if wpscan_exit_code not in [0,5]:
