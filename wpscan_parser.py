@@ -46,12 +46,16 @@ Ressource PArsing CLI output:
     List of all icons: https://github.com/wpscanteam/CMSScanner/blob/master/app/formatters/cli.rb
 """
 
-def parse_results(wpscan_output, false_positives=[], is_json=True):
+def parse_results(wpscan_output, false_positives=[]):
     # Init scan messages
     ( messages, warnings, alerts ) = ([],[],[])
-
+    is_json=False
+    try:
+        data=json.loads(wpscan_output)
+        is_json=True
+    except: pass
     if is_json:
-        (messages, warnings, alerts)=parse_json(wpscan_output)
+        (messages, warnings, alerts)=parse_json(data)
     else: 
         (messages, warnings, alerts)=parse_cli(wpscan_output)
     #Process false positives
@@ -143,12 +147,13 @@ def parse_cli(wpscan_output):
     else: 
         raise Exception("The file does not seem to be a WPScan CLI log.")
 
-def parse_json(wpscan_output):
+def parse_json(data):
      # Init scan messages
     ( messages, warnings, alerts ) = ([],[],[])
 
-    try :
-        data=json.loads(wpscan_output)
+    # try :
+    if True:
+        # data=json.loads(wpscan_output)
         # Do a sanity check to confirm the data is ok
         if data and 'target_url' in data and data['target_url']:
 
@@ -209,7 +214,7 @@ def parse_json(wpscan_output):
                         # Parse secondary theme warnings
                         warnings.extend(parse_warning_theme_or_plugin('theme',theme) )
                         # Parse secondary Vulnerable themes
-                        alerts.extend(parse_findings('Vulnerable theme',theme["vulnerabilities"]) )
+                        alerts.extend(parse_findings('Vulnerable theme', data["themes"][theme]["vulnerabilities"]) )
             
             if "plugins" in data:
                 if data["plugins"]==None or len(data["plugins"])==0:
@@ -274,13 +279,13 @@ def parse_json(wpscan_output):
                 alerts.append(data['not_fully_configured'])
 
         else: 
-            raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, ouput: \n"+wpscan_output)
+            raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
     
-    except Exception as err:
-        # Default parsing is json, if fails will try cli
-        try: (messages, warnings, alerts)=parse_cli(wpscan_output)
-        except Exception as err2: 
-            raise Exception("Could not parse wpscan Json output. Error:\n"+str(err)+"\nCould not parse neither CLI output: "+str(err2))
+    # except Exception as err:
+    #     # Default parsing is json, if fails will try cli
+    #     try: (messages, warnings, alerts)=parse_cli(wpscan_output)
+    #     except Exception as err2: 
+    #         raise Exception("Could not parse wpscan Json output. Error:\n"+str(err)+"\nCould not parse neither CLI output: "+str(err2))
 
     return (( messages, warnings, alerts ))
 
@@ -392,21 +397,21 @@ def parse_warning_theme_or_plugin(finding_type,finding):
     findingData=""
 
     if 'slug' in finding:
-        findingData+="%s\n" % finding['slug']
+        findingData+="%s" % finding['slug']
     
     if "location" in finding:
             findingData += "\nLocation: %s" % finding["location"]
 
     if 'outdated' in finding and finding['outdated']==True:
-        findingData+="The version of your %s is out of date. The latest version is %s." % (finding_type,finding["latest_version"])
+        findingData+="\nThe version of your %s is out of date. The latest version is %s." % (finding_type,finding["latest_version"])
         warn=True
 
     if "directory_listing" in finding and finding['directory_listing']:
-        findingData+="The %s allows directory listing: %s" % (finding_type,finding["location"])
+        findingData+="\nThe %s allows directory listing: %s" % (finding_type,finding["location"])
         warn=True
 
     if "error_log_url" in finding and finding['error_log_url']:
-        findingData+="The %s error log accessible: %s" % (finding_type,finding["error_log_url"])
+        findingData+="\nThe %s error log accessible: %s" % (finding_type,finding["error_log_url"])
         warn=True
 
     # if "found_by" in finding:

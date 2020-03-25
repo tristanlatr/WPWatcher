@@ -245,7 +245,7 @@ class WPWatcher():
                         self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
 
                 except Exception as err:
-                    err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output: {}".format(wp_site['url'],str(err), wpscan_output)
+                    err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output:\n{}".format(wp_site['url'],str(err), wpscan_output)
                     log.error(err_string)
                     errors.append(err_string)
                     exit_code=-1
