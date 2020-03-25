@@ -19,6 +19,7 @@ from subprocess import CalledProcessError
 import argparse
 import configparser
 import io
+import unicodedata
 import collections.abc
 from email import encoders
 from email.mime.base import MIMEBase
@@ -107,6 +108,16 @@ class WPWatcher():
         if exit_code!=0: 
             log.error("Error updating WPScan")
             exit(-1)
+    @staticmethod
+    def slugify(value):
+        """
+        Normalizes string, converts to lowercase, removes non-alpha characters,
+        and converts spaces to hyphens.
+        """
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore')
+        value = re.sub('[^\w\s-]', '', value).strip().lower()
+        value = re.sub('[-\s]+', '-', value)
+        return value
 
     # Send email report with status and timestamp
     def send_report(self, wp_site, warnings=None, alerts=None, infos=None, errors=None, emails=None, status=None, wpscan_output=None):
@@ -115,11 +126,10 @@ class WPWatcher():
         else: to_email = ','.join( wp_site['email_to'] + self.conf['email_to'] )
 
         if to_email != "":
+            datetimenow=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             # Building message
             message = MIMEMultipart("alternative")
-            message['Subject'] = 'WPWatcher %s report on %s - %s' % (  status,
-                                                                        wp_site['url'],
-                                                                        datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            message['Subject'] = 'WPWatcher %s report on %s - %s' % (  status, wp_site['url'], datetimenow)
             message['From'] = self.conf['from_email']
             message['To'] = to_email
 
@@ -132,6 +142,9 @@ class WPWatcher():
             
             # Attachment log if attach_wpscan_output
             if wpscan_output and self.conf['attach_wpscan_output']:
+                # Remove color
+                wpscan_output = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',wpscan_output)
+
                 attachment=io.BytesIO(wpscan_output.encode())
                 part = MIMEBase("application", "octet-stream")
                 part.set_payload(attachment.read())
@@ -140,7 +153,7 @@ class WPWatcher():
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
-                    "attachment; filename=%s"%(message['Subject']+".txt"),
+                    "attachment; filename=%s"%(self.slugify('WPScan_report_%s_%s' % (wp_site['url'], datetimenow))),
                 )
                 message.attach(part)
 
