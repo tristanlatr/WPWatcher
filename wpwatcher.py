@@ -210,6 +210,10 @@ class WPWatcher():
             if 'url' not in wp_site or wp_site['url']=="":
                 log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
                 exit_code=-1
+                # Fail fast
+                if self.conf['fail_fast']: 
+                    log.info("Failure. Scans aborted.") 
+                    exit(-1)
                 continue
             if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
             if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
@@ -228,7 +232,9 @@ class WPWatcher():
                 log.error("Could not scan site %s"%wp_site['url'])
                 errors.append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: %s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wpscan_output)))
                 exit_code=-1
-                if self.conf['fail_fast']: raise Exception("WPScan failed")
+                if self.conf['fail_fast']: 
+                    log.info("Failure. Scans aborted.")
+                    exit(-1)
             
             # Parse the results if no errors with wpscan -----------------------------
             else:
@@ -243,7 +249,9 @@ class WPWatcher():
                     log.error(err_string)
                     errors.append(err_string)
                     exit_code=-1
-                    if self.conf['fail_fast']: raise
+                    if self.conf['fail_fast']: 
+                        log.info("Failure. Scans aborted.")
+                        raise
                     
                 # Logfile ------------------------------------------------------
                 for message in messages:
@@ -296,7 +304,9 @@ class WPWatcher():
                 except Exception as err:
                     log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: "+str(err))
                     exit_code=12
-                    if self.conf['fail_fast']: raise
+                    if self.conf['fail_fast']: 
+                        log.info("Failure. Scans aborted.")
+                        raise
             else:
                 # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(status, wp_site['url']))

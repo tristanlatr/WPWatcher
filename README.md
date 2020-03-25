@@ -203,8 +203,8 @@ quiet=No
 # Print parsed WPScan results
 verbose=No
 
-# Raise exception and exit when WPScan failed or parsing error
-# Default behaviour is too log error, continue scans and return non zero status code
+# Raise exceptions with stack trace or exit when WPScan failed
+# Default behaviour is too log error, continue scans and return non zero status code when all scans are over
 fail_fast=No
 ```
 
