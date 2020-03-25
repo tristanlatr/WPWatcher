@@ -497,6 +497,8 @@ def wpwatcher():
         conf_from_args['send_errors']=True
     if args.attach_wpscan_output:
         conf_from_args['attach_wpscan_output']=True
+    if args.fail_fast:
+        conf_from_args['fail_fast']=True
     if len(args.wp_sites)>0:
         conf_from_args['wp_sites']=[ {"url":site} for site in args.wp_sites ]
     if len(args.false_positive_strings)>0:
