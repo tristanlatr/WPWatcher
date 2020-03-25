@@ -113,7 +113,7 @@ def parse_cli(wpscan_output):
                 if 'Insecure' in line: 
                     warning_on = True
                 # Lower voice of Vulnerabilities found but not plugin version
-                if 'The version could not be determined' in line:
+                if 'The version could not be determined' in line and alert_on:
                         alert_on = False  
                         warning_on = True 
 
