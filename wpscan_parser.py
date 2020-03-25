@@ -217,19 +217,21 @@ def parse_cli(wpscan_output):
         alert_on = False
         # Test if cli_with_colors
         cli_with_colors= ( "32m[+]" in wpscan_output )
-        message="" # Every blank ("") line will be considered as a message separator
+        message="" 
+        # Every blank ("") line will be considered as a message separator
         for line in wpscan_output.splitlines():
 
             # Parse all output lines and build infos, warnings and alerts
             line=line.strip()
 
-            # Append line to message line if line is not ignored : empty content lines are ignored
+            # Empty content lines are ignored
+            # Parse the line and Toogle Warning/Alert
             if line!="" and line!="|":   
 
                 # Toogle Warning/Alert if specific match in any line of the message
                 if cli_with_colors==False:
 
-                    # Method 1 : No color. Warnings string are hard coded here
+                    # Method 1 : No color. Warnings string are hard coded here -------------
                     # Remove colorization
                     # line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
                     if "[!]" in line and any([m in line for m in [   
@@ -240,27 +242,36 @@ def parse_cli(wpscan_output):
                     elif "[!]" in line :
                         alert_on = True
 
-                else: # Cli with colors parsing
+                    # Method 2 : Cli with colors parsing ------------------------------------
+                else: 
                     if "33m[!]" in line: warning_on=True
                     if "31m[!]" in line: alert_on = True
                     # Remove colorization anyway after parsing
                     line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
 
+                # Both method with color and no color apply supplementary proccessing 
                 # Warning for insecure Wordpress
-                if 'insecure' in line.lower(): warning_on = True
+                if 'Insecure' in line: warning_on = True
+                # Lower voice of Vulnerabilities found but not plugin version
+                if 'The version could not be determined' in message:
+                        alert_on = False  
+                        warning_on = True 
 
+                # When line message has been read and parsed
                 # Append line to message. Handle the begin of the message case
                 message+= line if message=="" else '\n'+line 
 
-            # End of the message just a white line.
+            # Message separator just a white line.
             elif line=="":
-                # Append messages to list of infos, warns and alerts
-                #   only if the message if not empty
+                # Only if the message if not empty. 
+                # End of the message
                 if message.strip() != "":
+                    # Append messages to list of infos, warns and alerts
                     if alert_on: alerts.append(message)
                     elif warning_on: warnings.append(message)
                     else: messages.append(message)
                     message=""
+                    # Reset Toogle Warning/Alert
                     alert_on = False  
                     warning_on = False
 
