@@ -39,20 +39,24 @@ Loads `~/wpwatcher.conf` as the default config file
 
     wpwatcher
 
-Messages are printed to `stdout`
+Messages are printed to `stdout`.
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
     python3 ./wpwatcher.py
 
+#### Notes
+- The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
+- You might want to use `--fast_fail` when you're setting up and configuring the script
+
 ### Crontab
 Add the following line to crontab to run WPWatcher every day and ignore errors.  
 
-    0 0 * * * wpwatcher >/dev/null 2>&1
+    0 0 * * * wpwatcher >/dev/null
 
 If you want to receive email alerts when script fail with cron `MAILTO` feature.
 
-    0 0 * * * wpwatcher | grep 'ERROR'
+    0 0 * * * wpwatcher --quiet
 
 To print only ERRORS and WPScan ALERTS, set `quiet=Yes` in your config.
 
@@ -145,10 +149,15 @@ false_positive_strings=["You can get a free API token with 50 daily requests by 
 #   But not all informations are logged. 
 # Using "--format", "cli" will parse full WPScan output with [!] etc
 #   Logs all informations
+#
+# See wpscan --help for more informations about WPScan options
 wpscan_args=[   "--format", "cli",
                 "--no-banner",
                 "--random-user-agent", 
-                "--disable-tls-checks" ]
+                "--disable-tls-checks",
+                "--detection-mode", "aggressive",
+                "--enumerate", "t,p,tt,cb,dbe,u,m",
+                "--api-token", "<TOKEN>" ]
 
 # Whether to send emails for alerting of the WPScan result (ALERT or other)
 # If missing, default to No
@@ -196,7 +205,8 @@ smtp_ssl=Yes
 
 # Local log file
 log_file=./wpwatcher.log
-# Print only errors and WPScan ALERTs
+# Quiet
+# Print only errors and WPScan ALERTS
 quiet=No
 # Verbose terminal output and logging.
 # Print WPScan raw output 
@@ -204,7 +214,7 @@ quiet=No
 verbose=No
 
 # Raise exceptions with stack trace or exit when WPScan failed
-# Default behaviour is too log error, continue scans and return non zero status code when all scans are over
+# Default behaviour is to log error, continue scans and return non zero status code when all scans are over
 fail_fast=No
 ```
 
@@ -257,6 +267,8 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `INFO`: Used for info output and `WPScan INFO`
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
+In addition to log messages, the readable report is printed to stdout
+
 ```log
 % python3 ./wpwatcher.py --conf ./test.conf
 INFO - Updating WPScan
@@ -285,11 +297,19 @@ CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 
 CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 5.3 - Stored XSS via Block Editor Content Fixed In: 5.1.4 References: - CVE-2019-16781 - CVE-2019-16780 url: https://wordpress.org/news/2019/12/wordpress-5-3-1-security-and-maintenance-release/, https://github.com/WordPress/wordpress-develop/security/advisories/GHSA-pg4x-64rh-3c9v - WPVulnDB(9976): https://wpvulndb.com/vulnerabilities/9976
 CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 5.3 - wp_kses_bad_protocol() Colon Bypass Fixed In: 5.1.4 References: - CVE-2019-20041 url: https://wordpress.org/news/2019/12/wordpress-5-3-1-security-and-maintenance-release/, https://github.com/WordPress/wordpress-develop/commit/b1975463dd995da19bb40d3fa0786498717e3c53 - WPVulnDB(10004): https://wpvulndb.com/vulnerabilities/10004
 INFO - No WPWatcher ALERT email report have been sent for site wp.exemple.com. If you want to receive emails, set send_email_report=Yes in the config.
+
+Hello,
+
+This is your WordPress security scan report report for site: wp.exemple.com
+
+Issues have been detected by WPScan. Your WordPress site is vulnerable.
+
+        Alerts
+
+[...]
+
 INFO - Scans finished successfully.
 ```
-
-## Notes
-- The script will automatically try to delete all temp wpscan files in `/tmp/wpscan` before starting scans
 
 ## Questions ?
 If you have any questions, please create a new issue.

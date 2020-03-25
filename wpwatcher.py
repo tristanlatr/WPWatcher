@@ -48,6 +48,11 @@ class WPWatcher():
             log.error("There is an issue with your WPScan installation or WPScan not installed. Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
 
+        # Check sites are in the config
+        if len(conf['wp_sites'])==0:
+            log.info("No sites configured, please provide wp_sites in config file or use --wp_sites URL [URL...]")
+            exit(-1)
+
         # Update wpscan database
         self.update_wpscan()
 
@@ -137,10 +142,7 @@ class WPWatcher():
             message['To'] = to_email
 
             # Email body
-            body=""
-            if (warnings or alerts) :body = "Issues have been detected by WPScan.\nSite: %s" % (wp_site['url'])
-            else: body = "WPScan report\nSite: %s" % (wp_site['url'])
-            body+=self.build_message(warnings, alerts, infos, errors)
+            body=self.build_message(warnings, alerts, infos, errors, site=wp_site['url'])
             message.attach(MIMEText(body, "plain"))
             
             # Attachment log if attach_wpscan_output
@@ -181,8 +183,16 @@ class WPWatcher():
             return(True)
     
     @staticmethod
-    def build_message(warnings=None, alerts=None, infos=None, errors=None):
-        message=""
+    def build_message(warnings=None, alerts=None, infos=None, errors=None, site=None):
+        
+        message="Hello,\n\n"
+        message+="This is your WordPress security scan report report for site: %s\n\n" % (site)
+        
+        if errors : message += "An error occurred, probably with WPScan."
+        elif alerts : message += "Issues have been detected by WPScan. Your WordPress site is vulnerable."
+        elif warnings: message += "Issues have been detected by WPScan. Probably a plugin, theme or WordPress itself require a upgrade."
+        else: message += "WPScan found some informations."
+        
         if errors:
             message += "\n\n\tErrors\n\n"
             message += "\n\n".join(errors)
@@ -195,6 +205,7 @@ class WPWatcher():
         if infos:
             message += "\n\n\tInformations\n\n"
             message += "\n\n".join(infos)
+
         return message
 
     # Run WPScan on defined websites
@@ -230,7 +241,7 @@ class WPWatcher():
             if wpscan_exit_code not in [0,5]:
                 # Handle scan error
                 log.error("Could not scan site %s"%wp_site['url'])
-                errors.append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: %s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wpscan_output)))
+                errors.append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wpscan_output)))
                 exit_code=-1
                 if self.conf['fail_fast']: 
                     log.info("Failure. Scans aborted.")
@@ -252,7 +263,7 @@ class WPWatcher():
                     if self.conf['fail_fast']: 
                         log.info("Failure. Scans aborted.")
                         raise
-                    
+
                 # Logfile ------------------------------------------------------
                 for message in messages:
                     log.info(self.oneline("** WPScan INFO %s ** %s" % (wp_site['url'], message )))
@@ -260,8 +271,7 @@ class WPWatcher():
                     log.warning(self.oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
                 for alert in alerts:
                     log.critical(self.oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
-                
-                log.debug("Readable parsed report:\n%s"%self.build_message(warnings, alerts, messages))
+                # log.debug("Readable parsed report:\n%s"%self.build_message(warnings, alerts, messages))
             
             #  Status ------------------------------------------------
             status=None
@@ -269,6 +279,10 @@ class WPWatcher():
             elif len(warnings)>0 and len(alerts) == 0: status='WARNING'
             elif len(alerts)>0: status='ALERT'
             else: status='INFO'
+
+            # Deleting unwanted informations in report text
+            warnings=warnings if self.conf['send_warnings'] or self.conf['send_infos'] else None
+            messages=messages if self.conf['send_infos'] else None
 
             if self.conf['send_email_report']:
                 try:
@@ -293,8 +307,7 @@ class WPWatcher():
                         
                         if self.conf['send_infos'] or ( status=="WARNING" and self.conf['send_warnings'] ) or status=='ALERT':
                             self.send_report(wp_site, alerts=alerts,
-                                warnings=warnings if self.conf['send_warnings'] or self.conf['send_infos'] else None,
-                                infos=messages if self.conf['send_infos'] else None,
+                                warnings=warnings, infos=messages,
                                 status=status, wpscan_output=wpscan_output)
                         else: 
                             # No report notice
@@ -310,7 +323,15 @@ class WPWatcher():
             else:
                 # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(status, wp_site['url']))
-        
+
+            # Printing to stdout if not quiet
+            # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
+            if self.conf['quiet']==False: 
+                print()
+                print(self.build_message(alerts=alerts,
+                    warnings=warnings, infos=messages, errors=errors, site=wp_site['url']))
+                print()
+
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
@@ -334,7 +355,7 @@ class WPWatcherConfig(collections.abc.Mapping):
                             'false_positive_strings' : 'null',                        
                             'wpscan_path':'wpscan',
                             'log_file':"",
-                            'wpscan_args':'null',
+                            'wpscan_args':'''["--no-banner","--random-user-agent"]''',
                             'send_email_report':'No',
                             'send_errors':'No',
                             'email_to':'null',
@@ -373,9 +394,10 @@ class WPWatcherConfig(collections.abc.Mapping):
 
             # Saving config file in right dict format - no 'wpwatcher' item, just config
             self._conf = {
+
+                # Configurable witg cli arguments
                 'wp_sites' :self.getjson(conf_parser,'wp_sites'),
                 'false_positive_strings' : self.getjson(conf_parser,'false_positive_strings'), 
-                'wpscan_args':self.getjson(conf_parser,'wpscan_args'),
                 'send_email_report':self.getbool(conf_parser, 'send_email_report'),
                 'send_errors':self.getbool(conf_parser, 'send_errors'),
                 'email_to':self.getjson(conf_parser,'email_to'),
@@ -385,19 +407,23 @@ class WPWatcherConfig(collections.abc.Mapping):
                 'quiet':self.getbool(conf_parser, 'quiet'),
                 'verbose':self.getbool(conf_parser, 'verbose'),
                 'attach_wpscan_output':self.getbool(conf_parser, 'attach_wpscan_output'),
-                # not configurable with cli params
-                'log_file':conf_parser.get('wpwatcher','log_file'),
+                'fail_fast':self.getbool(conf_parser, 'fail_fast'),
+                
+                # Not configurable with cli arguments
+                    
                 'wpscan_path':conf_parser.get('wpwatcher','wpscan_path'),
+                'wpscan_args':self.getjson(conf_parser,'wpscan_args'),
+                'log_file':conf_parser.get('wpwatcher','log_file'),
                 'smtp_server':conf_parser.get('wpwatcher','smtp_server'),
                 'smtp_auth':self.getbool(conf_parser, 'smtp_auth'),
                 'smtp_user':conf_parser.get('wpwatcher','smtp_user'),
                 'smtp_pass':conf_parser.get('wpwatcher','smtp_pass'),
                 'smtp_ssl':self.getbool(conf_parser, 'smtp_ssl'),
-                'from_email':conf_parser.get('wpwatcher','from_email'),
-                'fail_fast':self.getbool(conf_parser, 'fail_fast')
+                'from_email':conf_parser.get('wpwatcher','from_email')
+                
             }
 
-            # WPWatcherConfig conf Args
+            # Overwrite WPWatcherConfig with conf dict biult from CLI Args
             if conf:
                 # Apply arguments
                 # log.info("Applying config from aguments: "+str(conf))
@@ -406,7 +432,8 @@ class WPWatcherConfig(collections.abc.Mapping):
         except Exception as err: 
             log.error("Could not read config " + str(files) + ". Error: "+str(err))
             exit(-1)
-    
+
+    # Implement read-only dict interface
     def __getitem__(self, key): 
         return self._conf[key]
     def __len__(self):
@@ -494,7 +521,7 @@ def wpwatcher():
     args=parse_args()
     # Config file
     conf_files=args.conf
-    # Parse config from args
+    # Build dict config from args
     conf_from_args={}
     if args.quiet:
         conf_from_args['quiet']=True
@@ -524,7 +551,7 @@ def wpwatcher():
     conf=WPWatcherConfig(files=conf_files, conf=conf_from_args)
     # Create main object
     wpwatcher=WPWatcher(conf)
-    # Launch scans and quit
+    # Run scans and quit
     exit(wpwatcher.run_scans_and_notify())
 
 if __name__ == '__main__':
