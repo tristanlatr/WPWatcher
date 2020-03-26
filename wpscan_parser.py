@@ -1,11 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: iso-8859-1 -*-
 # -*- coding: utf-8 -*-
-import json
-import re
-import sys
-import argparse
 # WPScan output parser
+# 
+# Authors: Florian Roth, Tristan Landès
+#
 # DISCLAIMER - USE AT YOUR OWN RISK.
 # 
 # Some infos are intentionally ignored when parsing Json to have shorter output.
@@ -45,6 +44,11 @@ Dradis ruby json Parser
 Ressource PArsing CLI output:
     List of all icons: https://github.com/wpscanteam/CMSScanner/blob/master/app/formatters/cli.rb
 """
+
+import json
+import re
+import sys
+import argparse
 
 def parse_results(wpscan_output, false_positives=[]):
     # Init scan messages
