@@ -94,7 +94,7 @@ If you have large number of sites to watch, you'll probably need to separate con
 - `wpwatcher.conf`: contains all configurations expect `wp_wites`
 - `wp_sites_1.conf`: contains firsts sites
 - `wp_sites_2.conf`: contain the rest  ...  
-In your crontab, configure script to run at your conveniance. For exemple, if you have two lists :
+In your crontab, configure script to run at your convenience. For exemple, if you have two lists :
 ```
 # Will only run on odd days:
 0 0 1-31/2 * * wpwatcher --conf wpwatcher.conf wp_sites_1.conf --quiet
