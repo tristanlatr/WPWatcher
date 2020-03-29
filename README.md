@@ -27,27 +27,28 @@ git pull && python3 setup.py install
 ```
 
 ### Configure
-Copy template config file on your system and configure script.  
-See *Configuration* bellow to learn more about options.
+Create and edit the new default config file from template.   
+`--template_conf` print a default config file.  
+
 ```bash
 wpwatcher --template_conf > ~/wpwatcher.conf
 vim ~/wpwatcher.conf
 ```
-If not specified with `--conf` parameter, loads `~/wpwatcher.conf` as the default config file. 
-
+If not specified with `--conf` parameter, try to load `~/wpwatcher.conf`.   
+See *Configuration* bellow to learn more about options and how to and configure the script.    
 ### Execute
 
-    wpwatcher [--conf File path [File path ...]]
+    wpwatcher [--conf File path [File path ...]] [...]
 
 See other supported arguments in the sction *Command arguments* bellow.
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
-    python3 ./wpwatcher.py
+    python3 ./wpwatcher.py [...]
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
-- You might want to use `--fail_fast` when you're setting up and configuring the script
+- You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
 
 ### Crontab
@@ -68,30 +69,37 @@ To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your
 
 ## Compatibility
 Tested with WPScan 3.7 on :
-- MacOS (WPScan install wil `HomeBrew`) and 
+- MacOS (WPScan install wil `HomeBrew`)
 - Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
 
-The script must read a configuration file to set mail server settings, WPScan path and arguments. If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
+The script **must read a configuration file to set mail server settings, WPScan path and arguments**. If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
 
 Setup mail server settings in the config file if you want to receive reports.  
 
-`wpwatcher` command takes some arguments: `--conf <File path>` is the main one, other arguments will simply overwrite config values.  
+`wpwatcher` command takes some arguments: 
 
-You can specify multiple files `--conf <File path> [File path ...]`. Will overwrites the keys with each successive file.
-
-See *Command arguments* section below to see list of configurables values with CLI arguments. 
-
+`--conf <File path> [File path ...]` is the main one, you can specify multiple files. Will overwrites the keys with each successive file.  
 If not specified with `--conf` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
-
 All options can be missing from config file.
+
+`--`*`?`* Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--ff --verbose`
+
+See *Command arguments* section below to see list of configurables values with CLI arguments and shortcuts. 
+```
+usage: wpwatcher.py 
+
+[--em Email [Email ...]]
+[--send] [--infos] [--errors] [--attach]
+[--ff] [-v] [-q]
+```
 
 ### Note about WPScan API token
 
-Now, you need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerabilities data and be alerted of vulnerable WordPress or plugin. You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan arguments, number of plugins and site vulnerability. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests and have no money to put into this, you can create multiple configuration files and schedule scans on several days.  
+Now, you need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config, number of plugins and site vulnerability. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests and have no money to put into this, you can create multiple configuration files and schedule scans on several days.  
 
-If you have large number of sites to watch, you'll probably need to separate configs :  
+If you have large number of sites to watch, you'll probably need to separate sites in multiple files:  
 - `wpwatcher.conf`: contains all configurations expect `wp_wites`
 - `wp_sites_1.conf`: contains first X sites
 - `wp_sites_2.conf`: contain the rest  ...  
@@ -251,28 +259,29 @@ fail_fast=No
 Some config arguments can be passed to the `wpwatcher` command.   
 It will overwrite previous values from config file.
 ```
-usage: wpwatcher    [-h] [--conf File path [File path ...]] [--template_conf]
-                    [--send_email_report] [--send_infos] [--send_errors]
-                    [--attach_wpscan_output] [--fail_fast]
-                    [--wp_sites URL [URL ...]] [--email_to Email [Email ...]]
-                    [-v] [-q]
+usage: wpwatcher.py [-h] [--conf File path [File path ...]] [--template_conf]
+                    [--url URL [URL ...]] [--em Email [Email ...]] [--send]
+                    [--infos] [--errors] [--attach] [--ff] [-v] [-q]
 
 optional arguments:
   -h, --help            show this help message and exit
   --conf File path [File path ...]
-  --template_conf       Print a template config file.
-  --send_email_report   send_email_report=Yes
-  --send_infos          send_infos=Yes
-  --send_errors         send_errors=Yes
-  --attach_wpscan_output
-                        attach_wpscan_output=Yes
-  --fail_fast           fail_fast=Yes
-  --wp_sites URL [URL ...]
-                        wp_sites
-  --email_to Email [Email ...]
-                        email_to
-  -v, --verbose         verbose=Yes
-  -q, --quiet           quiet=Yes
+  --template_conf       Print a template config file
+  --url URL [URL ...], --wp_sites URL [URL ...]
+                        Configure wp_sites
+  --em Email [Email ...], --email_to Email [Email ...]
+                        Configure email_to
+  --send, --send_email_report
+                        Configure send_email_report=Yes
+  --infos, --send_infos
+                        Configure send_infos=Yes
+  --errors, --send_errors
+                        Configure send_errors=Yes
+  --attach, --attach_wpscan_output
+                        Configure attach_wpscan_output=Yes
+  --ff, --fail_fast     Configure fail_fast=Yes
+  -v, --verbose         Configure verbose=Yes
+  -q, --quiet           Configure quiet=Yes
 ```
 
 
