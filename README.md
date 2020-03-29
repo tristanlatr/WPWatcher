@@ -5,7 +5,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
   - Mail messages are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
-  - Mail notification and verbosity can be configred in config file 
+  - Mail notification and verbosity can be configred in config file, WPScan output can be attached to emails. 
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
@@ -33,13 +33,13 @@ See *Configuration* bellow to learn more about options.
 wpwatcher --template_conf > ~/wpwatcher.conf
 vim ~/wpwatcher.conf
 ```
-Loads `~/wpwatcher.conf` as the default config file
+If not specified with `--conf` parameter, loads `~/wpwatcher.conf` as the default config file. 
 
 ### Execute
 
-    wpwatcher
+    wpwatcher [--conf File path [File path ...]]
 
-Messages are printed to `stdout`.
+See other supported arguments in the sction *Command arguments* bellow.
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
@@ -48,6 +48,7 @@ The command should be in your `PATH` but you can always run the python script di
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--fail_fast` when you're setting up and configuring the script
+- All messages are printed to `stdout`.
 
 ### Crontab
 Add the following line to crontab to run WPWatcher every day and ignore errors.  
@@ -88,13 +89,14 @@ All options can be missing from config file.
 
 ### Note about WPScan API token
 
-Now, you need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerabilities data and be alerted of vulnerable WordPress or plugin. You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan arguments and site vulnerability. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests and have no money to put into this, you can create multiple configuration files and schedule scans on several days.  
+Now, you need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerabilities data and be alerted of vulnerable WordPress or plugin. You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan arguments, number of plugins and site vulnerability. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests and have no money to put into this, you can create multiple configuration files and schedule scans on several days.  
 
 If you have large number of sites to watch, you'll probably need to separate configs :  
 - `wpwatcher.conf`: contains all configurations expect `wp_wites`
-- `wp_sites_1.conf`: contains firsts sites
+- `wp_sites_1.conf`: contains first X sites
 - `wp_sites_2.conf`: contain the rest  ...  
-In your crontab, configure script to run at your convenience. For exemple, if you have two lists :
+
+In your crontab, configure script to run at your convenience. For exemple, with two lists :
 ```
 # Will only run on odd days:
 0 0 1-31/2 * * wpwatcher --conf wpwatcher.conf wp_sites_1.conf --quiet
@@ -115,12 +117,18 @@ wpscan_args=[   "--format", "json",
                 "--no-banner",
                 "--random-user-agent", 
                 "--disable-tls-checks",
-                "--api-token", "<TOKEN>" ]
+                "--api-token", "YOUR_API_TOKEN" ]
 send_email_report=Yes
 email_to=["me@exemple.com"]
 smtp_server=mailserver.exemple.com:25
 from_email=WordPressWatcher@exemple.com
 ```
+
+#### Save API Token in a file
+To keep the API Token in a config file and not have to supply it via the wpscan CLI argument in the WPWatcher config file, create the `~/.wpscan/scan.yml` file containing the below:
+
+    cli_options:
+      api_token: YOUR_API_TOKEN
 
 #### Full configuration options
 
@@ -136,7 +144,7 @@ wpscan_path=wpscan
 # List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments
 # Each dictrionnary must contain at least a "url" key
 # Must be a valid Json string
-# Cannot be missing
+# Must be supplied with config file or --wp_sites argument
 wp_sites=   [
         {   
             "url":"exemple.com",
@@ -151,8 +159,7 @@ wp_sites=   [
         },
         {   
             "url":"exemple3.com",
-            "email_to":["site_owner3@domain.com"],
-            "wpscan_args":["--enumerate", "vp,vt,cb,dbe,m"] 
+            "email_to":["site_owner3@domain.com"]
         }
     ]
 
@@ -178,8 +185,7 @@ wpscan_args=[   "--format", "cli",
                 "--random-user-agent", 
                 "--disable-tls-checks",
                 "--detection-mode", "aggressive",
-                "--enumerate", "t,p,tt,cb,dbe,u,m",
-                "--api-token", "<TOKEN>" ]
+                "--enumerate", "t,p,tt,cb,dbe,u,m"]
 
 # Whether to send emails for alerting of the WPScan result (ALERT or other)
 # If missing, default to No
