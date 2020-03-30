@@ -14,6 +14,10 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
   - Python 3 (standard libraries)
+#### Compatibility
+Tested with WPScan 3.7 on :
+- MacOS (WPScan install wil `HomeBrew`)
+- Linux (WPScan installed with `RubyGems`)  
 
 ## Install
 ```bash
@@ -25,33 +29,40 @@ cd WPWatcher && python3 setup.py install
 ```bash
 git pull && python3 setup.py install
 ```
+### Try out
 
-### Configure
-Create and edit the new default config file from template.   
-`--template_conf` print a default config file.  
-
-```bash
-wpwatcher --template_conf > ~/wpwatcher.conf
-vim ~/wpwatcher.conf
-```
-If not specified with `--conf` parameter, try to load `~/wpwatcher.conf`.   
-See *Configuration* bellow to learn more about options and how to and configure the script.    
-### Execute
-
-    wpwatcher [--conf File path [File path ...]] [...]
-
-See other supported arguments in the sction *Command arguments* bellow.
+    wpwatcher --url exemple.com exemple1.com
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
-    python3 ./wpwatcher.py [...]
+    python3 ./wpwatcher.py
+
+### Configure
+Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
+
+```bash
+wpwatcher --template_conf > ./wpwatcher.conf
+vim ./wpwatcher.conf
+```
+See *Configuration* bellow to learn more about options and how to and configure the script.    
+
+#### Execute
+
+    wpwatcher [--conf File path [File path ...]] [...]
+
+`--conf` is the main argument, you can specify multiple files. Will overwrites the keys with each successive file.  
+If not specified, it will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
+
+Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
+
+See complete list of supported arguments in the sction *Command arguments* bellow.
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
 
-### Crontab
+#### Crontab
 Add the following line to crontab to run WPWatcher every day and ignore errors.  
 
     0 0 * * * wpwatcher >/dev/null
@@ -62,42 +73,26 @@ If you want to receive email alerts with cron `MAILTO` feature.
 
 To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your config.
 
-#### Return non zero status code if :
+### Return non zero status code if :
 - One or more WPScan command failed
 - Unable to send one or more email report
 - Other errors
-
-## Compatibility
-Tested with WPScan 3.7 on :
-- MacOS (WPScan install wil `HomeBrew`)
-- Linux CentOS 7 (WPScan installed with `RubyGems`)
 
 ## Configuration
 
 The script **must read a configuration file to set mail server settings, WPScan path and arguments**. If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
 
-Setup mail server settings in the config file if you want to receive reports.  
+Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
 
-`wpwatcher` command takes some arguments: 
-
-`--conf <File path> [File path ...]` is the main one, you can specify multiple files. Will overwrites the keys with each successive file.  
-If not specified with `--conf` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
 All options can be missing from config file.
 
-`--`*`?`* Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--ff --verbose`
-
 See *Command arguments* section below to see list of configurables values with CLI arguments and shortcuts. 
-```
-usage: wpwatcher.py 
 
-[--em Email [Email ...]]
-[--send] [--infos] [--errors] [--attach]
-[--ff] [-v] [-q]
-```
+### Notes about WPScan API token
 
-### Note about WPScan API token
+You need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
 
-Now, you need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config, number of plugins and site vulnerability. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests and have no money to put into this, you can create multiple configuration files and schedule scans on several days.  
+You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests, you can create multiple configuration files and schedule scans on several days.  
 
 If you have large number of sites to watch, you'll probably need to separate sites in multiple files:  
 - `wpwatcher.conf`: contains all configurations expect `wp_wites`
@@ -112,7 +107,16 @@ In your crontab, configure script to run at your convenience. For exemple, with 
 0 0 2-30/2 * * wpwatcher --conf wpwatcher.conf wp_sites_2.conf --quiet
 ```
 
-#### Basic usage with mail report
+#### Save API Token in a file
+You can store the API Token in a different file and not have to supply it via the wpscan CLI argument in the WPWatcher config file. 
+Create the `~/.wpscan/scan.yml` file containing the below:
+
+    cli_options:
+      api_token: YOUR_API_TOKEN
+
+
+
+### Basic usage with mail report
 
 Simple configuration file without SMTP authentication 
 
@@ -132,13 +136,7 @@ smtp_server=mailserver.exemple.com:25
 from_email=WordPressWatcher@exemple.com
 ```
 
-#### Save API Token in a file
-To keep the API Token in a config file and not have to supply it via the wpscan CLI argument in the WPWatcher config file, create the `~/.wpscan/scan.yml` file containing the below:
-
-    cli_options:
-      api_token: YOUR_API_TOKEN
-
-#### Full configuration options
+### Full configuration options
 
 All configuration options with explanatory comments.
 
@@ -259,27 +257,23 @@ fail_fast=No
 Some config arguments can be passed to the `wpwatcher` command.   
 It will overwrite previous values from config file.
 ```
-usage: wpwatcher.py [-h] [--conf File path [File path ...]] [--template_conf]
-                    [--url URL [URL ...]] [--em Email [Email ...]] [--send]
-                    [--infos] [--errors] [--attach] [--ff] [-v] [-q]
-
 optional arguments:
   -h, --help            show this help message and exit
   --conf File path [File path ...]
-  --template_conf       Print a template config file
-  --url URL [URL ...], --wp_sites URL [URL ...]
+  --template_conf       Print a template config file.
+  --wp_sites URL [URL ...], --url URL [URL ...]
                         Configure wp_sites
-  --em Email [Email ...], --email_to Email [Email ...]
+  --email_to Email [Email ...], --em Email [Email ...]
                         Configure email_to
-  --send, --send_email_report
+  --send_email_report, --send
                         Configure send_email_report=Yes
-  --infos, --send_infos
+  --send_infos, --infos
                         Configure send_infos=Yes
-  --errors, --send_errors
+  --send_errors, --errors
                         Configure send_errors=Yes
-  --attach, --attach_wpscan_output
+  --attach_wpscan_output, --attach
                         Configure attach_wpscan_output=Yes
-  --ff, --fail_fast     Configure fail_fast=Yes
+  --fail_fast, --ff     Configure fail_fast=Yes
   -v, --verbose         Configure verbose=Yes
   -q, --quiet           Configure quiet=Yes
 ```
