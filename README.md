@@ -92,9 +92,9 @@ See *Command arguments* section below to see list of configurables values with C
 
 You need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
 
-You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. If you can't scan all your sites with 50 requests, you can create multiple configuration files and schedule scans on several days.  
+You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. 
 
-If you have large number of sites to watch, you'll probably need to separate sites in multiple files:  
+If you have large number of sites to watch, you'll probably can't scan all your sites with 50 requests. You can create multiple configuration files and schedule scans on several days. 
 - `wpwatcher.conf`: contains all configurations expect `wp_wites`
 - `wp_sites_1.conf`: contains first X sites
 - `wp_sites_2.conf`: contain the rest  ...  
@@ -108,13 +108,7 @@ In your crontab, configure script to run at your convenience. For exemple, with 
 ```
 
 #### Save API Token in a file
-You can store the API Token in a different file and not have to supply it via the wpscan CLI argument in the WPWatcher config file. 
-Create the `~/.wpscan/scan.yml` file containing the below:
-
-    cli_options:
-      api_token: YOUR_API_TOKEN
-
-
+You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
 ### Basic usage with mail report
 
