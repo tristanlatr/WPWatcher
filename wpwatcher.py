@@ -542,12 +542,13 @@ def parse_args():
 Some config arguments can be passed to the command.
 It will overwrite previous values from config file(s).
 Check %s for more informations."""%(GIT_URL), formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--conf', metavar='File path', help="""The script must read a configuration file to set mail server settings, WPScan path and arguments.
-If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.
-Setup mail server settings in the config file if you want to receive reports.\n`wpwatcher` command takes some arguments: `--conf <File path>` is the main one, other arguments will simply overwrite config values.
+    parser.add_argument('--conf', metavar='File path', help="""The script * must read a configuration file to set mail server settings, WPScan path and arguments *.     
+If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
+Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
 You can specify multiple files `--conf File path [File path ...]`. Will overwrites the keys with each successive file.
+All options keys can be missing from config file.
 If not specified with `--conf` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.\nAll options can be missing from config file.""", nargs='+', default=[])
-    parser.add_argument('--template_conf', help="Print a template config file.\nUse `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create and edit the new default config file.", action='store_true')
+    parser.add_argument('--template_conf', help="Print a template config file.\nUse `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.", action='store_true')
     parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=[])
     parser.add_argument('--email_to', '--em', metavar="Email", help="Configure email_to", nargs='+', default=[])
     parser.add_argument('--send_email_report', '--send', help="Configure send_email_report=Yes", action='store_true')
