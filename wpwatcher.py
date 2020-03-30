@@ -233,7 +233,7 @@ class WPWatcher():
                 "status":None
             }
 
-            # Check if url is present
+            # Check if url is present   
             if 'url' not in wp_site or wp_site['url']=="":
                 log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
                 exit_code=-1
@@ -426,9 +426,10 @@ fail_fast=No
                 log.info("No config file selected and could not find default config at ./wpwatcher.conf or ~/wpwatcher.conf. The script must read a configuration file to setup mail server settings, WPScan options and other features.")
 
             # Reading config 
-            if files:
-                if len(conf_parser.read(files))==0:
-                    log.error("Could not read config " + str(files) + ". Make sure the file exists, the format is OK and you have correct access right.")
+            else:
+                read_files=conf_parser.read(files)
+                if len(read_files) < len(files):
+                    log.error("Could not read config " + str(list(set(files)-set(read_files))) + ". Make sure the file exists, the format is OK and you have correct access right.")
                     exit(-1)
 
             # Saving config file in right dict format - no 'wpwatcher' item, just config
