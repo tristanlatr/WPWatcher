@@ -1,6 +1,4 @@
 #! /usr/bin/env python3
-# -*- coding: iso-8859-1 -*-
-# -*- coding: utf-8 -*-
 #
 # Wordpress Watcher
 # Automating WPscan to scan and report vulnerable Wordpress sites
@@ -30,9 +28,13 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
-# Local module
+# Local modules
 from wpscan_parser import parse_results
 
+#Project version.
+VERSION='0.5.2.dev0'
+
+# URL that will be displayed in help
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 
 # WPWatcher class ---------------------------------------------------------------------
@@ -431,7 +433,7 @@ def find_config_file():
     if len(paths)==0: return False
     else: return(paths)
 
-def build_config_dict(files=None, args=None):
+def build_config_dict(files=None):
     config_dict={}
     try:
         # Load the configuration file
@@ -450,10 +452,8 @@ def build_config_dict(files=None, args=None):
             if len(read_files) < len(files):
                 log.error("Could not read config " + str(list(set(files)-set(read_files))) + ". Make sure the file exists, the format is OK and you have correct access right.")
                 exit(-1)
-        
         # Saving config file in right dict format - no 'wpwatcher' section, just config options
         config_dict = {
-
             # Configurable witg cli arguments
             'wp_sites' :getjson(conf_parser,'wp_sites'),
             'send_email_report':getbool(conf_parser, 'send_email_report'),
@@ -478,9 +478,6 @@ def build_config_dict(files=None, args=None):
             'smtp_ssl':getbool(conf_parser, 'smtp_ssl'),
             'from_email':conf_parser.get('wpwatcher','from_email')
         }
-        # Overwrite with conf dict biult from CLI Args
-        if args: config_dict.update(args)
-
         return config_dict
 
     except Exception as err: 
@@ -526,6 +523,8 @@ If not specified with `--conf` parameter, will try to load config from file `./w
 All options can be missing from config file.\n\n""", nargs='+', default=None)
     parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.
 Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
+    parser.add_argument('--version', '-V', help="Print WPWatcher version informations", action='store_true')
+    # Declare arguments that will overwrite config options
     parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)
     parser.add_argument('--email_to', '--em', metavar="Email", help="Configure email_to", nargs='+', default=None)
     parser.add_argument('--send_email_report', '--send', help="Configure send_email_report=Yes", action='store_true')
@@ -546,24 +545,28 @@ def wpwatcher():
     if args.template_conf:
         print(TEMPLATE_FILE)
         exit(0)
+    # If version, print and exit
+    if args.version:
+        log.info("WPWatcher version %s"%VERSION)
+        exit(0)
     # Configuration variables
     conf_files=args.conf
     conf_args={}
-    # Sorting out only args that matches config options and not None or False
+    # Sorting out only args that matches config options and that are not None or False
     for k in vars(args): 
         if k in DEFAULT_CONFIG.keys() and vars(args)[k]:
             conf_args.update({k:vars(args)[k]})  
-    # Adjust special config options of urls
+    # Adjust special case of urls that are list of dict
     if 'wp_sites' in conf_args:
         conf_args['wp_sites']=[ {"url":site} for site in conf_args['wp_sites'] ]
-    # Init config dict: read config file and overwrite with config params
-    conf=build_config_dict(files=conf_files, args=conf_args)
+    # Init config dict: read config files
+    conf=build_config_dict(files=conf_files)
+    # Overwrite with conf dict biult from CLI Args
+    if conf_args: conf.update(conf_args)
     # (Re)init logger with config
     init_log(verbose=conf['verbose'],
         quiet=conf['quiet'],
         logfile=conf['log_file'])
-    # Log config
-    log.debug("Config :\n"+str(conf))
     # Create main object
     wpwatcher=WPWatcher(conf)
     # Run scans and quit

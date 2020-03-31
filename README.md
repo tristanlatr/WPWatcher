@@ -254,7 +254,8 @@ It will overwrite previous values from config file.
 optional arguments:
   -h, --help            show this help message and exit
   --conf File path [File path ...]
-  --template_conf       Print a template config file.
+  --template_conf       Print a template config file
+  --version, -V         Print WPWatcher version informations
   --wp_sites URL [URL ...], --url URL [URL ...]
                         Configure wp_sites
   --email_to Email [Email ...], --em Email [Email ...]
