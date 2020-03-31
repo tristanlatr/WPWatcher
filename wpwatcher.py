@@ -44,10 +44,6 @@ class WPWatcher():
         
         # Save config dict as is
         self.conf=conf
-         # (Re)init logger with config
-        init_log(verbose=self.conf['verbose'],
-            quiet=self.conf['quiet'],
-            logfile=self.conf['log_file'])
         # Check sites are in the config
         if len(self.conf['wp_sites'])==0:
             log.info("No sites configured, please provide wp_sites in config file or use --url URL [URL...]")
@@ -124,7 +120,7 @@ class WPWatcher():
             exit(-1)
 
     # Send email report with status and timestamp
-    def send_report(self, wp_report, wp_site):
+    def send_report(self, wp_site, wp_report):
         # To
         if len(self.conf['email_errors_to'])>0 and wp_report['status']=='ERROR':
             to_email = ','.join( self.conf['email_errors_to'] )
@@ -562,6 +558,12 @@ def wpwatcher():
         conf_args['wp_sites']=[ {"url":site} for site in conf_args['wp_sites'] ]
     # Init config dict: read config file and overwrite with config params
     conf=build_config_dict(files=conf_files, args=conf_args)
+    # (Re)init logger with config
+    init_log(verbose=conf['verbose'],
+        quiet=conf['quiet'],
+        logfile=conf['log_file'])
+    # Log config
+    log.debug("Config :\n"+str(conf))
     # Create main object
     wpwatcher=WPWatcher(conf)
     # Run scans and quit

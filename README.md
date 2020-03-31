@@ -51,7 +51,7 @@ See *Configuration* bellow to learn more about options and how to and configure 
     wpwatcher [--conf File path [File path ...]] [...]
 
 `--conf` is the main argument, you can specify multiple files. Will overwrites the keys with each successive file.  
-If not specified, it will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.  
+If not specified, it will try to load config from file `./wpwatcher.conf` and `~/wpwatcher.conf`.  
 
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
