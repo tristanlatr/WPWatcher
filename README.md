@@ -34,9 +34,13 @@ git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
+#### Try it out
+
+    wpwatcher --url exemple.com exemple1.com
+
 The command should be in your `PATH` but you can always run the python script directly  
                 
-    python3 ./wpwatcher.py
+    python3 ./wpwatcher.py --url exemple3.com -v
 
 ### Configure
 Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
@@ -57,10 +61,6 @@ If not specified, it will try to load config from file `./wpwatcher.conf` and `~
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
 See complete list of supported arguments in the sction *Command arguments* bellow.
-
-##### Try it out
-
-    wpwatcher --url exemple.com exemple1.com
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
@@ -260,7 +260,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --conf File path [File path ...]
   --template_conf       Print a template config file
-  --version, -V         Print WPWatcher version informations
+  --version, -V         Print WPWatcher version
   --wp_sites URL [URL ...], --url URL [URL ...]
                         Configure wp_sites
   --email_to Email [Email ...], --em Email [Email ...]
