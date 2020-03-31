@@ -20,7 +20,7 @@ Tested with WPScan 3.7 on :
 - Linux (WPScan installed with `RubyGems`)  
 
 ## Install
-#### With PyPi
+#### With PyPi (stable)
     pip3 install wpwatcher
 
 #####  Update
@@ -38,7 +38,9 @@ cd WPWatcher && python3 setup.py install
 
     wpwatcher --url exemple.com exemple1.com
 
-The command should be in your `PATH` but you can always run the python script directly  
+The command should be in your `PATH`, as well as `wpwatcher.py` (synonym of `wpwatcher`) and `wpscan_parser.py` (standalone WPScan output parser).
+
+You can always run the python script directly 
                 
     python3 ./wpwatcher.py --url exemple3.com -v
 
@@ -99,7 +101,15 @@ You need to register a WPVulDB account and use your API token with WPScan (`--ap
 
 You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. 
 
-If you have large number of sites to watch, you'll probably can't scan all your sites with 50 requests. You can create multiple configuration files and schedule scans on several days. 
+### Scanning a large number of sites
+You can configure `wp_sites` from a text file using `--urls` argument.
+
+If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests. 
+
+#### Option 1: use `api_limit_wait` config option
+It will wait 24h if your WPVulDB API limit has been reached and continue de scans. Reccursive implementation.
+
+#### Option 2: schedule scans on several days 
 - `wpwatcher.conf`: contains all configurations except `wp_wites`
 - `wp_sites_1.conf`: contains first X sites
 - `wp_sites_2.conf`: contain the rest  ...  
@@ -112,8 +122,6 @@ In your crontab, configure script to run at your convenience. For exemple, with 
 0 0 2-30/2 * * wpwatcher --conf wpwatcher.conf wp_sites_2.conf --quiet
 ```
 
-#### Save API Token in a file
-You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
 ### Basic usage with mail report
 
@@ -134,6 +142,7 @@ email_to=["me@exemple.com"]
 smtp_server=mailserver.exemple.com:25
 from_email=WordPressWatcher@exemple.com
 ```
+You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
 ### Full configuration options
 
@@ -249,6 +258,10 @@ verbose=No
 # Raise exceptions with stack trace or exit when WPScan failed
 # Default behaviour is to log error, continue scans and return non zero status code when all scans are over
 fail_fast=No
+
+# Wait 24h when API limit has been reached
+api_limit_wait=No
+
 ```
 
 #### Command arguments
@@ -263,6 +276,8 @@ optional arguments:
   --version, -V         Print WPWatcher version
   --wp_sites URL [URL ...], --url URL [URL ...]
                         Configure wp_sites
+  --wp_sites_list URL, --urls File path
+                        Configure wp_sites from a list of URLs
   --email_to Email [Email ...], --em Email [Email ...]
                         Configure email_to
   --send_email_report, --send
@@ -274,8 +289,10 @@ optional arguments:
   --attach_wpscan_output, --attach
                         Configure attach_wpscan_output=Yes
   --fail_fast, --ff     Configure fail_fast=Yes
-  -v, --verbose         Configure verbose=Yes
-  -q, --quiet           Configure quiet=Yes
+  --api_limit_wait, --wait
+                        Configure api_limit_wait=Yes
+  --verbose, -v         Configure verbose=Yes
+  --quiet, -q           Configure quiet=Yes
 ```
 
 

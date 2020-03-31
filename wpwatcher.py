@@ -21,6 +21,7 @@ import configparser
 import io
 import unicodedata
 import collections.abc
+import time
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -213,7 +214,7 @@ class WPWatcher():
         log.info("Starting scans on configured sites")
         exit_code=0
         for wp_site in self.conf['wp_sites']:
-
+            
             # Init report variables
             wp_report={
                 "wpscan_output":None,
@@ -254,11 +255,20 @@ class WPWatcher():
                 # Handle scan error
                 log.error("Could not scan site %s"%wp_site['url'])
                 wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wp_report['wpscan_output'])))
-                exit_code=-1
+                # Handle API limit
+                if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
+                    pass
+                    log.info("WPVulDB API limit has been reached, waiting 24h and continuing the scans...")
+                    time.sleep(86400)
+                    # Instanciating a new WPWatcher object and continue scans
+                    delayed=WPWatcher(self.conf)
+                    return(delayed.run_scans_and_notify()+exit_code)
                 # Fail fast
-                if self.conf['fail_fast']: 
+                elif self.conf['fail_fast']: 
                     log.info("Failure. Scans aborted.")
                     exit(-1)
+                else:
+                    exit_code=-1
             
             # Parse the results if no errors with wpscan -----------------------------
             else:
@@ -330,7 +340,10 @@ class WPWatcher():
             else:
                 # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(wp_report['status'], wp_site['url']))
-
+            
+            # To support reccursive calling and scanning all sites in several days
+            # Remove site from conf since it's been processed 
+            self.conf.remove(wp_site)
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
@@ -371,6 +384,7 @@ log_file=
 quiet=No
 verbose=No
 fail_fast=No
+api_limit_wait=No
 """%(GIT_URL)
 # Config default values
 DEFAULT_CONFIG={
@@ -394,7 +408,8 @@ DEFAULT_CONFIG={
     'from_email':"",
     'quiet':'No',
     'verbose':'No',
-    'fail_fast':'No'
+    'fail_fast':'No',
+    'api_limit_wait':'No'
 }
 
 # Configuration handling -------------------------------------------------------
@@ -463,6 +478,7 @@ def build_config_dict(files=None):
             'verbose':getbool(conf_parser, 'verbose'),
             'attach_wpscan_output':getbool(conf_parser, 'attach_wpscan_output'),
             'fail_fast':getbool(conf_parser, 'fail_fast'),
+            'api_limit_wait':getbool(conf_parser, 'api_limit_wait'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
@@ -525,12 +541,14 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
     # Declare arguments that will overwrite config options
     parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)
+    parser.add_argument('--wp_sites_list', '--urls', metavar="File path", help="Configure wp_sites from a list of URLs", default=None)
     parser.add_argument('--email_to', '--em', metavar="Email", help="Configure email_to", nargs='+', default=None)
     parser.add_argument('--send_email_report', '--send', help="Configure send_email_report=Yes", action='store_true')
     parser.add_argument('--send_infos', '--infos', help="Configure send_infos=Yes", action='store_true')
     parser.add_argument('--send_errors', '--errors', help="Configure send_errors=Yes", action='store_true')
     parser.add_argument('--attach_wpscan_output', '--attach', help="Configure attach_wpscan_output=Yes", action='store_true')
     parser.add_argument('--fail_fast', '--ff', help="Configure fail_fast=Yes", action='store_true')
+    parser.add_argument('--api_limit_wait', '--wait', help="Configure api_limit_wait=Yes", action='store_true')
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
     parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
     args = parser.parse_args()
@@ -551,24 +569,31 @@ def wpwatcher():
         exit(0)
     # Configuration variables
     conf_files=args.conf
+     # Init config dict: read config files
+    configuration=build_config_dict(files=conf_files)
     conf_args={}
     # Sorting out only args that matches config options and that are not None or False
     for k in vars(args): 
         if k in DEFAULT_CONFIG.keys() and vars(args)[k]:
             conf_args.update({k:vars(args)[k]})  
+    # Append or init list of urls from file if any
+    if args.wp_sites_list:
+        with open(args.wp_sites_list, 'r') as urlsfile:
+            sites=[ site.replace('\n','') for site in urlsfile.readlines() ]
+            conf_args['wp_sites']= sites if 'wp_sites' not in conf_args else conf_args['wp_sites']+sites
     # Adjust special case of urls that are list of dict
     if 'wp_sites' in conf_args:
         conf_args['wp_sites']=[ {"url":site} for site in conf_args['wp_sites'] ]
-    # Init config dict: read config files
-    conf=build_config_dict(files=conf_files)
     # Overwrite with conf dict biult from CLI Args
-    if conf_args: conf.update(conf_args)
+    if conf_args: configuration.update(conf_args)
     # (Re)init logger with config
-    init_log(verbose=conf['verbose'],
-        quiet=conf['quiet'],
-        logfile=conf['log_file'])
+    init_log(verbose=configuration['verbose'],
+        quiet=configuration['quiet'],
+        logfile=configuration['log_file'])
+    # Logging debug list of sites
+    log.debug("WP sites: %s"%(json.dumps(configuration['wp_sites'], indent=4)))
     # Create main object
-    wpwatcher=WPWatcher(conf)
+    wpwatcher=WPWatcher(configuration)
     # Run scans and quit
     exit(wpwatcher.run_scans_and_notify())
 
