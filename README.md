@@ -102,14 +102,17 @@ You need to register a WPVulDB account and use your API token with WPScan (`--ap
 You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. 
 
 ### Scanning a large number of sites
-You can configure `wp_sites` from a text file using `--urls` argument.
+Tip: you can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
 
-If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests. 
+If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
 
-#### Option 1: use `api_limit_wait` config option
-It will wait 24h if your WPVulDB API limit has been reached and continue de scans. Reccursive implementation.
+#### Handling API limit
+Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
 
-#### Option 2: schedule scans on several days 
+##### Option 1: use `api_limit_wait` feature option
+Set `api_limit_wait=Yes` in the config. It will wait 24h if your API limit has been reached and continue the scans.
+
+##### Option 2: schedule scans on several days 
 - `wpwatcher.conf`: contains all configurations except `wp_wites`
 - `wp_sites_1.conf`: contains first X sites
 - `wp_sites_2.conf`: contain the rest  ...  
