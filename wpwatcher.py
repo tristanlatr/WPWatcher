@@ -2,12 +2,10 @@
 #
 # Wordpress Watcher
 # Automating WPscan to scan and report vulnerable Wordpress sites
-# 
-# Authors: Florian Roth, Tristan Landès
 #
 # DISCLAIMER - USE AT YOUR OWN RISK.
 #
-
+# Standards libraries
 import os
 import sys
 import re
@@ -31,14 +29,16 @@ from datetime import datetime
 # Local modules
 from wpscan_parser import parse_results
 
-#Project version.
+# Setup configuration, will be parsed by setup.py -------------------
+# Values must be in one line
+# Project version.
 VERSION='0.5.2.dev0'
-
 # URL that will be displayed in help
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
+# Authors
+AUTHORS="Florian Roth, Tristan Landès"
 
 # WPWatcher class ---------------------------------------------------------------------
-
 class WPWatcher():
 
     # WPWatcher must use a configuration dict
@@ -337,7 +337,7 @@ class WPWatcher():
             log.info("Scans finished with errors.") 
         return(exit_code)
 
-# Configuration templates -------------------------
+# Configuration template -------------------------
 TEMPLATE_FILE="""[wpwatcher]
 # WPWatcher configuration file
 # WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email
@@ -372,7 +372,7 @@ quiet=No
 verbose=No
 fail_fast=No
 """%(GIT_URL)
-
+# Config default values
 DEFAULT_CONFIG={
     'wp_sites' :'null',
     'false_positive_strings' : 'null',                        
@@ -405,14 +405,14 @@ def getjson(conf, key):
         return loaded if loaded else []
     except Exception as err:
         log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, conf.get('wpwatcher',key), str(err)))
-        exit(-1)
+        raise
 
 def getbool(conf, key):
     try:
         return conf.getboolean('wpwatcher', key)
     except Exception as err:
         log.error("Could not read boolean value in config for: '{}' and string '{}'. Must be Yes/No. Error: {}".format(key, conf.get('wpwatcher',key), str(err)))
-        exit(-1)
+        raise
 
 def find_config_file():
     '''
@@ -430,8 +430,7 @@ def find_config_file():
     elif 'HOME' in os.environ: 
         p=os.path.join(os.environ['HOME'],'wpwatcher.conf')
         if os.path.isfile(p): paths.append(p)
-    if len(paths)==0: return False
-    else: return(paths)
+    return(paths)
 
 def build_config_dict(files=None):
     config_dict={}
@@ -442,7 +441,7 @@ def build_config_dict(files=None):
         conf_parser.read_dict({'wpwatcher':DEFAULT_CONFIG})
         # Search wpwatcher.conf file(s) if --conf not specified
         if not files or len(files)==0:
-            if find_config_file(): files=find_config_file()
+            files=find_config_file()
         # No config file notice
         if not files or len(files)==0: 
             log.info("No config file selected and could not find default config at ./wpwatcher.conf or ~/wpwatcher.conf. The script must read a configuration file to setup mail server settings, WPScan options and other features.")
@@ -523,7 +522,7 @@ If not specified with `--conf` parameter, will try to load config from file `./w
 All options can be missing from config file.\n\n""", nargs='+', default=None)
     parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.
 Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
-    parser.add_argument('--version', '-V', help="Print WPWatcher version informations", action='store_true')
+    parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
     # Declare arguments that will overwrite config options
     parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)
     parser.add_argument('--email_to', '--em', metavar="Email", help="Configure email_to", nargs='+', default=None)
@@ -547,7 +546,8 @@ def wpwatcher():
         exit(0)
     # If version, print and exit
     if args.version:
-        log.info("WPWatcher version %s"%VERSION)
+        log.info("Version:\t\t%s"%VERSION)
+        log.info("Authors:\t\t%s"""%AUTHORS)
         exit(0)
     # Configuration variables
     conf_files=args.conf

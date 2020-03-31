@@ -29,7 +29,7 @@ cd WPWatcher && python3 setup.py install
 ```bash
 git pull && python3 setup.py install
 ```
-### Try out
+#### Try it out
 
     wpwatcher --url exemple.com exemple1.com
 
