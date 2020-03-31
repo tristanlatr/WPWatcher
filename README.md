@@ -20,18 +20,19 @@ Tested with WPScan 3.7 on :
 - Linux (WPScan installed with `RubyGems`)  
 
 ## Install
+#### With PyPi
+    pip3 install wpwatcher
+
+#####  Update
+```bash
+pip3 install wpwatcher --upgrade
+```
+
+#### Or manually
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
-
-#### Update
-```bash
-git pull && python3 setup.py install
-```
-#### Try it out
-
-    wpwatcher --url exemple.com exemple1.com
 
 The command should be in your `PATH` but you can always run the python script directly  
                 
@@ -56,6 +57,10 @@ If not specified, it will try to load config from file `./wpwatcher.conf` and `~
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
 See complete list of supported arguments in the sction *Command arguments* bellow.
+
+##### Try it out
+
+    wpwatcher --url exemple.com exemple1.com
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
