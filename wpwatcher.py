@@ -16,6 +16,7 @@ import subprocess
 import logging
 import traceback
 import shutil
+import socket
 from subprocess import CalledProcessError
 import argparse
 import configparser
@@ -31,14 +32,18 @@ from datetime import datetime
 # Local modules
 from wpscan_parser import parse_results
 
-# Setup configuration, will be parsed by setup.py -------------------
+# Setup configuration: will be parsed by setup.py -------------------
 # Values must be in one line
 # Project version.
 VERSION='0.5.2'
-# URL that will be displayed in help
+# URL that will be displayed in help and other places
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
 AUTHORS="Florian Roth, Tristan Landès"
+
+# How many seconds to wait when API limit reached
+# 86400=24h
+API_WAIT_SLEEP=86400
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher():
@@ -65,18 +70,25 @@ class WPWatcher():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-
+        
+        # Logging debug list of sites
+        log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites']]) )
+     
+    # Replace --api-token param with *** for safe logging
+    @staticmethod
+    def safe_log_wpscan_args(wpscan_args):
+        logged_cmd=wpscan_args
+        if "--api-token" in logged_cmd :
+            logged_cmd[logged_cmd.index("--api-token")+1]="***"
+        return logged_cmd
+    
     # Helper method: actually wraps wpscan
     def wpscan(self, *args):
         (exit_code, output)=(0,"")
         # WPScan arguments
         cmd=[self.conf['wpscan_path']] + list(args) 
         # Log wpscan command without api token
-        logged_cmd=[self.conf['wpscan_path']] + list(args) 
-        # Replace --api-token param with *** for safe logging
-        if "--api-token" in logged_cmd :
-            logged_cmd[logged_cmd.index("--api-token")+1]="***"
-        log.debug("Running WPScan command: %s" % ' '.join(logged_cmd) )
+        log.debug("Running WPScan command: %s" % ' '.join(self.safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
@@ -122,7 +134,13 @@ class WPWatcher():
         if exit_code!=0: 
             log.error("Error updating WPScan")
             exit(-1)
-
+    
+    # Return the given string converted to a string that can be used for a clean filename
+    @staticmethod
+    def get_valid_filename(s):
+        s = str(s).strip().replace(' ', '_')
+        return re.sub(r'(?u)[^-\w.]', '', s)
+    
     # Send email report with status and timestamp
     def send_report(self, wp_site, wp_report):
         # To
@@ -132,16 +150,16 @@ class WPWatcher():
             to_email = ','.join( wp_site['email_to'] + self.conf['email_to'] )
 
         if to_email != "":
-            datetimenow=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            datetimenow=datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
             # Building message
-            message = MIMEMultipart("alternative")
+            message = MIMEMultipart("html")
             message['Subject'] = 'WPWatcher %s report on %s - %s' % (  wp_report['status'], wp_site['url'], datetimenow)
             message['From'] = self.conf['from_email']
             message['To'] = to_email
 
             # Email body
             body=self.build_message(wp_report, wp_site)
-            message.attach(MIMEText(body, "plain"))
+            message.attach(MIMEText(body))
             
             # Attachment log if attach_wpscan_output
             if self.conf['attach_wpscan_output']:
@@ -154,9 +172,7 @@ class WPWatcher():
                 # Encode file in ASCII characters to send by email    
                 encoders.encode_base64(part)
                 # Sanitize WPScan report filename 
-                wpscan_report_filename='WPScan_report_%s_%s' % (wp_site['url'], datetimenow)
-                wpscan_report_filename=wpscan_report_filename.strip().replace(' ', '_')
-                wpscan_report_filename=re.sub(r'(?u)[^-\w.]', '', wpscan_report_filename)
+                wpscan_report_filename=self.get_valid_filename('WPScan_report_%s_%s' % (wp_site['url'], datetimenow))
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
@@ -190,23 +206,24 @@ class WPWatcher():
         message="WordPress security scan report for site: %s\n\n" % (wp_site['url'])
         
         if wp_report['errors'] : message += "An error occurred."
-        elif wp_report['alerts'] : message += "Issues have been detected by WPScan. Your WordPress site is vulnerable."
+        elif wp_report['alerts'] : message += "Vulnerabilities have been detected by WPScan."
         elif wp_report['warnings']: message += "Issues have been detected by WPScan."
-        else: message += "WPScan found some informations."
         
         if wp_report['errors']:
-            message += "\n\n\tErrors\n\n"
+            message += "\n\n\tERRORS\n\n"
             message += "\n\n".join(wp_report['errors'])
         if wp_report['alerts']:
-            message += "\n\n\tAlerts\n\n"
+            message += "\n\n\tALERTS\n\n"
             message += "\n\n".join(wp_report['alerts'])
         if wp_report['warnings']:
-            message += "\n\n\tWarnings\n\n"
+            message += "\n\n\tWARNINGS\n\n"
             message += "\n\n".join(wp_report['warnings'])
         if wp_report['infos']:
-            message += "\n\n\tInformations\n\n"
+            message += "\n\n\tINFORMATIONS\n\n"
             message += "\n\n".join(wp_report['infos'])
-
+        message += "\n\n--"
+        message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
+        message += "\nServer: %s - Version: %s - Homepage: %s\n"%(socket.gethostname(),VERSION, GIT_URL)
         return message
 
     # Run WPScan on defined websites
@@ -247,19 +264,15 @@ class WPWatcher():
             # Launch WPScan -------------------------------------------------------
             (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan(*wpscan_arguments)
 
-            # Replace --api-token param with *** for safe logging
-            if "--api-token" in wpscan_arguments:
-                wpscan_arguments[wpscan_arguments.index("--api-token")+1]="***"
-
             # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
             if wpscan_exit_code not in [0,5]:
                 # Handle scan error
                 log.error("Could not scan site %s"%wp_site['url'])
-                wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wp_report['wpscan_output'])))
+                wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
                 # Handle API limit
                 if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
-                    log.info("WPVulDB API limit has been reached, waiting 24h and continuing the scans...")
-                    time.sleep(86400)
+                    log.info("WPVulDB API limit has been reached, sleeping %s seconds and continuing the scans..."%API_WAIT_SLEEP)
+                    time.sleep(API_WAIT_SLEEP)
                     # Instanciating a new WPWatcher object and continue scans
                     delayed=WPWatcher(self.conf)
                     return(delayed.run_scans_and_notify()+exit_code)
@@ -343,7 +356,8 @@ class WPWatcher():
             
             # To support reccursive calling and scanning all sites in several days
             # Remove site from conf since it's been processed 
-            self.conf.remove(wp_site)
+            self.conf['wp_sites'].remove(wp_site)
+
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
@@ -590,8 +604,6 @@ def wpwatcher():
     init_log(verbose=configuration['verbose'],
         quiet=configuration['quiet'],
         logfile=configuration['log_file'])
-    # Logging debug list of sites
-    log.debug("WP sites: %s"%(json.dumps(configuration['wp_sites'], indent=4)))
     # Create main object
     wpwatcher=WPWatcher(configuration)
     # Run scans and quit
