@@ -14,6 +14,7 @@ import smtplib
 import traceback
 import subprocess
 import logging
+import traceback
 import shutil
 from subprocess import CalledProcessError
 import argparse
@@ -62,8 +63,8 @@ class WPWatcher():
             try: 
                 shutil.rmtree('/tmp/wpscan')
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
-            except (FileNotFoundError, OSError, Exception) as err: 
-                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error: %s"%(err))
+            except (FileNotFoundError, OSError, Exception) : 
+                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
 
     # Helper method: actually wraps wpscan
     def wpscan(self, *args):
@@ -97,7 +98,7 @@ class WPWatcher():
         except CalledProcessError as err:
             # Handle error --------------------------------------------------
             wpscan_output=str(err.output)
-            err_string="WPScan failed with exit code %s. WPScan output: \n%s" % (str(process.returncode), wpscan_output)
+            err_string="WPScan failed with exit code %s. WPScan output: \n%s\nError:\n%s" % (str(process.returncode), wpscan_output, traceback.format_exc())
             log.error(self.oneline(err_string))
             (exit_code, output)=(err.returncode, wpscan_output)
 
@@ -257,7 +258,6 @@ class WPWatcher():
                 wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, wpscan_arguments, wp_report['wpscan_output'])))
                 # Handle API limit
                 if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
-                    pass
                     log.info("WPVulDB API limit has been reached, waiting 24h and continuing the scans...")
                     time.sleep(86400)
                     # Instanciating a new WPWatcher object and continue scans
@@ -278,16 +278,16 @@ class WPWatcher():
                     wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
                         self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
 
-                except Exception as err:
+                except Exception:
                     # Handle parsing error
-                    err_string="Could not parse the results from wpscan command for site {}.\nError: {}\nWPScan output:\n{}".format(wp_site['url'],str(err), wp_report['wpscan_output'])
+                    err_string="Something is wrong with the parser. Maybe because you're using a new version of WPScan.\nPlease report bugs at {}\nCould not parse the results from wpscan command for site {}.\nError:\n{}\nWPScan output:\n{}".format(GIT_URL, wp_site['url'], traceback.format_exc(), wp_report['wpscan_output'])
                     log.error(err_string)
                     wp_report['errors'].append(err_string)
                     exit_code=-1
                     # Fail fast
                     if self.conf['fail_fast']: 
                         log.info("Failure. Scans aborted.")
-                        raise
+                        exit(-1)
 
                 # Logfile ------------------------------------------------------
                 for info in wp_report['infos']:
@@ -331,12 +331,12 @@ class WPWatcher():
                             log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config."%(wp_report['status'],wp_site['url']))
                 
                 # Handle send mail error
-                except Exception as err:
-                    log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: "+str(err))
+                except Exception:
+                    log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
                     exit_code=-1
                     if self.conf['fail_fast']: 
                         log.info("Failure. Scans aborted.")
-                        raise
+                        exit(-1)
             else:
                 # No report notice
                 log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(wp_report['status'], wp_site['url']))
