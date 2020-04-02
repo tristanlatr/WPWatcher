@@ -6,7 +6,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Define reporting emails addresses for every configured site individually and globally
   - Mail messages are divided in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
   - Mail notification and verbosity can be configred in config file, additionnaly WPScan output can be attached to emails. 
-  - Scan sites continuously at defined interval and handled VulDB API limit.  
+  - Scan sites continuously at defined interval and handled VulnDB API limit.  
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
