@@ -117,7 +117,7 @@ Check your platform documentation to setup the tool as a service.
 - [systemctl](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files)
 - [other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
 
-#### Or schedule scans on several days with cron
+#### Or schedule scans with cron
 <details><summary>See</summary>
 <p>
 Make sure daemon feature if turned off.
