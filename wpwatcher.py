@@ -78,7 +78,7 @@ class WPWatcher():
     # Replace --api-token param with *** for safe logging
     @staticmethod
     def safe_log_wpscan_args(wpscan_args):
-        logged_cmd=wpscan_args
+        logged_cmd=copy.deepcopy(wpscan_args)
         if "--api-token" in logged_cmd :
             logged_cmd[logged_cmd.index("--api-token")+1]="***"
         return logged_cmd
