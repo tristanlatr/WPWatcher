@@ -4,8 +4,9 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ## In a Nutshell
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
-  - Mail messages are divided in "Warnings", "Alerts", "Informations" and eventually "Errors"
-  - Mail notification and verbosity can be configred in config file, WPScan output can be attached to emails. 
+  - Mail messages are divided in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
+  - Mail notification and verbosity can be configred in config file, additionnaly WPScan output can be attached to emails. 
+  - Scan sites continuously at defined interval and handled VulDB API limit.  
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
@@ -14,10 +15,12 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
   - Python 3 (standard libraries)
-#### Compatibility
+
+<!-- #### Compatibility
 Tested with WPScan 3.7 on :
 - MacOS (WPScan install wil `HomeBrew`)
 - Linux (WPScan installed with `RubyGems`)  
+- Raspbian (WPScan installed with `RubyGems`)   -->
 
 ## Install
 #### With PyPi (stable)
@@ -68,17 +71,7 @@ See complete list of supported arguments in the sction *Command arguments* bello
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
-
-#### Crontab
-Add the following line to crontab to run WPWatcher every day and ignore errors.  
-
-    0 0 * * * wpwatcher >/dev/null
-
-If you want to receive email alerts with cron `MAILTO` feature.
-
-    0 0 * * * wpwatcher --quiet
-
-To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your config.
+- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. Set `wp_reports=null` in the config to disable the storage of the json file, the database will still be stored in memory when using `--daemon`.
 
 ### Return non zero status code if :
 - One or more WPScan command failed
@@ -109,24 +102,53 @@ If you have large number of sites to scan, you'll probably can't scan all your s
 #### Handling API limit
 Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
 
-##### Option 1: use `api_limit_wait` feature option
-Set `api_limit_wait=Yes` in the config. It will wait 24h if your API limit has been reached and continue the scans.
+Set `api_limit_wait=Yes` option in the config. It will wait 24h if your API limit has been reached and continue the scans.
 
-##### Option 2: schedule scans on several days 
-- `wpwatcher.conf`: contains all configurations except `wp_wites`
-- `wp_sites_1.conf`: contains first X sites
-- `wp_sites_2.conf`: contain the rest  ...  
 
-In your crontab, configure script to run at your convenience. For exemple, with two lists :
+
+#### Setup continuous scanning service
+Caution: **do not configure crontab execution and deamon service at the same time** .   
+Configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`.   
+Scans sites for ever with `--daemon` configuration
+
+    wpwatcher --daemon
+
+Check your platform documentation to setup the tool as a service.
+- [systemctl](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files)
+- [other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
+
+#### Or schedule scans on several days with cron
+<details><summary>See</summary>
+<p>
+Make sure daemon feature if turned off.
+
+- Crontab usage:
+
 ```
-# Will only run on odd days:
-0 0 1-31/2 * * wpwatcher --conf wpwatcher.conf wp_sites_1.conf --quiet
-# Will only run on even days:
-0 0 2-30/2 * * wpwatcher --conf wpwatcher.conf wp_sites_2.conf --quiet
+0 0 * * * wpwatcher --quiet
 ```
 
+To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your config.  
+You'll receive email alerts with cron `MAILTO` feature. Add `>/dev/null` to ignore.  
 
-### Basic usage with mail report
+
+- Crontab with multiple config files usage:
+    - `wpwatcher.conf`: contains all configurations except `wp_wites`
+    - `wp_sites_1.conf`: contains first X sites
+    - `wp_sites_2.conf`: contain the rest  ...  
+
+    In your crontab, configure script to run at your convenience. For exemple, with two lists :
+```
+# Will run at 00:00 on Monday:
+0 0 * * 1 wpwatcher --conf wpwatcher.conf wp_sites_1.conf --quiet
+# Will run at 00:00 on Tuesday:
+0 0 * * 2 wpwatcher --conf wpwatcher.conf wp_sites_2.conf --quiet
+```
+Warning, this kind of setup can lead into having two `wpwatcher` executions at the same time. This might result into database corruption because of conccurent accesses to reports database file.
+</p>
+</details>
+
+### Simple configuration with mail report
 
 Simple configuration file without SMTP authentication 
 
@@ -150,6 +172,9 @@ You can store the API Token in the WPScan default config file at `~/.wpscan/scan
 ### Full configuration options
 
 All configuration options with explanatory comments.
+
+<details><summary>See</summary>
+<p>
 
 ```ini
 [wpwatcher]
@@ -249,7 +274,7 @@ smtp_pass=p@assw0rd
 smtp_ssl=Yes
 
 # Local log file
-log_file=./wpwatcher.log
+log_file=/home/user/.wpwatcher/wpwatcher.log
 # Quiet
 # Print only errors and WPScan ALERTS
 quiet=No
@@ -265,7 +290,21 @@ fail_fast=No
 # Wait 24h when API limit has been reached
 api_limit_wait=No
 
+# Reports database file
+wp_reports=/home/user/.wpwatcher/wp_reports.json
+
+# Loop for ever
+daemon=No
+
+# Loop sleep
+daemon_loop_sleep=0s
+
+# Minimum inverval between 2 same status reports sent
+resend_emails_after=3d
 ```
+
+</p>
+</details>
 
 #### Command arguments
 
@@ -279,7 +318,7 @@ optional arguments:
   --version, -V         Print WPWatcher version
   --wp_sites URL [URL ...], --url URL [URL ...]
                         Configure wp_sites
-  --wp_sites_list URL, --urls File path
+  --wp_sites_list File path, --urls File path
                         Configure wp_sites from a list of URLs
   --email_to Email [Email ...], --em Email [Email ...]
                         Configure email_to
@@ -294,6 +333,11 @@ optional arguments:
   --fail_fast, --ff     Configure fail_fast=Yes
   --api_limit_wait, --wait
                         Configure api_limit_wait=Yes
+  --daemon              Configure daemon=Yes
+  --wp_reports File path
+                        Configure wp_reports
+  --resend_emails_after Time string, --resend Time string
+                        Configure resend_emails_after
   --verbose, -v         Configure verbose=Yes
   --quiet, -q           Configure quiet=Yes
 ```
@@ -306,6 +350,7 @@ One report is generated per site and the reports are sent individually when fini
 Email notification can have 4 status: 
 - `ALERT`: You have a vulnerable Wordpress, theme or plugin
 - `WARNING`: You have an oudated Wordpress, theme or plugin
+- `FIXED`: All issues are fixed or ignored (warnings included if `send_warnings=Yes`) 
 - `INFO`: WPScan did not find any issues with your site
 - `ERROR`: WPScan failed
 
@@ -324,10 +369,12 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `CRITICAL`: Only used for `WPScan ALERT`
   - `ERROR`:  WPScan failed, send report failed or other errors
   - `WARNING`: Only used for `WPScan WARNING`
-  - `INFO`: Used for info output and `WPScan INFO`
+  - `INFO`: Used for info output , `WPScan INFO` and `FIXED` issues
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
 In addition to log messages, the readable report, same as email report, is printed to stdout.
+<details><summary>See</summary>
+<p>
 
 ```log
 % python3 ./wpwatcher.py --conf ./test.conf
@@ -368,6 +415,8 @@ Issues have been detected by WPScan.
 
 INFO - Scans finished successfully.
 ```
+</p>
+</details>
 
 ## Questions ?
 If you have any questions, please create a new issue.
