@@ -108,14 +108,61 @@ Set `api_limit_wait=Yes` option in the config. It will wait 24h if your API limi
 
 #### Setup continuous scanning service
 Caution: **do not configure crontab execution and deamon service at the same time** .   
-Configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`.   
-Scans sites for ever with `--daemon` configuration
+Configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`. 
 
     wpwatcher --daemon
 
-Check your platform documentation to setup the tool as a service.
-- [systemctl](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files)
-- [other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
+`wpwatcher` and `wpscan` might not be in your execution environement `PATH`. If you run into file not found error: try to configure the full paths to executables and config files.
+
+Setup the tool as a service.
+-  With `systemctl`
+    
+    <details><summary>See</summary>
+    <p>
+
+    Create and configure the service file `/lib/systemd/system/wpwatcher.service`
+    ```bash
+    systemctl edit --full --force wpwatcher.service
+    ```
+    Adjust the following template service:  
+    ```
+    [Unit]
+    Description=WPWatcher
+    After=network.target
+    StartLimitIntervalSec=0
+
+    [Service]
+    Type=simple
+    Restart=always
+    RestartSec=1
+    ExecStart=/usr/local/bin/wpwatcher --daemon 
+    User=user
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
+
+    Enable the service to start on boot
+    ```
+    systemctl daemon-reload
+    systemctl enable wpwatcher.service
+    ```
+
+    The service can be started/stopped with the following commands:
+    ```
+    systemctl start wpwatcher.service
+    systemctl stop wpwatcher.service
+    ```  
+
+    Follow logs
+    ```
+    journalctl -u wpwatcher -f
+    ```
+    [More infos on `systemctl`](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files) 
+
+    </p>
+    </details>
+- [Other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
 
 #### Or schedule scans with cron
 <details><summary>See</summary>
