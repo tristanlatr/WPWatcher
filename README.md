@@ -282,7 +282,7 @@ wpscan_args=[   "--format", "cli",
 # If missing, default to No
 send_email_report=No
 
-# Whether to send warnings. 
+# Whether to report warnings and track the warnings fixes
 # Will send WARNING notifications and will include warnings in ALERT reports
 # If missing, default to Yes
 send_warnings=Yes

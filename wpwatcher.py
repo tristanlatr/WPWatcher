@@ -96,7 +96,7 @@ class WPWatcher():
             if not os.path.isfile(wp_reports):
                 with open(wp_reports,'w') as reportsfile:
                     json.dump([],reportsfile)
-                    log.info("Init new wp_reports file: %s"%(wp_reports))
+                    log.info("Init new wp_reports database: %s"%(wp_reports))
         return(wp_reports)
     # Read wp_reports database
     def build_wp_reports(self):
@@ -105,16 +105,19 @@ class WPWatcher():
             if not self.conf['wp_reports']:
                 self.conf['wp_reports']=self.find_wp_reports_file(create=True)
             if self.conf['wp_reports']:
-                try:
-                    with open(self.conf['wp_reports'], 'r') as reportsfile:
-                        wp_reports=json.load(reportsfile)
-                    log.info("Load wp_reports database: %s"%self.conf['wp_reports'])
-                except Exception:
-                    log.error("Could not read wp_reports database\n{}".format(traceback.format_exc()))
-                    # Fail fast
-                    if self.conf['fail_fast']: 
-                        log.info("Failure. Scans aborted.")
-                        exit(-1)
+                if os.path.isfile(self.conf['wp_reports']):
+                    try:
+                        with open(self.conf['wp_reports'], 'r') as reportsfile:
+                            wp_reports=json.load(reportsfile)
+                        log.info("Load wp_reports database: %s"%self.conf['wp_reports'])
+                    except Exception:
+                        log.error("Could not read wp_reports database\n{}".format(traceback.format_exc()))
+                        # Fail fast
+                        if self.conf['fail_fast']: 
+                            log.info("Failure. Scans aborted.")
+                            exit(-1)
+                else:
+                    log.info("The file database file %s do not exist. It will be created at the end of the scans."%(self.conf['wp_reports']))
         return wp_reports
 
     def write_wp_reports(self, new_wp_report_list):
@@ -312,10 +315,11 @@ class WPWatcher():
             if last_alert.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['alerts']]:
                 wp_report['fixed'].append('Alert regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_alert.splitlines()[0], 
                     last_wp_report['last_email'], wp_report['datetime']))
-        for last_warn in last_wp_report['warnings']:
-            if last_warn.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['warnings']]:
-                wp_report['fixed'].append('Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_warn.splitlines()[0], 
-                    last_wp_report['last_email'], wp_report['datetime']))
+        if self.conf['send_warnings']:
+            for last_warn in last_wp_report['warnings']:
+                if last_warn.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['warnings']]:
+                    wp_report['fixed'].append('Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_warn.splitlines()[0], 
+                        last_wp_report['last_email'], wp_report['datetime']))
         # Save last email datetime if any
         if last_wp_report['last_email']:
             wp_report['last_email']=last_wp_report['last_email']
@@ -437,8 +441,7 @@ class WPWatcher():
 
             # Printing to stdout if not quiet
             # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
-            if self.conf['quiet']==False: 
-                print("\n"+self.build_message(wp_report, wp_site)+"\n")
+            log.debug("\n"+self.build_message(wp_report, wp_site)+"\n")
 
             # Sending report
             if self.conf['send_email_report']:
