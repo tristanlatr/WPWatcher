@@ -107,12 +107,14 @@ Set `api_limit_wait=Yes` option in the config. It will wait 24h if your API limi
 
 
 #### Setup continuous scanning service
-Caution: **do not configure crontab execution and deamon service at the same time** .   
-Configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`. 
+Caution: **do not configure crontab execution and service at the same time** .   
+
+It's best to configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`.  
+Launch WPWatcher in daemon moode:
 
     wpwatcher --daemon
 
-`wpwatcher` and `wpscan` might not be in your execution environement `PATH`. If you run into file not found error: try to configure the full paths to executables and config files.
+`wpwatcher` and `wpscan` might not be in your execution environement `PATH`. If you run into file not found error, try to configure the full paths to executables and config files.
 
 Setup the tool as a service.
 -  With `systemctl`
@@ -158,7 +160,7 @@ Setup the tool as a service.
     ```
     journalctl -u wpwatcher -f
     ```
-    [More infos on `systemctl`](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files) 
+    [More infos on systemctl](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files) 
 
     </p>
     </details>
@@ -366,13 +368,13 @@ api_limit_wait=No
 ```
 Overwrite with arguments: `--wait`
 #### Daemon settings
-- Daemon mode: loops forever
+- Daemon mode: loops forever. 
 If missing, default to No
 ```ini
 daemon=No
 ```
 Overwrite with arguments: `--daemon`
-- Sleep time between to scans
+- Sleep time between two scans.
 If missing, default to 0s
 ```ini
 daemon_loop_sleep=12h
@@ -425,7 +427,7 @@ Email notification can have 4 status:
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
 
-Tip: set `"--format","json"` in  `wpscan_args` config option to use the json parsing feature. 
+Tip: set `"--format","json"` in  `wpscan_args` config option to use the json parsing feature and have more concise email text. 
 
 `wpwatcher` will use the `wpscan_parser.py` to parse WPScan output messages. Alerts, Warnings and Infos might differ whether you're using cli or json format.
 
