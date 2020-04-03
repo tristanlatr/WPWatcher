@@ -502,6 +502,16 @@ TEMPLATE_FILE="""[wpwatcher]
 # Options configurable with CLI args, see 'wpwatcher --help'
 # For more infos check %s
 
+# WPScan configuration
+# wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
+wpscan_args=[   "--format", "cli",
+                "--no-banner",
+                "--random-user-agent", 
+                "--disable-tls-checks" ]
+
+# False positive string matches
+# false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
+
 # Sites (--url or --urls)
 wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 
@@ -515,15 +525,6 @@ wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 # resend_emails_after=5d
 # email_errors_to=["admins@domain"]
 
-# Exit if any errors (--ff)
-# fail_fast=Yes 
-
-# Sleep when API limit reached (--wait)
-# api_limit_wait=Yes
-
-# Custom database (--reports)
-# wp_reports=/home/user/.wpwatcher/wp_reports.json
-
 # Email server settings
 from_email=WordPressWatcher@domain.com
 smtp_server=mailserver.de:587
@@ -532,23 +533,23 @@ smtp_user=me@domain
 smtp_pass=P@assw0rd
 smtp_ssl=Yes
 
+# Sleep when API limit reached (--wait)
+# api_limit_wait=Yes
+
 # Daemon settings (recommended to use --daemon)
 # daemon=No
 # daemon_loop_sleep=24h
-
-# WPScan configuration and other scan options
-# wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
-wpscan_args=[   "--format", "cli",
-                "--no-banner",
-                "--random-user-agent", 
-                "--disable-tls-checks" ]
-
-# false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
 
 # Output (-q , -v)
 # log_file=/home/user/.wpwatcher/wpwatcher.log
 # quiet=Yes
 # verbose=Yes
+
+# Custom database (--reports)
+# wp_reports=/home/user/.wpwatcher/wp_reports.json
+
+# Exit if any errors (--ff)
+# fail_fast=Yes 
 """%(GIT_URL)
 # Config default values
 DEFAULT_CONFIG={

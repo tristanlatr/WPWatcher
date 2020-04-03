@@ -61,7 +61,7 @@ See *Configuration* bellow to learn more about options and how to and configure 
     wpwatcher [--conf File path [File path ...]] [...]
 
 `--conf` is the main argument, you can specify multiple files. Will overwrites the keys with each successive file.  
-If not specified, it will try to load config from files `./wpwatcher.conf`  ,  `~/wpwatcher.conf` and/or `~/.wpwatcher/wpwatcher.conf`.  
+If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
 
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
@@ -117,7 +117,7 @@ Configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`.
 Setup the tool as a service.
 -  With `systemctl`
     
-    <details><summary>See</summary>
+    <details><summary><b>See</b></summary>
     <p>
 
     Create and configure the service file `/lib/systemd/system/wpwatcher.service`
@@ -165,7 +165,7 @@ Setup the tool as a service.
 - [Other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
 
 #### Or schedule scans with cron
-<details><summary>See</summary>
+<details><summary><b>See</b></summary>
 <p>
 Make sure daemon feature if turned off.
 
@@ -216,26 +216,53 @@ from_email=WordPressWatcher@exemple.com
 ```
 You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
-If you're using RVM, the `wpscan_path` should point to the WPScan wapper like `/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan`
-
 ### Full configuration options
 
 All configuration options with explanatory comments.
 
-<details><summary>See</summary>
+<details><summary><b>See</b></summary>
 <p>
 
-```ini
-[wpwatcher]
-# Path to wpscan executable. On linuxes could be /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan
-# If missing , assume wpscan is in you path
-wpscan_path=wpscan
+#### WPScan path
+Path to wpscan executable. 
+With RVM could be `/usr/local/rvm/gems/default/wrappers/wpscan`. 
+If missing, assume wpscan is in you path
 
-# Monitored sites:
-# List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments
-# Each dictrionnary must contain at least a "url" key
-# Must be a valid Json string
-# Must be supplied with config file or --wp_sites argument
+```ini
+wpscan_path=wpscan
+```
+#### WPScan arguments
+Global WPScan arguments.
+Must be a valid Json string
+Set `"--format","json"` to use Json parsing feature
+The list of warnings, alerts and infos might differ when using json 
+    Email outpout will be more concice. 
+    But not all informations are logged. 
+Using `"--format", "cli"` will parse full WPScan output with [!] etc
+    Logs all informations
+
+See `wpscan --help` for more informations about WPScan options
+```ini
+wpscan_args=[   "--format", "cli",
+                "--no-banner",
+                "--random-user-agent", 
+                "--disable-tls-checks",
+                "--detection-mode", "aggressive",
+                "--enumerate", "t,p,tt,cb,dbe,u,m"]
+```
+#### False positive strings
+You can use this to ignore some warnmings or alerts.
+False positives will still be processed as infos: Use with care !
+Must be a valid Json string
+```ini
+false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
+```
+#### Monitored sites
+List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments.
+Each dictrionnary must contain at least a `"url"` key.
+Must be a valid Json string.
+Must be supplied with config file or `--wp_sites` argument.
+```ini
 wp_sites=   [
         {   
             "url":"exemple.com",
@@ -253,149 +280,137 @@ wp_sites=   [
             "email_to":["site_owner3@domain.com"]
         }
     ]
+```
+Overwrite with arguments: `--url URL [URL...]` or `--urls File path`
 
-# Global false positive strings
-# You can use this to ignore some warnmings or alerts.
-# False positives will still be processed as infos: Use with care !
-# Must be a valid Json string
-false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
+#### Notifications
 
-# Global WPScan arguments.
-# Must be a valid Json string
-#
-# Set "--format","json" to use Json parsing feature
-# The list of warnings, alerts and infos might differ when using json 
-#   Email outpout will be more concice. 
-#   But not all informations are logged. 
-# Using "--format", "cli" will parse full WPScan output with [!] etc
-#   Logs all informations
-#
-# See wpscan --help for more informations about WPScan options
-wpscan_args=[   "--format", "cli",
-                "--no-banner",
-                "--random-user-agent", 
-                "--disable-tls-checks",
-                "--detection-mode", "aggressive",
-                "--enumerate", "t,p,tt,cb,dbe,u,m"]
-
-# Whether to send emails for alerting of the WPScan result (ALERT or other)
-# If missing, default to No
+- Whether to send emails for alerting of the WPScan result (ALERT or other)
+If missing, default to No
+```ini
 send_email_report=No
-
-# Whether to report warnings and track the warnings fixes
-# Will send WARNING notifications and will include warnings in ALERT reports
-# If missing, default to Yes
+```
+Overwrite with arguments: `--send`
+- Whether to report warnings and track the warnings fixes
+Will send WARNING notifications and will include warnings in ALERT reports
+If missing, default to Yes
+```ini
 send_warnings=Yes
-
-# Wheter to include Informations in the reports
-# Will send INFO notifications if no warnings or alerts are found
-# If missing, default to No
+```
+- Wheter to include Informations in the reports. Send INFO notifications if no warnings or alerts are found
+If missing, default to No
+```ini
 send_infos=No
-
-# Will send ERROR notifications if wpscan exited with non zero status code
-# If missing, default to No
+```
+Overwrite with arguments: `--infos`
+- Send ERROR notifications if wpscan exited with non zero status code
+If missing, default to No
+```ini
 send_errors=No
-
-# Will attach text output file with raw WPScan output when sending a report
+```
+Overwrite with arguments: `--errors`
+- Attach text output file with raw WPScan output when sending a report
+```ini
 attach_wpscan_output=No
-
-# Global email report recepients, will always receive email reports for all sites
-# Must be a valid Json string
+```
+Overwrite with arguments: `--attach`
+- Global email report recepients, will always receive email reports for all sites
+Must be a valid Json string
+```ini
 email_to=["securityalerts@domain.com"]
-
-# Applicable only if send_errors=Yes
-# If set, will send any error output to those addresses (not to other)
-# Must be a valid Json string
-email_errors_to=["admins@domain.com"]
-
-# Send email reports as
-from_email=WordPressWatcher@domain.com
-
-# SMTP Email server settings
-smtp_server=mailserver.de:25
-# SMTP Use authentication. If missing, default to No
-smtp_auth=No
-# SMTP Username
-smtp_user=office
-# SMTP Password
-smtp_pass=p@assw0rd
-# SMTP Use SSL
-smtp_ssl=Yes
-
-# Local log file
-log_file=/home/user/.wpwatcher/wpwatcher.log
-# Quiet
-# Print only errors and WPScan ALERTS
-quiet=No
-# Verbose terminal output and logging.
-# Print WPScan raw output 
-# Print parsed WPScan results (all infos)
-verbose=No
-
-# Raise exceptions with stack trace or exit when WPScan failed
-# Default behaviour is to log error, continue scans and return non zero status code when all scans are over
-fail_fast=No
-
-# Wait 24h when API limit has been reached
-# Default behaviour will consider the API limit as a WPScan failure and continue the scans (if not fail_fast) leading into making lot's of failed commands
-api_limit_wait=No
-
-# Reports database file
-# If missing, will figure out a place based on your environment to store the database
-wp_reports=/home/user/.wpwatcher/wp_reports.json
-
-# Daemon mode: loops forever
-# If missing, default to No
-daemon=No
-
-# Sleep time between to scans
-# If missing, default to 0s
-daemon_loop_sleep=12h
-
-# Minimum time inverval between sending two report with the same status
-# If missing, default to 0s
+```
+Overwrite with arguments: `--email_to Email [Email...]`
+- Minimum time inverval between sending two report with the same status
+If missing, default to 0s
+```ini
 resend_emails_after=3d
 ```
+Overwrite with arguments: `--resend Time string`
+- Applicable only if send_errors=Yes
+If set, will send any error output to those addresses (not to other)
+Must be a valid Json string
+```ini
+email_errors_to=["admins@domain.com"]
+```
+
+#### Mail server
+- Send email reports as
+```ini
+from_email=WordPressWatcher@domain.com
+```
+- SMTP Email server and port
+```ini
+smtp_server=mailserver.de:25
+```
+- SMTP Use authentication. If missing, default to No
+```ini
+smtp_auth=No
+```
+- SMTP Username
+```ini
+smtp_user=office
+```
+- SMTP Password
+```ini
+smtp_pass=p@assw0rd
+```
+- SMTP Use SSL
+```ini
+smtp_ssl=Yes
+```
+#### Sleep when API limit reached
+Wait 24h when API limit has been reached
+Default behaviour will consider the API limit as a WPScan failure and continue the scans (if not fail_fast) leading into making lot's of failed commands
+```ini
+api_limit_wait=No
+```
+Overwrite with arguments: `--wait`
+#### Daemon settings
+- Daemon mode: loops forever
+If missing, default to No
+```ini
+daemon=No
+```
+Overwrite with arguments: `--daemon`
+- Sleep time between to scans
+If missing, default to 0s
+```ini
+daemon_loop_sleep=12h
+```
+#### Output
+- Quiet
+Print only errors and WPScan ALERTS
+```ini
+quiet=No
+```
+Overwrite with arguments: `--quiet`
+- Verbose terminal output and logging.
+Print WPScan raw output 
+Print parsed WPScan results (all infos)
+```ini
+verbose=No
+```
+Overwrite with arguments: `--verbose`
+- Local log file
+```ini
+log_file=/home/user/.wpwatcher/wpwatcher.log
+```
+#### Misc
+- Raise exceptions with stack trace or exit when WPScan failed
+Default behaviour is to log error, continue scans and return non zero status code when all scans are over
+```ini
+fail_fast=No
+```
+Overwrite with arguments: `--ff`
+- Reports database file
+If missing, will figure out a place based on your environment to store the database
+```ini
+wp_reports=/home/user/.wpwatcher/wp_reports.json
+```
+Overwrite with arguments: `--reports`
 
 </p>
 </details>
-
-#### Command arguments
-
-Some config arguments can be passed to the `wpwatcher` command.   
-It will overwrite previous values from config file.
-```
-optional arguments:
-  -h, --help            show this help message and exit
-  --conf File path [File path ...]
-  --template_conf       Print a template config file
-  --version, -V         Print WPWatcher version
-  --wp_sites URL [URL ...], --url URL [URL ...]
-                        Configure wp_sites
-  --wp_sites_list File path, --urls File path
-                        Configure wp_sites from a list of URLs
-  --email_to Email [Email ...], --em Email [Email ...]
-                        Configure email_to
-  --send_email_report, --send
-                        Configure send_email_report=Yes
-  --send_infos, --infos
-                        Configure send_infos=Yes
-  --send_errors, --errors
-                        Configure send_errors=Yes
-  --attach_wpscan_output, --attach
-                        Configure attach_wpscan_output=Yes
-  --fail_fast, --ff     Configure fail_fast=Yes
-  --api_limit_wait, --wait
-                        Configure api_limit_wait=Yes
-  --daemon              Configure daemon=Yes
-  --wp_reports File path
-                        Configure wp_reports
-  --resend_emails_after Time string, --resend Time string
-                        Configure resend_emails_after
-  --verbose, -v         Configure verbose=Yes
-  --quiet, -q           Configure quiet=Yes
-```
-
 
 ## Email reports
 
@@ -427,7 +442,7 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
 In addition to log messages, the readable report, same as email report, is printed to stdout.
-<details><summary>See</summary>
+<details><summary><b>See</b></summary>
 <p>
 
 ```log
@@ -458,15 +473,6 @@ CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 
 CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 5.3 - Stored XSS via Block Editor Content Fixed In: 5.1.4 References: - CVE-2019-16781 - CVE-2019-16780 url: https://wordpress.org/news/2019/12/wordpress-5-3-1-security-and-maintenance-release/, https://github.com/WordPress/wordpress-develop/security/advisories/GHSA-pg4x-64rh-3c9v - WPVulnDB(9976): https://wpvulndb.com/vulnerabilities/9976
 CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 5.3 - wp_kses_bad_protocol() Colon Bypass Fixed In: 5.1.4 References: - CVE-2019-20041 url: https://wordpress.org/news/2019/12/wordpress-5-3-1-security-and-maintenance-release/, https://github.com/WordPress/wordpress-develop/commit/b1975463dd995da19bb40d3fa0786498717e3c53 - WPVulnDB(10004): https://wpvulndb.com/vulnerabilities/10004
 INFO - No WPWatcher ALERT email report have been sent for site wp.exemple.com. If you want to receive emails, set send_email_report=Yes in the config.
-
-WordPress security scan report for site: wp.exemple.com
-
-Issues have been detected by WPScan.
-
-        Alerts
-
-[...]
-
 INFO - Scans finished successfully.
 ```
 </p>
