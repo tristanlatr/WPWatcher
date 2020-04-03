@@ -216,6 +216,8 @@ from_email=WordPressWatcher@exemple.com
 ```
 You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
+If you're using RVM, the `wpscan_path` should point to the WPScan wapper like `/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan`
+
 ### Full configuration options
 
 All configuration options with explanatory comments.

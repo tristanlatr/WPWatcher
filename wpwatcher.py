@@ -56,11 +56,11 @@ class WPWatcher():
         self.conf=copy.deepcopy(conf)
         # Check sites are in the config
         if len(self.conf['wp_sites'])==0:
-            log.info("No sites configured, please provide wp_sites in config file or use --url URL [URL...]")
+            log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
             exit(-1)
         # Check if WPScan exists
         if not self.is_wpscan_installed():
-            log.error("There is an issue with your WPScan installation or WPScan not installed. Fix wpscan on your system. See https://wpscan.org for installation steps.")
+            log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan . Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
         # Update wpscan database
         self.update_wpscan()
@@ -448,7 +448,7 @@ class WPWatcher():
                         if self.conf['send_errors']:
                             self.send_report(wp_site, wp_report)
                         else:
-                            log.info("No WPWatcher ERROR email report have been sent for site %s. If you want to receive error emails, set send_errors=Yes in the config."%(wp_site['url']))
+                            log.info("No WPWatcher ERROR email report have been sent for site %s. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_site['url']))
                     # Or email regular report if conditions ------------------------------------------
                     else:
                         if ( self.conf['send_infos'] or 
@@ -464,7 +464,7 @@ class WPWatcher():
                                 log.info("Not sending WPWatcher %s email report because already sent in the last %s (at %s) for site %s"%(wp_report['status'], self.conf['resend_emails_after'], wp_report['last_email'], wp_site['url']))
                         else: 
                             # No report notice
-                            log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config."%(wp_report['status'],wp_site['url']))
+                            log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive more emails, send_warnings=Yes, set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_site['url']))
                 
                 # Handle send mail error
                 except Exception:
@@ -475,7 +475,7 @@ class WPWatcher():
                         exit(-1)
             else:
                 # No report notice
-                log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, set send_email_report=Yes in the config."%(wp_report['status'], wp_site['url']))
+                log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, setup mail server settings in the config and enable send_email_report=Yes or use --send."%(wp_report['status'], wp_site['url']))
             
             # To support reccursive calling and scanning all sites in several days
             # Save scanned site
@@ -484,11 +484,12 @@ class WPWatcher():
             del wp_report['wpscan_output']
             # Save report
             wp_report_list.append(wp_report)
+
+        self.write_wp_reports(wp_report_list)
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
             log.info("Scans finished with errors.") 
-        self.write_wp_reports(wp_report_list)
         return((exit_code, wp_report_list))
 
 # Configuration template -------------------------
