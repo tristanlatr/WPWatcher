@@ -228,7 +228,7 @@ class WPWatcher():
             message['To'] = to_email
 
             # Email body
-            body=self.build_message(wp_report, wp_site)
+            body=self.build_message(wp_report)
             message.attach(MIMEText(body))
             
             # Attachment log if attach_wpscan_output
@@ -275,9 +275,9 @@ class WPWatcher():
 
     
     @staticmethod
-    def build_message(wp_report, wp_site):
+    def build_message(wp_report):
         
-        message="WordPress security scan report for site: %s\n" % (wp_site['url'])
+        message="WordPress security scan report for site: %s\n" % (wp_report['site'])
         message+="Scan datetime: %s\n" % (wp_report['datetime'])
         
         if wp_report['errors'] : message += "\nAn error occurred."
@@ -335,7 +335,7 @@ class WPWatcher():
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self, last_wp_report_list=None):
-        log.info("Starting scans on configured sites")
+        log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
         last_wp_report_list=self.wp_reports if last_wp_report_list==None else last_wp_report_list
         wp_report_list=[]
         scanned_sites=[]
@@ -435,13 +435,13 @@ class WPWatcher():
             elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
             else: wp_report['status']='INFO'
 
-            # Deleting unwanted informations in report text, alerts and fixed items (if any) are always present
+            # Deleting unwanted informations in report, alerts and fixed items (if any) are always present util next email
             wp_report['warnings']=wp_report['warnings'] if self.conf['send_warnings'] or self.conf['send_infos'] else []
             wp_report['infos']=wp_report['infos'] if self.conf['send_infos'] else []
 
             # Printing to stdout if not quiet
             # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
-            log.debug("\n"+self.build_message(wp_report, wp_site)+"\n")
+            log.debug("\n"+self.build_message(wp_report)+"\n")
 
             # Sending report
             if self.conf['send_email_report']:
@@ -499,25 +499,29 @@ class WPWatcher():
 TEMPLATE_FILE="""[wpwatcher]
 # WPWatcher configuration file
 # WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email
+# Options configurable with CLI args, see 'wpwatcher --help'
 # For more infos check %s
 
-# Options configurable with CLI args, see 'wpwatcher --help':
-wp_sites=   [
-            {"url":"exemple.com"},
-            {"url":"exemple2.com"},
-            {"url":"exemple3.com"}
-    ]
-email_to=["you@domain"]
+# Sites (--url or --urls)
+wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 
+# Notifications (--send , --em , --infos , --errors , --attach , --resend)
 # send_email_report=Yes
+# email_to=["you@domain"]
 # send_infos=Yes
 # send_errors=Yes
+# send_warnings=No
 # attach_wpscan_output=Yes
-# quiet=Yes
-# verbose=Yes
+# resend_emails_after=5d
+# email_errors_to=["admins@domain"]
+
+# Exit if any errors (--ff)
 # fail_fast=Yes 
+
+# Sleep when API limit reached (--wait)
 # api_limit_wait=Yes
-# daemon=No
+
+# Custom database (--reports)
 # wp_reports=/home/user/.wpwatcher/wp_reports.json
 
 # Email server settings
@@ -528,18 +532,23 @@ smtp_user=me@domain
 smtp_pass=P@assw0rd
 smtp_ssl=Yes
 
+# Daemon settings (recommended to use --daemon)
+# daemon=No
+# daemon_loop_sleep=24h
+
 # WPScan configuration and other scan options
 # wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
 wpscan_args=[   "--format", "cli",
                 "--no-banner",
                 "--random-user-agent", 
                 "--disable-tls-checks" ]
+
 # false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
+
+# Output (-q , -v)
 # log_file=/home/user/.wpwatcher/wpwatcher.log
-# send_warnings=No
-# email_errors_to=["admins@domain"]
-# daemon_loop_sleep=12h
-# resend_emails_after=3d
+# quiet=Yes
+# verbose=Yes
 """%(GIT_URL)
 # Config default values
 DEFAULT_CONFIG={
@@ -669,6 +678,8 @@ def build_config_files(files=None):
             'fail_fast':getbool(conf_parser, 'fail_fast'),
             'api_limit_wait':getbool(conf_parser, 'api_limit_wait'),
             'daemon':getbool(conf_parser, 'daemon'),
+            'resend_emails_after':parse_timedelta(conf_parser.get('wpwatcher','resend_emails_after')),
+            'wp_reports':conf_parser.get('wpwatcher','wp_reports'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
@@ -682,9 +693,7 @@ def build_config_files(files=None):
             'smtp_pass':conf_parser.get('wpwatcher','smtp_pass'),
             'smtp_ssl':getbool(conf_parser, 'smtp_ssl'),
             'from_email':conf_parser.get('wpwatcher','from_email'),
-            'daemon_loop_sleep':parse_timedelta(conf_parser.get('wpwatcher','daemon_loop_sleep')),
-            'resend_emails_after':parse_timedelta(conf_parser.get('wpwatcher','resend_emails_after')),
-            'wp_reports':conf_parser.get('wpwatcher','wp_reports'),
+            'daemon_loop_sleep':parse_timedelta(conf_parser.get('wpwatcher','daemon_loop_sleep'))
         }
         return ((config_dict,files))
 
@@ -743,7 +752,7 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--fail_fast', '--ff', help="Configure fail_fast=Yes", action='store_true')
     parser.add_argument('--api_limit_wait', '--wait', help="Configure api_limit_wait=Yes", action='store_true')
     parser.add_argument('--daemon',  help="Configure daemon=Yes", action='store_true')
-    parser.add_argument('--wp_reports', metavar="File path", help="Configure wp_reports", default=None)
+    parser.add_argument('--wp_reports', '--reports', metavar="File path", help="Configure wp_reports", default=None)
     parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Configure resend_emails_after")
     
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
