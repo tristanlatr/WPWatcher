@@ -15,6 +15,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
   - Python 3 (standard libraries)
+  - Tested on Linux and MacOS
 
 <!-- #### Compatibility
 Tested with WPScan 3.7 on :
@@ -65,13 +66,13 @@ If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.
 
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
-See complete list of supported arguments in the sction *Command arguments* bellow.
+See complete list of supported arguments in the sction *Full configuration options* bellow or use `wpwatcher --help`
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
-- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. Set `wp_reports=null` in the config to disable the storage of the json file, the database will still be stored in memory when using `--daemon`.
+- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. Set `wp_reports=null` in the config to disable the storage of the Json file, the database will still be stored in memory when using `--daemon`.
 
 ### Return non zero status code if :
 - One or more WPScan command failed
@@ -86,37 +87,43 @@ Setup mail server settings and turn on `send_email_report` in the config file if
 
 All options can be missing from config file.
 
-See *Command arguments* section below to see list of configurables values with CLI arguments and shortcuts. 
+See *Full configuration options* section below to see list of configurables values with CLI arguments and shortcuts. 
 
 ### Notes about WPScan API token
 
-You need to register a WPVulDB account and use your API token with WPScan (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
+You need a WPScan API token (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. 
 
-You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have no API calls in bank anymore. 
+You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have reached yout API limit. 
+
+Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reached.
+
+If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
 
 ### Scanning a large number of sites
 Tip: you can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
 
 If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
 
-#### Handling API limit
 Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
-
-Set `api_limit_wait=Yes` option in the config. It will wait 24h if your API limit has been reached and continue the scans.
-
-
 
 #### Setup continuous scanning service
 Caution: **do not configure crontab execution and service at the same time** .   
 
-It's best to configure `daemon_loop_sleep` , `resend_emails_after` and `api_limit_wait=Yes`.  
-Launch WPWatcher in daemon moode:
+Configure :
+- `daemon_loop_sleep`: i.e. `24h` 
+- `resend_emails_after` i.e.`5d` and 
+- `api_limit_wait=Yes`. 
 
-    wpwatcher --daemon
+Recommended to use `--daemon` argument and not the config file value, otherwise `wpwatcher` will start by default in daemon mode.  
+Launch WPWatcher in daemon mode:
+
+    wpwatcher --daemon [--urls ./my_sites.txt] ...
+
+Let's say you have 20 WordPress sites to scan but your API limit is reached after 8 sites, the program will sleep 24h and continue until all sites are scanned (2 days later). Then will sleep the configured time and start again.
 
 `wpwatcher` and `wpscan` might not be in your execution environement `PATH`. If you run into file not found error, try to configure the full paths to executables and config files.
 
-Setup the tool as a service.
+Setup WPWatcher as a service.
 -  With `systemctl`
     
     <details><summary><b>See</b></summary>
@@ -263,7 +270,7 @@ false_positive_strings=["You can get a free API token with 50 daily requests by 
 List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments.
 Each dictrionnary must contain at least a `"url"` key.
 Must be a valid Json string.
-Must be supplied with config file or `--wp_sites` argument.
+Must be supplied with config file or argument.
 ```ini
 wp_sites=   [
         {   
@@ -283,7 +290,7 @@ wp_sites=   [
         }
     ]
 ```
-Overwrite with arguments: `--url URL [URL...]` or `--urls File path`
+Overwrite with arguments: `--url URL [URL...]` or `--urls File path`. Custom email report recepients, false positives and specific wpscan arguments are not supported with CLI arguments
 
 #### Notifications
 
@@ -322,14 +329,14 @@ Must be a valid Json string
 email_to=["securityalerts@domain.com"]
 ```
 Overwrite with arguments: `--email_to Email [Email...]`
-- Minimum time inverval between sending two report with the same status.  
-If missing, default to 0s
+- Minimum time inverval between sending two report with the same status.  Examples of valid strings: `8h`, `2d8h5m20s`, `2m4s`
+If missing, default to `0s`
 ```ini
 resend_emails_after=3d
 ```
 Overwrite with arguments: `--resend Time string`
-- If set, will send any error output to those addresses (not to other).  
-Applicable only if send_errors=Yes.  
+- Send any error email to those addresses and not to other recepients (`email_to` options).  
+Applicable only if `send_errors=Yes`.  
 Must be a valid Json string
 ```ini
 email_errors_to=["admins@domain.com"]
@@ -374,8 +381,8 @@ If missing, default to No
 daemon=No
 ```
 Overwrite with arguments: `--daemon`
-- Sleep time between two scans.
-If missing, default to 0s
+- Sleep time between two scans.  
+If missing, default to `0s`
 ```ini
 daemon_loop_sleep=12h
 ```
@@ -404,7 +411,7 @@ fail_fast=No
 ```
 Overwrite with arguments: `--ff`
 - Reports database file.  
-If missing, will figure out a place based on your environment to store the database
+If missing, will figure out a place based on your environment to store the database. Use `null` keyword to disable the storage of the Json database file.
 ```ini
 wp_reports=/home/user/.wpwatcher/wp_reports.json
 ```
