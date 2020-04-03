@@ -406,7 +406,7 @@ If missing, will figure out a place based on your environment to store the datab
 ```ini
 wp_reports=/home/user/.wpwatcher/wp_reports.json
 ```
-Overwrite with arguments: `--reports`
+Overwrite with arguments: `--reports File path`
 
 </p>
 </details>
