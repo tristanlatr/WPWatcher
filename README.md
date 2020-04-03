@@ -225,23 +225,23 @@ All configuration options with explanatory comments.
 
 #### WPScan path
 Path to wpscan executable. 
-With RVM could be `/usr/local/rvm/gems/default/wrappers/wpscan`. 
-If missing, assume wpscan is in you path
+With RVM could be `/usr/local/rvm/gems/default/wrappers/wpscan`.  
+If missing, assume `wpscan` is in your `PATH`
 
 ```ini
 wpscan_path=wpscan
 ```
 #### WPScan arguments
-Global WPScan arguments.
-Must be a valid Json string
-Set `"--format","json"` to use Json parsing feature
-The list of warnings, alerts and infos might differ when using json 
-    Email outpout will be more concice. 
-    But not all informations are logged. 
-Using `"--format", "cli"` will parse full WPScan output with [!] etc
-    Logs all informations
+Global WPScan arguments.  
+Must be a valid Json string.  
+<!-- Set `"--format","json"` to use Json parsing feature.  
+The list of warnings, alerts and infos might differ when using json  
+    Email outpout will be more concice.   
+    But not all informations are logged.   
+Using `"--format", "cli"` will parse full WPScan output with [!] etc  
+    Logs all informations   -->
 
-See `wpscan --help` for more informations about WPScan options
+See `wpscan --help` for more informations about WPScan options  
 ```ini
 wpscan_args=[   "--format", "cli",
                 "--no-banner",
@@ -251,8 +251,8 @@ wpscan_args=[   "--format", "cli",
                 "--enumerate", "t,p,tt,cb,dbe,u,m"]
 ```
 #### False positive strings
-You can use this to ignore some warnmings or alerts.
-False positives will still be processed as infos: Use with care !
+You can use this to ignore some warnmings or alerts.  
+False positives will still be processed as infos: Use with care.   
 Must be a valid Json string
 ```ini
 false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
@@ -285,49 +285,49 @@ Overwrite with arguments: `--url URL [URL...]` or `--urls File path`
 
 #### Notifications
 
-- Whether to send emails for alerting of the WPScan result (ALERT or other)
+- Whether to send emails for alerting of the WPScan result (ALERT or other).  
 If missing, default to No
 ```ini
 send_email_report=No
 ```
 Overwrite with arguments: `--send`
-- Whether to report warnings and track the warnings fixes
-Will send WARNING notifications and will include warnings in ALERT reports
+- Whether to report warnings and track the warnings fixes.
+Will send WARNING notifications and will include warnings in ALERT reports.  
 If missing, default to Yes
 ```ini
 send_warnings=Yes
 ```
-- Wheter to include Informations in the reports. Send INFO notifications if no warnings or alerts are found
+- Wheter to include Informations in the reports. Send INFO notifications if no warnings or alerts are found.  
 If missing, default to No
 ```ini
 send_infos=No
 ```
 Overwrite with arguments: `--infos`
-- Send ERROR notifications if wpscan exited with non zero status code
+- Send ERROR notifications if wpscan exited with non zero status code.  
 If missing, default to No
 ```ini
 send_errors=No
 ```
 Overwrite with arguments: `--errors`
-- Attach text output file with raw WPScan output when sending a report
+- Attach text output file with raw WPScan output when sending a report  
 ```ini
 attach_wpscan_output=No
 ```
 Overwrite with arguments: `--attach`
-- Global email report recepients, will always receive email reports for all sites
+- Global email report recepients, will always receive email reports for all sites.  
 Must be a valid Json string
 ```ini
 email_to=["securityalerts@domain.com"]
 ```
 Overwrite with arguments: `--email_to Email [Email...]`
-- Minimum time inverval between sending two report with the same status
+- Minimum time inverval between sending two report with the same status.  
 If missing, default to 0s
 ```ini
 resend_emails_after=3d
 ```
 Overwrite with arguments: `--resend Time string`
-- Applicable only if send_errors=Yes
-If set, will send any error output to those addresses (not to other)
+- If set, will send any error output to those addresses (not to other).  
+Applicable only if send_errors=Yes.  
 Must be a valid Json string
 ```ini
 email_errors_to=["admins@domain.com"]
@@ -359,7 +359,7 @@ smtp_pass=p@assw0rd
 smtp_ssl=Yes
 ```
 #### Sleep when API limit reached
-Wait 24h when API limit has been reached
+Wait 24h when API limit has been reached.  
 Default behaviour will consider the API limit as a WPScan failure and continue the scans (if not fail_fast) leading into making lot's of failed commands
 ```ini
 api_limit_wait=No
@@ -384,9 +384,8 @@ Print only errors and WPScan ALERTS
 quiet=No
 ```
 Overwrite with arguments: `--quiet`
-- Verbose terminal output and logging.
-Print WPScan raw output 
-Print parsed WPScan results (all infos)
+- Verbose terminal output and logging.  
+Print WPScan raw output and parsed WPScan results.
 ```ini
 verbose=No
 ```
@@ -396,13 +395,13 @@ Overwrite with arguments: `--verbose`
 log_file=/home/user/.wpwatcher/wpwatcher.log
 ```
 #### Misc
-- Raise exceptions with stack trace or exit when WPScan failed
+- Raise exceptions with stack trace or exit when WPScan failed.  
 Default behaviour is to log error, continue scans and return non zero status code when all scans are over
 ```ini
 fail_fast=No
 ```
 Overwrite with arguments: `--ff`
-- Reports database file
+- Reports database file.  
 If missing, will figure out a place based on your environment to store the database
 ```ini
 wp_reports=/home/user/.wpwatcher/wp_reports.json
