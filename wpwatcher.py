@@ -815,9 +815,9 @@ def wpwatcher():
 
     if wpwatcher.conf['daemon']: 
         log.info("Daemon mode selected, looping for ever...")
+        results=None # Keep databse in memory
         while True:
             # If daemon, run scans for ever
-            results=[]
             exit_code,results=wpwatcher.run_scans_and_notify(results)
             log.info("Sleeping %s and scanning again..."%wpwatcher.conf['daemon_loop_sleep'])
             time.sleep(wpwatcher.conf['daemon_loop_sleep'].total_seconds())
