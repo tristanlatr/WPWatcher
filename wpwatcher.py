@@ -108,22 +108,31 @@ class WPWatcher():
                 try:
                     with open(self.conf['wp_reports'], 'r') as reportsfile:
                         wp_reports=json.load(reportsfile)
-                    log.info("Load wp_reports file: %s"%self.conf['wp_reports'])
+                    log.info("Load wp_reports database: %s"%self.conf['wp_reports'])
                 except Exception:
-                    log.error("Could not read wp_reports database file\n{}".format(traceback.format_exc()))
+                    log.error("Could not read wp_reports database\n{}".format(traceback.format_exc()))
                     # Fail fast
                     if self.conf['fail_fast']: 
                         log.info("Failure. Scans aborted.")
                         exit(-1)
         return wp_reports
 
-    def write_wp_reports(self, wp_report_list):
+    def write_wp_reports(self, new_wp_report_list):
         if self.conf['wp_reports']!='null':
-            # Update the sites that have been scanned and keep old
-            wp_report_list=wp_report_list+[r for r in self.wp_reports if not any([r['site']==new_res['site'] for new_res in wp_report_list ])]
+            # Update the sites that have been scanned, keep others
+            # Keep same report order add append new sites at the bottom
+            for newr in new_wp_report_list:
+                new=True
+                for r in self.wp_reports:
+                    if r['site']==newr['site']:
+                        self.wp_reports[self.wp_reports.index(r)]=newr
+                        new=False
+                        break
+                if new: self.wp_reports.append(newr)
+                
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(wp_report_list, reportsfile, indent=4)
+                    json.dump(self.wp_reports, reportsfile, indent=4)
                     log.info("Write wp_reports to %s"%self.conf['wp_reports'])
             except Exception:
                 log.error("Could not write wp_reports database file\n{}".format(traceback.format_exc()))
