@@ -442,7 +442,7 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `INFO`: Used for info output , `WPScan INFO` and `FIXED` issues
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
-In addition to log messages, the readable report, same as email report, is printed to stdout.
+In addition to log messages, the readable report, same as email report, and raw WPScan output can be printed with `--verbose`.
 <details><summary><b>See</b></summary>
 <p>
 
