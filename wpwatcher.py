@@ -504,36 +504,39 @@ wp_sites=   [
             {"url":"exemple2.com"},
             {"url":"exemple3.com"}
     ]
-send_email_report=No
-send_infos=No
-send_errors=No
-attach_wpscan_output=No
 email_to=["you@domain"]
-quiet=No
-verbose=No
-fail_fast=No
-api_limit_wait=No
-daemon=No
+
+# send_email_report=Yes
+# send_infos=Yes
+# send_errors=Yes
+# attach_wpscan_output=Yes
+# quiet=Yes
+# verbose=Yes
+# fail_fast=Yes 
+# api_limit_wait=Yes
+# daemon=No
 # wp_reports=/home/user/.wpwatcher/wp_reports.json
 
-# Options only configurable with a config file:
-wpscan_path=wpscan
-wpscan_args=[   "--format", "cli",
-                "--no-banner",
-                "--random-user-agent", 
-                "--disable-tls-checks" ]
-# false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
-log_file=./wpwatcher.log
-send_warnings=Yes
+# Email server settings
 from_email=WordPressWatcher@domain.com
-# email_errors_to=["admins@domain"]
 smtp_server=mailserver.de:587
 smtp_auth=Yes
 smtp_user=me@domain
 smtp_pass=P@assw0rd
 smtp_ssl=Yes
-daemon_loop_sleep=0s
-resend_emails_after=3d
+
+# WPScan configuration and other scan options
+# wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
+wpscan_args=[   "--format", "cli",
+                "--no-banner",
+                "--random-user-agent", 
+                "--disable-tls-checks" ]
+# false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
+# log_file=/home/user/.wpwatcher/wpwatcher.log
+# send_warnings=No
+# email_errors_to=["admins@domain"]
+# daemon_loop_sleep=12h
+# resend_emails_after=3d
 """%(GIT_URL)
 # Config default values
 DEFAULT_CONFIG={

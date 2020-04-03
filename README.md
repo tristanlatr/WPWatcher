@@ -337,18 +337,23 @@ verbose=No
 fail_fast=No
 
 # Wait 24h when API limit has been reached
+# Default behaviour will consider the API limit as a WPScan failure and continue the scans (if not fail_fast) leading into making lot's of failed commands
 api_limit_wait=No
 
 # Reports database file
+# If missing, will figure out a place based on your environment to store the database
 wp_reports=/home/user/.wpwatcher/wp_reports.json
 
-# Loop for ever
+# Daemon mode: loops forever
+# If missing, default to No
 daemon=No
 
-# Loop sleep
-daemon_loop_sleep=0s
+# Sleep time between to scans
+# If missing, default to 0s
+daemon_loop_sleep=12h
 
-# Minimum inverval between 2 same status reports sent
+# Minimum time inverval between sending two report with the same status
+# If missing, default to 0s
 resend_emails_after=3d
 ```
 
