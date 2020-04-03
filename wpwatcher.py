@@ -133,7 +133,7 @@ class WPWatcher():
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
                     json.dump(self.wp_reports, reportsfile, indent=4)
-                    log.info("Write wp_reports to %s"%self.conf['wp_reports'])
+                    log.info("Updated %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
             except Exception:
                 log.error("Could not write wp_reports database file\n{}".format(traceback.format_exc()))
                 # Fail fast
@@ -288,12 +288,12 @@ class WPWatcher():
         if wp_report['alerts']:
             message += "\n\n\tAlerts\n\t------\n\n"
             message += "\n\n".join(wp_report['alerts'])
-        if wp_report['warnings']:
-            message += "\n\n\tWarnings\n\t--------\n\n"
-            message += "\n\n".join(wp_report['warnings'])
         if wp_report['fixed']:
             message += "\n\n\tFixed\n\t-----\n\n"
             message += "\n\n".join(wp_report['fixed'])
+        if wp_report['warnings']:
+            message += "\n\n\tWarnings\n\t--------\n\n"
+            message += "\n\n".join(wp_report['warnings'])
         if wp_report['infos']:
             message += "\n\n\tInformations\n\t------------\n\n"
             message += "\n\n".join(wp_report['infos'])
@@ -310,12 +310,12 @@ class WPWatcher():
         # Figure out fixed issues : compare firt line of alerts and warnings and see if they are still present
         for last_alert in last_wp_report['alerts']:
             if last_alert.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['alerts']]:
-                wp_report['fixed'].append('Alert regarding component %s has been fixed since the last report %s.'%(last_alert.splitlines()[0], 
-                    last_wp_report['last_email']))
+                wp_report['fixed'].append('Alert regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_alert.splitlines()[0], 
+                    last_wp_report['last_email'], wp_report['datetime']))
         for last_warn in last_wp_report['warnings']:
             if last_warn.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['warnings']]:
-                wp_report['fixed'].append('Warning regarding component %s has been fixed since the last report %s.'%(last_warn.splitlines()[0], 
-                    last_wp_report['last_email']))
+                wp_report['fixed'].append('Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_warn.splitlines()[0], 
+                    last_wp_report['last_email'], wp_report['datetime']))
         # Save last email datetime if any
         if last_wp_report['last_email']:
             wp_report['last_email']=last_wp_report['last_email']
