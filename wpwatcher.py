@@ -607,15 +607,6 @@ def find_config_files(create=False):
                 log.info("Init new config file from template: %s"%(p))
         p=os.path.join(os.environ['APPDATA'],'wpwatcher.conf')
         if os.path.isfile(p): paths.append(p)
-    elif 'XDG_CONFIG_HOME' in os.environ: 
-        p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wpwatcher.conf')
-        if os.path.isfile(p): paths.append(p)
-        elif create: 
-            with open(p,'w') as config_file:
-                config_file.write(TEMPLATE_FILE)
-                log.info("Init new config file: %s"%(p))
-        p=os.path.join(os.environ['XDG_CONFIG_HOME'],'wpwatcher.conf')
-        if os.path.isfile(p): paths.append(p)
     elif 'HOME' in os.environ: 
         p=os.path.join(os.environ['HOME'],'.wpwatcher/wpwatcher.conf')
         if os.path.isfile(p): paths.append(p)
@@ -624,6 +615,15 @@ def find_config_files(create=False):
                 config_file.write(TEMPLATE_FILE)
                 log.info("Init new config file: %s"%(p))
         p=os.path.join(os.environ['HOME'],'wpwatcher.conf')
+        if os.path.isfile(p): paths.append(p)
+    elif 'XDG_CONFIG_HOME' in os.environ: 
+        p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wpwatcher.conf')
+        if os.path.isfile(p): paths.append(p)
+        elif create: 
+            with open(p,'w') as config_file:
+                config_file.write(TEMPLATE_FILE)
+                log.info("Init new config file: %s"%(p))
+        p=os.path.join(os.environ['XDG_CONFIG_HOME'],'wpwatcher.conf')
         if os.path.isfile(p): paths.append(p)
     if os.path.isfile('./wpwatcher.conf'): 
         paths.append('./wpwatcher.conf')
