@@ -547,7 +547,7 @@ smtp_ssl=Yes
 
 # Daemon settings (recommended to use --daemon)
 # daemon=No
-# daemon_loop_sleep=24h
+# daemon_loop_sleep=12h
 
 # Output (-q , -v)
 # log_file=/home/user/.wpwatcher/wpwatcher.log
