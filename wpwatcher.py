@@ -76,21 +76,23 @@ class WPWatcher():
         log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites']]) )
 
         self.wp_reports=self.build_wp_reports()
-    @staticmethod
-    def find_wp_reports_file(create=False):
+    
+    def find_wp_reports_file(self, create=False):
         wp_reports=None
         if 'APPDATA' in os.environ: 
-            p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wp_reports.json')
-            # if create: os.makedirs(, exist_ok=True)
-            if os.path.isfile(p) or create: wp_reports=p
-        elif 'XDG_CONFIG_HOME' in os.environ: 
-            p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wp_reports.json')
+            if self.conf['daemon']: p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wp_reports.daemon.json')
+            else: p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wp_reports.json')
             if os.path.isfile(p) or create: wp_reports=p
         elif 'HOME' in os.environ: 
-            p=os.path.join(os.environ['HOME'],'.wpwatcher/wp_reports.json')
+            if self.conf['daemon']: p=os.path.join(os.environ['HOME'],'.wpwatcher/wp_reports.daemon.json')
+            else: p=os.path.join(os.environ['HOME'],'.wpwatcher/wp_reports.json')
             if os.path.isfile(p) or create: wp_reports=p
-        if os.path.isfile('./wp_reports.json'): 
-            wp_reports='./wp_reports.json'
+        elif 'XDG_CONFIG_HOME' in os.environ: 
+            if self.conf['daemon']: p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wp_reports.daemon.json')
+            else: p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wp_reports.json')
+            if os.path.isfile(p) or create: wp_reports=p
+        # if os.path.isfile('./wp_reports.json'): 
+        #     wp_reports='./wp_reports.json'
         if create:
             os.makedirs(os.path.join(os.environ['HOME'],'.wpwatcher'), exist_ok=True)
             if not os.path.isfile(wp_reports):
@@ -117,7 +119,7 @@ class WPWatcher():
                             log.info("Failure. Scans aborted.")
                             exit(-1)
                 else:
-                    log.info("The file database file %s do not exist. It will be created at the end of the scans."%(self.conf['wp_reports']))
+                    log.info("The database file %s do not exist. It will be created at the end of the scans."%(self.conf['wp_reports']))
         return wp_reports
 
     def write_wp_reports(self, new_wp_report_list):
@@ -341,6 +343,15 @@ class WPWatcher():
         scanned_sites=[]
         exit_code=0
         for wp_site in self.conf['wp_sites']:
+            # Check if url is present and fail if not  
+            if 'url' not in wp_site or wp_site['url']=="":
+                log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
+                exit_code=-1
+                # Fail fast
+                if self.conf['fail_fast']: 
+                    log.info("Failure. Scans aborted.") 
+                    exit(-1)
+                continue
             # Init report variables
             wp_report={
                 "site":wp_site['url'],
@@ -354,22 +365,23 @@ class WPWatcher():
                 "fixed":[],
                 "wpscan_output":None # will be deleted
             }
-
-            # Check if url is present and fail if not  
-            if 'url' not in wp_site or wp_site['url']=="":
-                log.error("Site must have valid a 'url' key: %s" % (str(wp_site)))
-                exit_code=-1
-                # Fail fast
-                if self.conf['fail_fast']: 
-                    log.info("Failure. Scans aborted.") 
-                    exit(-1)
-                continue
+            # Find last site result if any
+            last_wp_report=[r for r in last_wp_report_list if r['site']==wp_site['url']]
+            if len(last_wp_report)>0: 
+                last_wp_report=last_wp_report[0]
+                # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
+                if ( self.conf['daemon'] and 
+                    datetime.strptime(wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') - datetime.strptime(last_wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') < self.conf['daemon_loop_sleep']):
+                    log.info("Skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
+                    continue
+            else: last_wp_report=None
+            
             # Read the wp_site dict and assing default values if needed -------------
             if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
             if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
             if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-            
-            # WPScan arguments
+
+           # WPScan arguments
             wpscan_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']+['--url', wp_site['url']]
             log.info("Scanning site %s"%wp_site['url'] )
             
@@ -410,11 +422,8 @@ class WPWatcher():
                         log.info("Failure. Scans aborted.")
                         exit(-1)
                 else:
-                    # Find last site result if any
-                    last_wp_report=[r for r in last_wp_report_list if r['site']==wp_site['url']]
-                    if len(last_wp_report)>0:
-                        last_wp_report=last_wp_report[0]
-                        # Update report entry
+                    # Update report entry if any
+                    if last_wp_report:
                         self.update_report(wp_report, last_wp_report)
                     
                     # Print WPScan findings ------------------------------------------------------
@@ -812,22 +821,20 @@ def wpwatcher():
     configuration=build_config(args)
     # Create main object
     wpwatcher=WPWatcher(configuration)
-
+    # If daemon lopping
     if wpwatcher.conf['daemon']: 
         log.info("Daemon mode selected, looping for ever...")
         results=None # Keep databse in memory
         while True:
-            # If daemon, run scans for ever
+            # Run scans for ever
             exit_code,results=wpwatcher.run_scans_and_notify(results)
             log.info("Sleeping %s and scanning again..."%wpwatcher.conf['daemon_loop_sleep'])
             time.sleep(wpwatcher.conf['daemon_loop_sleep'].total_seconds())
             wpwatcher=WPWatcher(build_config(args))
+    # Run scans and quit
     else:
-        # Run scans and quit
         exit_code,results=wpwatcher.run_scans_and_notify()
-
         exit(exit_code)
-        
 
 if __name__ == '__main__':
     wpwatcher()
