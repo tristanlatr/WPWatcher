@@ -43,8 +43,8 @@ GIT_URL="https://github.com/tristanlatr/WPWatcher"
 AUTHORS="Florian Roth, Tristan Landès"
 
 # How many seconds to wait when API limit reached
-# 86400=24h
-API_WAIT_SLEEP=86400
+# 86400s=24h
+API_WAIT_SLEEP=timedelta(hours=24)
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher():
@@ -123,18 +123,17 @@ class WPWatcher():
         return wp_reports
 
     def write_wp_reports(self, new_wp_report_list):
+        # Update the sites that have been scanned, keep others
+        # Keep same report order add append new sites at the bottom
+        for newr in new_wp_report_list:
+            new=True
+            for r in self.wp_reports:
+                if r['site']==newr['site']:
+                    self.wp_reports[self.wp_reports.index(r)]=newr
+                    new=False
+                    break
+            if new: self.wp_reports.append(newr)
         if self.conf['wp_reports']!='null':
-            # Update the sites that have been scanned, keep others
-            # Keep same report order add append new sites at the bottom
-            for newr in new_wp_report_list:
-                new=True
-                for r in self.wp_reports:
-                    if r['site']==newr['site']:
-                        self.wp_reports[self.wp_reports.index(r)]=newr
-                        new=False
-                        break
-                if new: self.wp_reports.append(newr)
-                
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
                     json.dump(self.wp_reports, reportsfile, indent=4)
@@ -145,6 +144,7 @@ class WPWatcher():
                 if self.conf['fail_fast']: 
                     log.info("Failure. Scans aborted.")
                     exit(-1)
+        return self.wp_reports
 
     # Replace --api-token param with *** for safe logging
     @staticmethod
@@ -327,13 +327,13 @@ class WPWatcher():
             wp_report['last_email']=last_wp_report['last_email']
                             
     def delay_scans(self, scanned_sites, wp_reports_list):
-        log.info("API limit has been reached, sleeping %s seconds and continuing the scans..."%API_WAIT_SLEEP)
-        self.write_wp_reports(wp_reports_list)
-        time.sleep(API_WAIT_SLEEP)
+        log.info("API limit has been reached, sleeping %s and continuing the scans..."%API_WAIT_SLEEP)
+        wp_reports_db=self.write_wp_reports(wp_reports_list)
+        time.sleep(API_WAIT_SLEEP.total_seconds())
         # Instanciating a new WPWatcher object and continue scans with all the non processed sites
         self.conf['wp_sites']=[s for s in self.conf['wp_sites'] if s['url'] not in scanned_sites]
         delayed=WPWatcher(self.conf)
-        return(delayed.run_scans_and_notify())
+        return(delayed.run_scans_and_notify(wp_reports_db))
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self, last_wp_report_list=None):
@@ -372,7 +372,7 @@ class WPWatcher():
                 # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
                 if ( self.conf['daemon'] and 
                     datetime.strptime(wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') - datetime.strptime(last_wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') < self.conf['daemon_loop_sleep']):
-                    log.info("Skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
+                    log.info("Daemon skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
                     continue
             else: last_wp_report=None
             
@@ -497,12 +497,12 @@ class WPWatcher():
             # Save report
             wp_report_list.append(wp_report)
 
-        self.write_wp_reports(wp_report_list)
+        wp_reports_db=self.write_wp_reports(wp_report_list)
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
             log.info("Scans finished with errors.") 
-        return((exit_code, wp_report_list))
+        return((exit_code, wp_reports_db))
 
 # Configuration template -------------------------
 TEMPLATE_FILE="""[wpwatcher]
@@ -828,7 +828,7 @@ def wpwatcher():
         while True:
             # Run scans for ever
             exit_code,results=wpwatcher.run_scans_and_notify(results)
-            log.info("Sleeping %s and scanning again..."%wpwatcher.conf['daemon_loop_sleep'])
+            log.info("Daemon sleeping %s and scanning again..."%wpwatcher.conf['daemon_loop_sleep'])
             time.sleep(wpwatcher.conf['daemon_loop_sleep'].total_seconds())
             wpwatcher=WPWatcher(build_config(args))
     # Run scans and quit
