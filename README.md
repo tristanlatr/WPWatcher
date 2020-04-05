@@ -72,7 +72,7 @@ See complete list of supported arguments in the sction *Full configuration optio
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
-- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. Set `wp_reports=null` in the config to disable the storage of the Json file, the database will still be stored in memory when using `--daemon`.
+- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. If the databse cannot de loaded or missing, it will be (re)created.  Set `wp_reports=null` in the config to disable the storage of the Json file, the database will still be stored in memory when using `--daemon`.
 
 ### Return non zero status code if :
 - One or more WPScan command failed
@@ -484,6 +484,30 @@ CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 
 CRITICAL - ** WPScan ALERT wp.exemple.com ** Vulnerable wordpress: WordPress <= 5.3 - wp_kses_bad_protocol() Colon Bypass Fixed In: 5.1.4 References: - CVE-2019-20041 url: https://wordpress.org/news/2019/12/wordpress-5-3-1-security-and-maintenance-release/, https://github.com/WordPress/wordpress-develop/commit/b1975463dd995da19bb40d3fa0786498717e3c53 - WPVulnDB(10004): https://wpvulndb.com/vulnerabilities/10004
 INFO - No WPWatcher ALERT email report have been sent for site wp.exemple.com. If you want to receive emails, set send_email_report=Yes in the config.
 INFO - Scans finished successfully.
+```
+</p>
+</details>
+
+## Library usage
+
+<details><summary><b>See</b></summary>
+<p>
+
+- Init config dict from file with `build_config_files()` method  
+- Customize the config if you want, you can overwrite any config values  
+- Create a `WPWatcher` object with your desired configuration  
+- Call `run_scans_and_notify()` method  
+
+```python
+from wpwatcher import WPWatcher, build_config_files
+config,files=build_config_files(['./demo.conf']) # leave None to find default config file
+config.update({ 'send_infos':   True,
+                'wp_sites':     [   {'url':'exemple1.com'},
+                                    {'url':'exemple2.com'}  ],
+                'wpscam_args': ['--stealthy']
+            })
+w=WPWatcher(config)
+w.run_scans_and_notify()
 ```
 </p>
 </details>
