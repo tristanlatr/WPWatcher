@@ -496,18 +496,22 @@ INFO - Scans finished successfully.
 - Init config dict from file with `build_config_files()` method  
 - Customize the config if you want, you can overwrite any config values  
 - Create a `WPWatcher` object with your desired configuration  
-- Call `run_scans_and_notify()` method  
+- Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)` The prorgam will automatically load and use a local reports databse and return complete updated database. Set `wp_reports` to `null` to only return scanned site reports.
+
 
 ```python
 from wpwatcher import WPWatcher, build_config_files
-config,files=build_config_files(['./demo.conf']) # leave None to find default config file
+config, files = build_config_files(['./demo.conf']) # leave None to find default config file
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
-                'wpscam_args': ['--stealthy']
+                'wpscam_args': ['--stealthy'],
+                'wp_reports': 'null'
             })
 w=WPWatcher(config)
-w.run_scans_and_notify()
+exit_code, reports = w.run_scans_and_notify()
+for r in reports:
+    print("%s\t\t%s"%( r['site'], r['status'] ))
 ```
 </p>
 </details>
