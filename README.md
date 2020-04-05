@@ -314,7 +314,7 @@ If missing, default to No
 send_infos=No
 ```
 Overwrite with arguments: `--infos`
-- Send ERROR notifications if wpscan exited with non zero status code.  
+- Send ERROR notifications if wpscan failed.  
 If missing, default to No
 ```ini
 send_errors=No
@@ -426,7 +426,7 @@ Overwrite with arguments: `--reports File path`
 
 One report is generated per site and the reports are sent individually when finished scanning a website.
 
-Email notification can have 4 status: 
+Email notification can have 5 status: 
 - `ALERT`: You have a vulnerable Wordpress, theme or plugin
 - `WARNING`: You have an oudated Wordpress, theme or plugin
 - `FIXED`: All issues are fixed or ignored (warnings included if `send_warnings=Yes`) 
