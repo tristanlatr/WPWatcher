@@ -54,6 +54,11 @@ class WPWatcher():
         
         # Copy config dict as is. Copy not to edit initial dict
         self.conf=copy.deepcopy(conf)
+        # (Re)init logger with config
+        init_log(verbose=self.conf['verbose'],
+            quiet=self.conf['quiet'],
+            logfile=self.conf['log_file'])
+        
         # Check sites are in the config
         if len(self.conf['wp_sites'])==0:
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
@@ -674,6 +679,7 @@ def build_config_files(files=None):
             if len(read_files) < len(files):
                 log.error("Could not read config " + str(list(set(files)-set(read_files))) + ". Make sure the file exists, the format is OK and you have correct access right.")
                 exit(-1)
+        
         # Saving config file in right dict format - no 'wpwatcher' section, just config options
         config_dict = {
             # Configurable witg cli arguments
@@ -705,6 +711,7 @@ def build_config_files(files=None):
             'from_email':conf_parser.get('wpwatcher','from_email'),
             'daemon_loop_sleep':parse_timedelta(conf_parser.get('wpwatcher','daemon_loop_sleep'))
         }
+        log.info("Loaded config from files %s"%files)
         return ((config_dict,files))
 
     except Exception as err: 
@@ -797,11 +804,6 @@ def build_config(args):
     # Overwrite with conf dict biult from CLI Args
     if conf_args: configuration.update(conf_args)
 
-    # (Re)init logger with config
-    init_log(verbose=configuration['verbose'],
-        quiet=configuration['quiet'],
-        logfile=configuration['log_file'])
-    log.info("Loaded config from files %s"%files)
     return configuration
 
 # Main program, parse the args, read config and launch scans
