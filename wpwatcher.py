@@ -25,6 +25,7 @@ import unicodedata
 import collections.abc
 import time
 import copy
+import threading
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -45,6 +46,9 @@ AUTHORS="Florian Roth, Tristan Landès"
 # How many seconds to wait when API limit reached
 # 86400s=24h
 API_WAIT_SLEEP=timedelta(hours=24)
+
+wp_report_lock = threading.Lock()
+log = logging.getLogger('wpwatcher')
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher():
@@ -140,16 +144,24 @@ class WPWatcher():
             if new: self.wp_reports.append(newr)
         # Write to file if not null
         if self.conf['wp_reports']!='null':
+            # Write method should be thread safe
+            while wp_report_lock.locked():
+                time.sleep(0.01)
+                continue
+            wp_report_lock.acquire()
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
                     json.dump(self.wp_reports, reportsfile, indent=4)
                     log.info("Updated %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
+                wp_report_lock.release()
             except Exception:
-                log.error("Could not write wp_reports database file\n{}".format(traceback.format_exc()))
+                log.error("Could not write wp_reports database file")
                 # Fail fast
-                if self.conf['fail_fast']: 
-                    log.info("Failure. Scans aborted.")
-                    exit(-1)
+                # if self.conf['fail_fast']: 
+                #     log.info("Failure. Scans aborted.")
+                #     exit(-1)
+                raise
+
         return self.wp_reports
 
     # Replace --api-token param with *** for safe logging
@@ -719,7 +731,6 @@ def build_config_files(files=None):
         raise
 
 # Setup stdout logger
-log = logging.getLogger('wpwatcher')
 def init_log(verbose=False, quiet=False, logfile=None):
     format_string='%(asctime)s - %(levelname)s - %(message)s'
     format_string_cli='%(levelname)s - %(message)s'
