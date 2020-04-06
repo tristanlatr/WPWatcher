@@ -127,7 +127,7 @@ class WPWatcher():
                     log.info("The database file %s do not exist. It will be created."%(self.conf['wp_reports']))
         return wp_reports
 
-    def write_wp_reports(self, new_wp_report_list):
+    def update_and_write_wp_reports(self, new_wp_report_list):
         # Update the sites that have been scanned, keep others
         # Keep same report order add append new sites at the bottom
         for newr in new_wp_report_list:
@@ -138,6 +138,7 @@ class WPWatcher():
                     new=False
                     break
             if new: self.wp_reports.append(newr)
+        # Write to file if not null
         if self.conf['wp_reports']!='null':
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
@@ -332,8 +333,8 @@ class WPWatcher():
             wp_report['last_email']=last_wp_report['last_email']
                             
     def delay_scans(self, scanned_sites): #, wp_reports_db): #, wp_reports_list):
-        log.info("API limit has been reached, sleeping %s and continuing the scans..."%API_WAIT_SLEEP)
-        # wp_reports_db=self.write_wp_reports(wp_reports_list)
+        log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
+        # wp_reports_db=self.update_and_write_wp_reports(wp_reports_list)
         time.sleep(API_WAIT_SLEEP.total_seconds())
         # Instanciating a new WPWatcher object and continue scans with all the non processed sites
         self.conf['wp_sites']=[s for s in self.conf['wp_sites'] if s['url'] not in scanned_sites]
@@ -499,9 +500,8 @@ class WPWatcher():
             scanned_sites.append(wp_site['url'])
             # Discar wpscan_output from report
             del wp_report['wpscan_output']
-            # Save report
-            #  wp_report_list.append(wp_report)
-            self.wp_reports=self.write_wp_reports([wp_report])
+            # Save report in database when a site has been scanned
+            self.wp_reports=self.update_and_write_wp_reports([wp_report])
 
         if exit_code == 0:
             log.info("Scans finished successfully.") 
@@ -672,7 +672,7 @@ def build_config_files(files=None):
             files=find_config_files()
         # No config file notice
         if not files or len(files)==0: 
-            log.info("No config file selected and could not find default config at ./wpwatcher.conf or ~/wpwatcher.conf. The script must read a configuration file to setup mail server settings, WPScan options and other features.")
+            log.info("No config file selected and could not find default config `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`. The script must read a configuration file to setup mail server settings, WPScan options and other features.")
         # Reading config 
         else:
             read_files=conf_parser.read(files)
@@ -753,7 +753,7 @@ If no config file is found, mail server settings, WPScan path and arguments and 
 Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
 You can specify multiple files `--conf File path [File path ...]`. Will overwrites the keys with each successive file.
 All options keys can be missing from config file.
-If not specified with `--conf` parameter, will try to load config from file `./wpwatcher.conf` or `~/wpwatcher.conf`.
+If not specified with `--conf` parameter, will try to load config from file `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` and `./wpwatcher.conf`.
 All options can be missing from config file.\n\n""", nargs='+', default=None)
     parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.
 Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
