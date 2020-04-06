@@ -118,11 +118,11 @@ class WPWatcher():
                             wp_reports=json.load(reportsfile)
                         log.info("Load wp_reports database: %s"%self.conf['wp_reports'])
                     except Exception:
-                        log.error("Could not read wp_reports database\n{}".format(traceback.format_exc()))
+                        
+                        log.error("Could not read wp_reports database: {}. Use --reports null to ignore local Json database".format(self.conf['wp_reports']))
                         # Fail fast
-                        if self.conf['fail_fast']: 
-                            log.info("Failure. Scans aborted.")
-                            exit(-1)
+                        # if self.conf['fail_fast']: 
+                        raise
                 else:
                     log.info("The database file %s do not exist. It will be created."%(self.conf['wp_reports']))
         return wp_reports
