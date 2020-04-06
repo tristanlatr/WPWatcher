@@ -124,7 +124,7 @@ class WPWatcher():
                             log.info("Failure. Scans aborted.")
                             exit(-1)
                 else:
-                    log.info("The database file %s do not exist. It will be created at the end of the scans."%(self.conf['wp_reports']))
+                    log.info("The database file %s do not exist. It will be created."%(self.conf['wp_reports']))
         return wp_reports
 
     def write_wp_reports(self, new_wp_report_list):
@@ -331,20 +331,20 @@ class WPWatcher():
         if last_wp_report['last_email']:
             wp_report['last_email']=last_wp_report['last_email']
                             
-    def delay_scans(self, scanned_sites, wp_reports_list):
+    def delay_scans(self, scanned_sites): #, wp_reports_db): #, wp_reports_list):
         log.info("API limit has been reached, sleeping %s and continuing the scans..."%API_WAIT_SLEEP)
-        wp_reports_db=self.write_wp_reports(wp_reports_list)
+        # wp_reports_db=self.write_wp_reports(wp_reports_list)
         time.sleep(API_WAIT_SLEEP.total_seconds())
         # Instanciating a new WPWatcher object and continue scans with all the non processed sites
         self.conf['wp_sites']=[s for s in self.conf['wp_sites'] if s['url'] not in scanned_sites]
         delayed=WPWatcher(self.conf)
-        return(delayed.run_scans_and_notify(wp_reports_db))
+        return(delayed.run_scans_and_notify(self.wp_reports))
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self, last_wp_report_list=None):
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
         last_wp_report_list=self.wp_reports if last_wp_report_list==None else last_wp_report_list
-        wp_report_list=[]
+        # wp_report_list=[]
         scanned_sites=[]
         exit_code=0
         for wp_site in self.conf['wp_sites']:
@@ -400,7 +400,7 @@ class WPWatcher():
                 wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
                 # Handle API limit
                 if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
-                    return self.delay_scans(scanned_sites, wp_report_list)
+                    return self.delay_scans(scanned_sites)
                 # Fail fast
                 elif self.conf['fail_fast']: 
                     log.info("Failure. Scans aborted.")
@@ -500,14 +500,14 @@ class WPWatcher():
             # Discar wpscan_output from report
             del wp_report['wpscan_output']
             # Save report
-            wp_report_list.append(wp_report)
+            #  wp_report_list.append(wp_report)
+            self.wp_reports=self.write_wp_reports([wp_report])
 
-        wp_reports_db=self.write_wp_reports(wp_report_list)
         if exit_code == 0:
             log.info("Scans finished successfully.") 
         else:
             log.info("Scans finished with errors.") 
-        return((exit_code, wp_reports_db))
+        return((exit_code, self.wp_reports))
 
 # Configuration template -------------------------
 TEMPLATE_FILE="""[wpwatcher]
