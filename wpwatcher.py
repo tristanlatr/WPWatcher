@@ -84,7 +84,7 @@ class WPWatcher():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-        log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites']]) )
+        log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites'] if 'url' in s]) )
         # Read DB
         self.wp_reports=self.build_wp_reports()
     
@@ -98,7 +98,7 @@ class WPWatcher():
             #     log.info("Failure. Scans aborted.") 
             #     exit(-1)
             wp_site={'url':''}
-        # Read the wp_site dict and assing default values if needed -------------
+        # Read the wp_site dict and assing default values if needed
         if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
         if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
         if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
@@ -161,7 +161,8 @@ class WPWatcher():
                     self.wp_reports[self.wp_reports.index(r)]=newr
                     new=False
                     break
-            if new: self.wp_reports.append(newr)
+            if new: 
+                self.wp_reports.append(newr)
         # Write to file if not null
         if self.conf['wp_reports']!='null':
             # Write method should be thread safe
@@ -172,7 +173,7 @@ class WPWatcher():
             try:
                 with open(self.conf['wp_reports'],'w') as reportsfile:
                     json.dump(self.wp_reports, reportsfile, indent=4)
-                    log.info("Updated %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
+                    log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
                 wp_report_lock.release()
             except Exception:
                 log.error("Could not write wp_reports database file")
