@@ -400,6 +400,7 @@ class WPWatcher():
             if ( self.conf['daemon'] and 
                 datetime.strptime(wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') - datetime.strptime(last_wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') < self.conf['daemon_loop_sleep']):
                 log.info("Daemon skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
+                scanned_sites.append(None)
                 return None
         else: last_wp_report=None
         
