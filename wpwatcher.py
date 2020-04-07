@@ -87,24 +87,6 @@ class WPWatcher():
         log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites'] if 'url' in s]) )
         # Read DB
         self.wp_reports=self.build_wp_reports()
-    
-    def format_site(self, wp_site):
-        # for wp_site in self.conf['wp_sites']:
-        # index=self.conf['wp_sites'].index(wp_site)
-        # Check if url is present
-        if 'url' not in wp_site :
-            # # Fail fast
-            # if self.conf['fail_fast']: 
-            #     log.info("Failure. Scans aborted.") 
-            #     exit(-1)
-            wp_site={'url':''}
-        # Read the wp_site dict and assing default values if needed
-        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
-        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
-        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-        return wp_site
-            # # Write formatted site
-            # self.conf['wp_sites'][index]=wp_site
 
     def find_wp_reports_file(self, create=False):
         wp_reports=None
@@ -219,12 +201,16 @@ class WPWatcher():
 
             (exit_code, output)=(process.returncode, wpscan_output)
 
-        except CalledProcessError as err:
+        except (CalledProcessError) as err:
             # Handle error --------------------------------------------------
             wpscan_output=str(err.output)
             err_string="WPScan failed with exit code %s. WPScan output: \n%s\nError:\n%s" % (str(process.returncode), wpscan_output, traceback.format_exc())
             log.error(self.oneline(err_string))
             (exit_code, output)=(err.returncode, wpscan_output)
+        except FileNotFoundError as err:
+            err_string="Could not find wpscan executable. \nError:\n%s" % (traceback.format_exc())
+            log.error(self.oneline(err_string))
+            (exit_code, output)=(-1, "")
 
         return((exit_code, output))
 
@@ -365,18 +351,18 @@ class WPWatcher():
         # Save last email datetime if any
         if last_wp_report['last_email']:
             wp_report['last_email']=last_wp_report['last_email']
-                            
-    # def delay_scans(self, scanned_sites): #, wp_reports_db): #, wp_reports_list):
-    #     log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
-    #     # wp_reports_db=self.update_and_write_wp_reports(wp_reports_list)
-    #     time.sleep(API_WAIT_SLEEP.total_seconds())
-    #     # Instanciating a new WPWatcher object and continue scans with all the non processed sites
-    #     # self.conf['wp_sites']=[s for s in self.conf['wp_sites'] if s['url'] not in scanned_sites]
-    #     # delayed=WPWatcher(self.conf)
-    #     # delayed.wp_reports=self.wp_reports
-    #     return(delayed.run_scans_and_notify())
     
-    def scan_site(self, wp_site, scanned_sites):
+    def format_site(self, wp_site):
+        if 'url' not in wp_site :
+            log.info("Invalid site %s"%wp_site)
+            wp_site={'url':''}
+        # Read the wp_site dict and assing default values if needed
+        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
+        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
+        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
+        return wp_site
+
+    def scan_site(self, wp_site, scanned_sites=[]):
         wp_site=self.format_site(wp_site)
         # Init report variables
         wp_report={
@@ -422,6 +408,7 @@ class WPWatcher():
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
                 log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
                 time.sleep(API_WAIT_SLEEP.total_seconds())
+                self.update_wpscan()
                 return self.scan_site(wp_site, scanned_sites)
             # Fail fast
             elif self.conf['fail_fast']: 
@@ -513,7 +500,6 @@ class WPWatcher():
             # No report notice
             log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, setup mail server settings in the config and enable send_email_report=Yes or use --send."%(wp_report['status'], wp_site['url']))
         
-        # To support reccursive calling and scanning all sites in several days
         # Save scanned site
         scanned_sites.append(wp_site['url'])
         # Discar wpscan_output from report
@@ -527,7 +513,7 @@ class WPWatcher():
     def print_progress_bar(self,count,total):
         size=0.4 #size of progress bar
         percent = int(float(count)/float(total)*100)
-        log.info( "Scanning sites, please wait... [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
+        log.info( "Progress - [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
     def perform(self, func, data, func_args=None, asynch=False,  workers=None):
         """
@@ -535,13 +521,10 @@ class WPWatcher():
 
         Arguments:  
         
-        - `func`: callable function. `func` is going to be called like `func(item, **func_args)` on all items in data.  This function can be stateless (static) or statefull (first argument is `self`),
-        it doesn't really matter as the element will always be passed as the first argument of the function. On thing really important, the function must not
-        set/delete/change any global variable, as a result, you'll see your varible beeing potentially corrupted or chalenged with conccurent accesses.
-        - `data`: if stays `None`, will perform the action on itself (`list(self)`) else it will perfom the action on the `data` list.
+        - `func`: callable function. `func` is going to be called like `func(item, **func_args)` for all items in data.
+        - `data`: will perfom the action on the `data` list.
         - `func_args`: arguments that will be passed by default to `func` in all calls.
-        - `asynch`: execute the task asynchronously with `concurrent.futures.ThreadPoolExecutor`. It will create a new executor object, so be carefull not to nest 2 asynchronous executions within eachother,
-        it will be a mess.
+        - `asynch`: execute the task asynchronously with `concurrent.futures.ThreadPoolExecutor`
         - `workers`: number of parrallel tasks, mandatory if asynch is true.
 
         Returns a list of returned results.
@@ -612,7 +595,7 @@ wpscan_args=[   "--format", "cli",
 # false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
 
 # Sites (--url or --urls)
-wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
+# wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 
 # Notifications (--send , --em , --infos , --errors , --attach , --resend)
 # send_email_report=Yes
@@ -625,12 +608,12 @@ wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 # email_errors_to=["admins@domain"]
 
 # Email server settings
-from_email=WordPressWatcher@domain.com
-smtp_server=mailserver.de:587
-smtp_auth=Yes
-smtp_user=me@domain
-smtp_pass=P@assw0rd
-smtp_ssl=Yes
+# from_email=WordPressWatcher@domain.com
+# smtp_server=mailserver.de:587
+# smtp_auth=Yes
+# smtp_user=me@domain
+# smtp_pass=P@assw0rd
+# smtp_ssl=Yes
 
 # Sleep when API limit reached (--wait)
 # api_limit_wait=Yes
@@ -650,7 +633,7 @@ smtp_ssl=Yes
 # Exit if any errors (--ff)
 # fail_fast=Yes 
 
-# Numbre of parallel WPScan executions
+# Number of asynchronous WPScan executions
 # asynch_workers=5
 
 """%(GIT_URL)
