@@ -204,7 +204,8 @@ class WPWatcher():
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
             wpscan_output, _  = process.communicate()
-            wpscan_output=wpscan_output.decode("utf-8")
+            try: wpscan_output=wpscan_output.decode("utf-8")
+            except UnicodeDecodeError: wpscan_output=wpscan_output.decode("latin1")
 
             # Error when wpscan failed, except exit code 5: means the target has at least one vulnerability.
             #   See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
