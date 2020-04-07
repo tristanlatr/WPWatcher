@@ -520,7 +520,7 @@ class WPWatcher():
         # Save report in global instance database when a site has been scanned
         self.wp_reports=self.update_and_write_wp_reports([wp_report])
         # Print progress
-        self.print_progress_bar(len(scanned_sites), len(self.conf['wp_sites']), "Scanned... %s / %s"%(len(scanned_sites), len(self.conf['wp_sites']) ) ) 
+        self.print_progress_bar(len(scanned_sites), len(self.conf['wp_sites']), "Scanned %s / %s"%(len(scanned_sites), len(self.conf['wp_sites']) ) ) 
         return(wp_report)
     
     def print_progress_bar(self,i,max,postText):
@@ -586,7 +586,7 @@ class WPWatcher():
             asynch=True, 
             workers=self.conf['asynch_workers'])
 
-        if not any ([r['status']=='ERROR' for r in new_reports]):
+        if not any ([r['status']=='ERROR' for r in new_reports if r]):
             log.info("Scans finished successfully.")
             return((0, self.wp_reports))
         else:
@@ -871,6 +871,7 @@ def build_config(args):
     conf_files=args.conf
      # Init config dict: read config files
     configuration, files =build_config_files(files=conf_files)
+    if files: log.info("Load config file(s) : %s"%files)
     conf_args={}
     # Sorting out only args that matches config options and that are not None or False
     for k in vars(args): 
