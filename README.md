@@ -418,6 +418,12 @@ If missing, will figure out a place based on your environment to store the datab
 wp_reports=/home/user/.wpwatcher/wp_reports.json
 ```
 Overwrite with arguments: `--reports File path`
+- Number of asynchronous workers. Speed up the scans. 
+If missing, default to `1`, classic iterating. 
+```ini
+asynch_workers=5
+```
+Overwrite with arguments: `--workers Number`
 
 </p>
 </details>
