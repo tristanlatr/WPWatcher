@@ -520,13 +520,14 @@ class WPWatcher():
         # Save report in global instance database when a site has been scanned
         self.wp_reports=self.update_and_write_wp_reports([wp_report])
         # Print progress
-        self.print_progress_bar(len(scanned_sites), len(self.conf['wp_sites']), "Scanned %s / %s"%(len(scanned_sites), len(self.conf['wp_sites']) ) ) 
+        self.print_progress_bar(len(scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
     
-    def print_progress_bar(self,i,max,postText):
-        n_bar=50 #size of progress bar
-        j= i/max
-        log.info(f"Progress [{'=' * int(n_bar * j):{n_bar}s}] {int(100 * j)}%  {postText}")
+    def print_progress_bar(self,count,total):
+        size=1 #size of progress bar
+        percent = int(float(count)/float(total)*100)
+        log.info( "Scanning sites, please wait... [{}{}] {}% - {} / {}".format('='*int(percent)*size, ' '*(100-int(percent))*size, percent, count, total) )
+        # log.info(f"Progress [{'=' * int(n_bar * j):{n_bar}s}] {int(100 * j)}%  {postText}"%())
 
     def perform(self, func, data, func_args=None, asynch=False,  workers=None):
         """
