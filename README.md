@@ -100,7 +100,9 @@ Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reach
 If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
 
 ### Scanning a large number of sites
-Tip: you can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
+Tips: 
+- You can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
+- Speed up the scans with `--workers` option  
 
 If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
 
@@ -513,7 +515,7 @@ config.update({ 'send_infos':   True,
                 'wpscam_args': ['--stealthy']
             })
 w=WPWatcher(config)
-w.run_scans_and_notify()
+exit_code, results=w.run_scans_and_notify()
 ```
 </p>
 </details>

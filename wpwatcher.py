@@ -649,7 +649,7 @@ smtp_ssl=Yes
 # fail_fast=Yes 
 
 # Numbre of parallel WPScan executions
-# asynch_workers=10
+# asynch_workers=5
 
 """%(GIT_URL)
 # Config default values
