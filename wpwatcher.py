@@ -84,30 +84,27 @@ class WPWatcher():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-        # Format sites
-        self.format_sites()
-        # Print list of sites
         log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites']]) )
-
+        # Read DB
         self.wp_reports=self.build_wp_reports()
     
-    def format_sites(self):
-        for wp_site in self.conf['wp_sites']:
-            index=self.conf['wp_sites'].index(wp_site)
-            # Check if url is present
-            if 'url' not in wp_site :
-                # # Fail fast
-                # if self.conf['fail_fast']: 
-                #     log.info("Failure. Scans aborted.") 
-                #     exit(-1)
-                wp_site={'url':''}
-            # Read the wp_site dict and assing default values if needed -------------
-            if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
-            if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
-            if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
-
-            # Write formatted site
-            self.conf['wp_sites'][index]=wp_site
+    def format_site(self, wp_site):
+        # for wp_site in self.conf['wp_sites']:
+        # index=self.conf['wp_sites'].index(wp_site)
+        # Check if url is present
+        if 'url' not in wp_site :
+            # # Fail fast
+            # if self.conf['fail_fast']: 
+            #     log.info("Failure. Scans aborted.") 
+            #     exit(-1)
+            wp_site={'url':''}
+        # Read the wp_site dict and assing default values if needed -------------
+        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
+        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
+        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
+        return wp_site
+            # # Write formatted site
+            # self.conf['wp_sites'][index]=wp_site
 
     def find_wp_reports_file(self, create=False):
         wp_reports=None
@@ -378,6 +375,7 @@ class WPWatcher():
     #     return(delayed.run_scans_and_notify())
     
     def scan_site(self, wp_site, scanned_sites):
+        wp_site=self.format_site(wp_site)
         # Init report variables
         wp_report={
             "site":wp_site['url'],
@@ -524,10 +522,9 @@ class WPWatcher():
         return(wp_report)
     
     def print_progress_bar(self,count,total):
-        size=1 #size of progress bar
+        size=0.4 #size of progress bar
         percent = int(float(count)/float(total)*100)
-        log.info( "Scanning sites, please wait... [{}{}] {}% - {} / {}".format('='*int(percent)*size, ' '*(100-int(percent))*size, percent, count, total) )
-        # log.info(f"Progress [{'=' * int(n_bar * j):{n_bar}s}] {int(100 * j)}%  {postText}"%())
+        log.info( "Scanning sites, please wait... [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
     def perform(self, func, data, func_args=None, asynch=False,  workers=None):
         """
