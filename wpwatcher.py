@@ -124,10 +124,7 @@ class WPWatcher():
                             wp_reports=json.load(reportsfile)
                         log.info("Load wp_reports database: %s"%self.conf['wp_reports'])
                     except Exception:
-                        
-                        log.error("Could not read wp_reports database: {}. Use --reports null to ignore local Json database".format(self.conf['wp_reports']))
-                        # Fail fast
-                        # if self.conf['fail_fast']: 
+                        log.error("Could not read wp_reports database: {}. Use '--reports null' to ignore local Json database".format(self.conf['wp_reports']))
                         raise
                 else:
                     log.info("The database file %s do not exist. It will be created."%(self.conf['wp_reports']))
@@ -158,11 +155,7 @@ class WPWatcher():
                     log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
                 wp_report_lock.release()
             except Exception:
-                log.error("Could not write wp_reports database file")
-                # Fail fast
-                # if self.conf['fail_fast']: 
-                #     log.info("Failure. Scans aborted.")
-                #     exit(-1)
+                log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database".format(self.conf['wp_reports']))
                 raise
 
         return self.wp_reports
@@ -301,7 +294,6 @@ class WPWatcher():
         else:
             log.info("Not sending WPWatcher %s email report because no email are configured for site %s"%(wp_report['status'], wp_site['url']))
 
-    
     @staticmethod
     def build_message(wp_report):
         
@@ -561,8 +553,6 @@ class WPWatcher():
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
-        #  last_wp_report_list=self.wp_reports if last_wp_report_list==None else last_wp_report_list
-        # wp_report_list=[]
         scanned_sites=[]
         new_reports = self.perform(self.scan_site, 
             self.conf['wp_sites'], 

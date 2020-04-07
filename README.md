@@ -72,7 +72,7 @@ See complete list of supported arguments in the sction *Full configuration optio
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
-- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`. If the databse cannot de loaded or missing, it will be (re)created.  Set `wp_reports=null` in the config to disable the storage of the Json file, the database will still be stored in memory when using `--daemon`.
+- WPWatcher store a database of reports and compare reports one scan after another to notice for fixed issues and implement `resend_emails_after` config . Default location is `~/.wpwatcher/wp_reports.json`.  Set `wp_reports=null` in the config to disable the storage of the Json file, the database will still be stored in memory when using `--daemon`.
 
 ### Return non zero status code if :
 - One or more WPScan command failed
@@ -102,7 +102,7 @@ If no API token is provided to WPScan, scans will trigger WARNING emails with ou
 ### Scanning a large number of sites
 Tips: 
 - You can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
-- Speed up the scans with `--workers` option  
+- Speed up the scans with multiple asynchronous workers `--workers Number` option  
 
 If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
 
@@ -137,7 +137,7 @@ Setup WPWatcher as a service.
     ```bash
     systemctl edit --full --force wpwatcher.service
     ```
-    Adjust the following template service:  
+    Adjust `ExecStart` and `User` in the following template service file:  
     ```
     [Unit]
     Description=WPWatcher
