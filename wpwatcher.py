@@ -411,7 +411,7 @@ class WPWatcher():
         if wpscan_exit_code not in [0,5]:
             # Handle scan error
             log.error("Could not scan site %s"%wp_site['url'])
-            wp_report['errors'].append("Could not scan site %s. \nWPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
+            wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
                 log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
@@ -510,7 +510,7 @@ class WPWatcher():
         
         # Save scanned site
         scanned_sites.append(wp_site['url'])
-        # Discar wpscan_output from report
+        # Discard wpscan_output from report
         del wp_report['wpscan_output']
         # Save report in global instance database when a site has been scanned
         self.wp_reports=self.update_and_write_wp_reports([wp_report])
@@ -567,17 +567,17 @@ class WPWatcher():
         return(returned)
     
     def results_summary(self, results):
-        # Determine the longest width for each column
         string='Results summary\n'
         header = ("Site", "Status", "Last email", "Issues", "Problematic component(s)")
         sites_w=20
+        # Determine the longest width for site column
         for r in results:
             sites_w=len(r['site'])+2 if len(r['site'])>sites_w else sites_w
         frow="{:<%d} {:<8} {:<20} {:<8}{}"%sites_w
         string+=frow.format(*header)
         for row in results:
             pb_components=[]
-            for m in row['alerts']+row['warnings']:
+            for m in row['alerts']+row['warnings']+row['errors']:
                 pb_components.append(m.splitlines()[0])
             string+='\n'
             string+=frow.format(row['site'], 
