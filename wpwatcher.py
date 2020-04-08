@@ -84,9 +84,25 @@ class WPWatcher():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-        log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites'] if 'url' in s]) )
+        # log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites'] if 'url' in s]) )
+        log.info("WordPress sites and configuration:{}".format(self.dump_config()))
         # Read DB
         self.wp_reports=self.build_wp_reports()
+        
+    def dump_config(self):
+        bump_conf=copy.deepcopy(self.conf)
+        string=''
+        for k in bump_conf:
+            v=bump_conf[k]
+            if k == 'wpscan_args':
+                v=self.safe_log_wpscan_args(v)
+            if k == 'smtp_pass':
+                v = '***'
+            if isinstance(v, (list, dict)):
+                v=json.dumps(v)
+            else: v=str(v)
+            string+=("\n{:<25}\t=\t{}".format(k,v))
+        return(string)
 
     def find_wp_reports_file(self, create=False):
         wp_reports=None
@@ -490,7 +506,7 @@ class WPWatcher():
                     exit(-1)
         else:
             # No report notice
-            log.info("No WPWatcher %s email report have been sent for site %s. If you want to receive emails, setup mail server settings in the config and enable send_email_report=Yes or use --send."%(wp_report['status'], wp_site['url']))
+            log.info("No WPWatcher %s email report have been sent for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_site['url']))
         
         # Save scanned site
         scanned_sites.append(wp_site['url'])
@@ -503,7 +519,7 @@ class WPWatcher():
         return(wp_report)
     
     def print_progress_bar(self,count,total):
-        size=0.4 #size of progress bar
+        size=0.3 #size of progress bar
         percent = int(float(count)/float(total)*100)
         log.info( "Progress - [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
@@ -549,7 +565,28 @@ class WPWatcher():
             for index_or_item in elements:
                 returned.append(func(index_or_item))
         return(returned)
-
+    
+    def results_summary(self, results):
+        # Determine the longest width for each column
+        string='Results summary\n'
+        header = ("Site", "Status", "Last email", "Issues", "Problematic component(s)")
+        sites_w=20
+        for r in results:
+            sites_w=len(r['site'])+2 if len(r['site'])>sites_w else sites_w
+        frow="{:<%d} {:<8} {:<20} {:<8}{}"%sites_w
+        string+=frow.format(*header)
+        for row in results:
+            pb_components=[]
+            for m in row['alerts']+row['warnings']:
+                pb_components.append(m.splitlines()[0])
+            string+='\n'
+            string+=frow.format(row['site'], 
+                row['status'],
+                str(row['last_email']),
+                len(row['alerts']+row['warnings']+row['errors']),
+                ', '.join(pb_components) )
+        return string
+    
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
@@ -559,13 +596,14 @@ class WPWatcher():
             func_args=dict(scanned_sites=scanned_sites), 
             asynch=True, 
             workers=self.conf['asynch_workers'])
-
+        log.info(self.results_summary(new_reports))
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
             log.info("Scans finished successfully.")
             return((0, self.wp_reports))
         else:
             log.info("Scans finished with errors.") 
             return((-1, self.wp_reports))
+       
 
 # Configuration template -------------------------
 TEMPLATE_FILE="""[wpwatcher]
@@ -588,8 +626,9 @@ wpscan_args=[   "--format", "cli",
 # wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
 
 # Notifications (--send , --em , --infos , --errors , --attach , --resend)
-# send_email_report=Yes
-# email_to=["you@domain"]
+send_email_report=No
+email_to=["you@domain"]
+
 # send_infos=Yes
 # send_errors=Yes
 # send_warnings=No
@@ -598,12 +637,12 @@ wpscan_args=[   "--format", "cli",
 # email_errors_to=["admins@domain"]
 
 # Email server settings
-# from_email=WordPressWatcher@domain.com
-# smtp_server=mailserver.de:587
-# smtp_auth=Yes
-# smtp_user=me@domain
-# smtp_pass=P@assw0rd
-# smtp_ssl=Yes
+from_email=WordPressWatcher@domain.com
+smtp_server=mailserver.de:587
+smtp_auth=Yes
+smtp_user=me@domain
+smtp_pass=P@assw0rd
+smtp_ssl=Yes
 
 # Sleep when API limit reached (--wait)
 # api_limit_wait=Yes
@@ -757,23 +796,23 @@ def build_config_files(files=None):
             'fail_fast':getbool(conf_parser, 'fail_fast'),
             'api_limit_wait':getbool(conf_parser, 'api_limit_wait'),
             'daemon':getbool(conf_parser, 'daemon'),
+            'daemon_loop_sleep':parse_timedelta(conf_parser.get('wpwatcher','daemon_loop_sleep')),
             'resend_emails_after':parse_timedelta(conf_parser.get('wpwatcher','resend_emails_after')),
             'wp_reports':conf_parser.get('wpwatcher','wp_reports'),
             'asynch_workers':conf_parser.getint('wpwatcher','asynch_workers'),
+            'log_file':conf_parser.get('wpwatcher','log_file'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
             'email_errors_to':getjson(conf_parser,'email_errors_to'),
             'wpscan_path':conf_parser.get('wpwatcher','wpscan_path'),
             'wpscan_args':getjson(conf_parser,'wpscan_args'),
-            'log_file':conf_parser.get('wpwatcher','log_file'),
             'smtp_server':conf_parser.get('wpwatcher','smtp_server'),
             'smtp_auth':getbool(conf_parser, 'smtp_auth'),
             'smtp_user':conf_parser.get('wpwatcher','smtp_user'),
             'smtp_pass':conf_parser.get('wpwatcher','smtp_pass'),
             'smtp_ssl':getbool(conf_parser, 'smtp_ssl'),
-            'from_email':conf_parser.get('wpwatcher','from_email'),
-            'daemon_loop_sleep':parse_timedelta(conf_parser.get('wpwatcher','daemon_loop_sleep'))
+            'from_email':conf_parser.get('wpwatcher','from_email')
         }
         return ((config_dict,files))
 
@@ -831,9 +870,11 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--fail_fast', '--ff', help="Configure fail_fast=Yes", action='store_true')
     parser.add_argument('--api_limit_wait', '--wait', help="Configure api_limit_wait=Yes", action='store_true')
     parser.add_argument('--daemon',  help="Configure daemon=Yes", action='store_true')
+    parser.add_argument('--daemon_loop_sleep','--loop', metavar='Time string', help="Configure daemon_loop_sleeps")
     parser.add_argument('--wp_reports', '--reports', metavar="File path", help="Configure wp_reports", default=None)
     parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Configure resend_emails_after")
     parser.add_argument('--asynch_workers','--workers', metavar="Number of asynchronous workers", help="Configure asynch_workers", type=int)
+    parser.add_argument('--log_file','--log', metavar="Logfile path", help="Configure log_file")
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
     parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
     args = parser.parse_args()
@@ -862,12 +903,17 @@ def build_config(args):
     # Adjust special case of resend_emails_after
     if 'resend_emails_after' in conf_args:
         conf_args['resend_emails_after']=parse_timedelta(conf_args['resend_emails_after'])
+    # Adjust special case of daemon_loop_sleep
+    if 'daemon_loop_sleep' in conf_args:
+        conf_args['daemon_loop_sleep']=parse_timedelta(conf_args['daemon_loop_sleep'])
    
     # if vars(args)['resend']: conf_args['resend_email_after']=timedelta(seconds=0)
     # Overwrite with conf dict biult from CLI Args
     if conf_args: configuration.update(conf_args)
 
     return configuration
+
+
 
 # Main program, parse the args, read config and launch scans
 def wpwatcher():
