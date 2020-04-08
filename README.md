@@ -1,9 +1,11 @@
-# WPWatcher
-WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
+
+# WPWatcher
 [![Tests](https://github.com/tristanlayt/WPWatcher/workflows/test/badge.svg)](https://github.com/tristanaltr/WPWatcher/actions)
 [![Coverage](https://codecov.io/gh/tristanaltr/WPWatcher/branch/master/graph/badge.svg)](https://codecov.io/gh/tristanaltr/WPWatcher)
 [![PyPI version](https://badge.fury.io/py/wpwatcher.svg)](https://pypi.org/project/WPWatcher/)
+
+WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
 ## In a Nutshell
   - Scan multiple sites with WPScan
