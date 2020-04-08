@@ -432,7 +432,12 @@ If missing, default to `1`, classic iterating.
 asynch_workers=5
 ```
 Overwrite with arguments: `--workers Number`
-
+- Follow redirection when WPScan failed and propose to use `--ignore-main-redirect`
+If missing, default to `No` 
+```ini
+follow_redirect=Yes
+```
+Overwrite with arguments: `--follow`
 </p>
 </details>
 
