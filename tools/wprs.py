@@ -1,3 +1,16 @@
+#! /usr/bin/env python3
+# 
+# WPWatcher reports summary generator
+#
+# DISCLAIMER - USE AT YOUR OWN RISK.
+# 
+# 
+# Exemple stdin usage:
+#   $ cat ~/.wpwatcher/wp_reports.json | python3 ./tools/wprs.py
+#
+# With param --input :
+#   $ python3 ./tools/wprs.py --input ~/.wpwatcher/wp_reports.json
+
 import json
 import sys
 import argparse
