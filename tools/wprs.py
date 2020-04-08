@@ -27,7 +27,7 @@ def results_summary(results):
     sites_w=20
     # Determine the longest width for site column
     for r in results:
-        sites_w=len(r['site'])+2 if len(r['site'])>sites_w else sites_w
+        sites_w=len(r['site'])+2 if r and len(r['site'])>sites_w else sites_w
     frow="{:<%d} {:<8} {:<20} {:<8}{}"%sites_w
     string+=frow.format(*header)
     for row in results:

@@ -39,7 +39,7 @@ from wpscan_parser import parse_results
 # Setup configuration: will be parsed by setup.py -------------------
 # Values must be in one line
 # Project version.
-VERSION='0.5.5.dev0'
+VERSION='0.5.5.dev1'
 # URL that will be displayed in help and other places
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
@@ -411,12 +411,18 @@ class WPWatcher():
         if wpscan_exit_code not in [0,5]:
             # Handle scan error
             log.error("Could not scan site %s"%wp_site['url'])
-            wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wp_site['url'], wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
+            wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
                 log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
                 time.sleep(API_WAIT_SLEEP.total_seconds())
                 self.update_wpscan()
+                return self.scan_site(wp_site, scanned_sites)
+            # Following redirection
+            if "Use the --ignore-main-redirect option to ignore the redirection and scan the target, or change the --url option value to the redirected URL." in str(wp_report["wpscan_output"]) : 
+                url = wp_report["wpscan_output"].split("The URL supplied redirects to")[1].split(". Use the --ignore-main-redirect")[0].strip()
+                log.info("Following redirection to %s"%url)
+                wp_site['url']=url
                 return self.scan_site(wp_site, scanned_sites)
             # Fail fast
             elif self.conf['fail_fast']: 
@@ -572,7 +578,7 @@ class WPWatcher():
         sites_w=20
         # Determine the longest width for site column
         for r in results:
-            sites_w=len(r['site'])+2 if len(r['site'])>sites_w else sites_w
+            sites_w=len(r['site'])+2 if r and len(r['site'])>sites_w else sites_w
         frow="{:<%d} {:<8} {:<20} {:<8}{}"%sites_w
         string+=frow.format(*header)
         for row in results:
