@@ -419,7 +419,7 @@ class WPWatcher():
                 self.update_wpscan()
                 return self.scan_site(wp_site, scanned_sites)
             # Following redirection
-            if "Use the --ignore-main-redirect option to ignore the redirection and scan the target, or change the --url option value to the redirected URL." in str(wp_report["wpscan_output"]) : 
+            if "Use the --ignore-main-redirect option to ignore the redirection and scan the target, or change the --url option value to the redirected URL." in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
                 url = wp_report["wpscan_output"].split("The URL supplied redirects to")[1].split(". Use the --ignore-main-redirect")[0].strip()
                 log.info("Following redirection to %s"%url)
                 wp_site['url']=url
@@ -671,6 +671,9 @@ smtp_ssl=Yes
 # Number of asynchronous WPScan executions
 # asynch_workers=5
 
+# Follow main redirection when WPScan failed
+follow_redirect=No
+
 """%(GIT_URL)
 # Config default values
 DEFAULT_CONFIG={
@@ -700,7 +703,8 @@ DEFAULT_CONFIG={
     'daemon_loop_sleep':'0s',
     'resend_emails_after':'0s',
     'wp_reports':'',
-    'asynch_workers':'1'
+    'asynch_workers':'1',
+    'follow_redirect':'No'
 }
 
 def parse_timedelta(time_str):
@@ -807,6 +811,7 @@ def build_config_files(files=None):
             'wp_reports':conf_parser.get('wpwatcher','wp_reports'),
             'asynch_workers':conf_parser.getint('wpwatcher','asynch_workers'),
             'log_file':conf_parser.get('wpwatcher','log_file'),
+            'follow_redirect':getbool(conf_parser, 'follow_redirect'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
@@ -881,6 +886,7 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Configure resend_emails_after")
     parser.add_argument('--asynch_workers','--workers', metavar="Number of asynchronous workers", help="Configure asynch_workers", type=int)
     parser.add_argument('--log_file','--log', metavar="Logfile path", help="Configure log_file")
+    parser.add_argument('--follow_redirect','--follow',  help="Configure follow_redirect=Yes", action='store_true')
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
     parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
     args = parser.parse_args()
