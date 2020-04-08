@@ -322,7 +322,7 @@ If missing, default to No
 send_infos=No
 ```
 Overwrite with arguments: `--infos`
-- Send ERROR notifications if wpscan exited with non zero status code.  
+- Send ERROR notifications if wpscan failed.  
 If missing, default to No
 ```ini
 send_errors=No
@@ -445,7 +445,7 @@ Overwrite with arguments: `--follow`
 
 One report is generated per site and the reports are sent individually when finished scanning a website.
 
-Email notification can have 4 status: 
+Email notification can have 5 status: 
 - `ALERT`: You have a vulnerable Wordpress, theme or plugin
 - `WARNING`: You have an oudated Wordpress, theme or plugin
 - `FIXED`: All issues are fixed or ignored (warnings included if `send_warnings=Yes`) 
@@ -515,18 +515,22 @@ INFO - Scans finished successfully.
 - Init config dict from file with `build_config_files()` method  
 - Customize the config if you want, you can overwrite any config values  
 - Create a `WPWatcher` object with your desired configuration  
-- Call `run_scans_and_notify()` method  
+- Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)` The prorgam will automatically load and use a local reports databse and return complete updated database. Set `wp_reports` to `null` to only return scanned site reports.
+
 
 ```python
 from wpwatcher import WPWatcher, build_config_files
-config,files=build_config_files(['./demo.conf']) # leave None to find default config file
+config, files = build_config_files(['./demo.conf']) # leave None to find default config file
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
-                'wpscam_args': ['--stealthy']
+                'wpscam_args': ['--stealthy'],
+                'wp_reports': 'null'
             })
 w=WPWatcher(config)
-exit_code, results=w.run_scans_and_notify()
+exit_code, reports = w.run_scans_and_notify()
+for r in reports:
+    print("%s\t\t%s"%( r['site'], r['status'] ))
 ```
 </p>
 </details>
