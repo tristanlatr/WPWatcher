@@ -441,6 +441,8 @@ Overwrite with arguments: `--follow`
 </p>
 </details>
 
+See options configurable with CLI, run `wpwatcher --help`
+
 ## Email reports
 
 One report is generated per site and the reports are sent individually when finished scanning a website.
