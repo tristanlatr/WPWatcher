@@ -882,7 +882,7 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
 
 # Assemble the config dict from args and from file
 def build_config(args):
-    args=vars(args)
+    args=vars(args) if hasattr(args, '__dict__') and not type(args)==dict else args
     # Configuration variables
     conf_files=args['conf'] if 'conf' in args else None
      # Init config dict: read config files
@@ -890,7 +890,7 @@ def build_config(args):
     if files: log.info("Load config file(s) : %s"%files)
     conf_args={}
     # Sorting out only args that matches config options and that are not None or False
-    for k in vars(args): 
+    for k in args: 
         if k in DEFAULT_CONFIG.keys() and args[k]:
             conf_args.update({k:args[k]})  
     # Append or init list of urls from file if any
