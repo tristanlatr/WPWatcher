@@ -39,7 +39,7 @@ from wpscan_parser import parse_results
 # Setup configuration: will be parsed by setup.py -------------------
 # Values must be in one line
 # Project version.
-VERSION='0.5.5.dev1'
+VERSION='0.5.5'
 # URL that will be displayed in help and other places
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
