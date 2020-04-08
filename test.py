@@ -56,7 +56,7 @@ class WPWatcherTests(unittest.TestCase):
             'daemon':False,
             'daemon_loop_sleep':timedelta(seconds=0),
             'resend_emails_after':timedelta(seconds=0),
-            'wp_reports':'',
+            'wp_reports':'./test.json',
             'asynch_workers':3
         })
         exit_code, results=w.run_scans_and_notify()
@@ -95,6 +95,39 @@ class WPWatcherTests(unittest.TestCase):
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(-1, exit_code)
 
+    def test_json(self):
+        w=WPWatcher({
+            'wp_sites' :[{"url":"affiliatesbootcamp.com"}, {"url":"driveinteractivepdx.com"}],
+            'false_positive_strings' : ['No WPVulnDB API Token given, as a result vulnerability data has not been output'],                        
+            'wpscan_path':'wpscan',
+            'log_file':"",
+            'wpscan_args':["--no-banner","--random-user-agent", "--format", "json"],
+            'send_email_report':False,
+            'send_errors':False,
+            'email_to':[],
+            'email_errors_to':[],
+            'send_warnings':True,
+            'send_infos':True,
+            'attach_wpscan_output':False,
+            'smtp_server':"",
+            'smtp_auth':False,
+            'smtp_user':"",
+            'smtp_pass':"",
+            'smtp_ssl':False,
+            'from_email':"",
+            'quiet':False,
+            'verbose':False,
+            'fail_fast':False,
+            'api_limit_wait':False,
+            'daemon':False,
+            'daemon_loop_sleep':timedelta(seconds=0),
+            'resend_emails_after':timedelta(seconds=0),
+            'wp_reports':'./test-parse-json.json',
+            'asynch_workers':3
+        })
+        exit_code, results=w.run_scans_and_notify()
+        self.assertEqual(0, exit_code)
+
     def test_config(self):
         config="""
 [wpwatcher]
@@ -132,7 +165,7 @@ daemon_loop_sleep=5m
 # verbose=Yes
 
 # Custom database (--reports)
-# wp_reports=/home/user/.wpwatcher/wp_reports.json
+wp_reports=./test.json
 
 # Exit if any errors (--ff)
 # fail_fast=Yes 
