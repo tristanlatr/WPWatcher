@@ -882,19 +882,20 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
 
 # Assemble the config dict from args and from file
 def build_config(args):
+    args=vars(args)
     # Configuration variables
-    conf_files=args.conf
+    conf_files=args['conf'] if 'conf' in args else None
      # Init config dict: read config files
     configuration, files =build_config_files(files=conf_files)
     if files: log.info("Load config file(s) : %s"%files)
     conf_args={}
     # Sorting out only args that matches config options and that are not None or False
     for k in vars(args): 
-        if k in DEFAULT_CONFIG.keys() and vars(args)[k]:
-            conf_args.update({k:vars(args)[k]})  
+        if k in DEFAULT_CONFIG.keys() and args[k]:
+            conf_args.update({k:args[k]})  
     # Append or init list of urls from file if any
-    if args.wp_sites_list:
-        with open(args.wp_sites_list, 'r') as urlsfile:
+    if 'wp_sites_list' in args and args['wp_sites_list'] :
+        with open(args['wp_sites_list'], 'r') as urlsfile:
             sites=[ site.replace('\n','') for site in urlsfile.readlines() ]
             conf_args['wp_sites']= sites if 'wp_sites' not in conf_args else conf_args['wp_sites']+sites
     # Adjust special case of urls that are list of dict
