@@ -28,6 +28,7 @@ import collections.abc
 import time
 import copy
 import threading
+import shlex
 from urllib.parse import urljoin, urlparse, urlunparse
 from email import encoders
 from email.mime.base import MIMEBase
@@ -188,7 +189,7 @@ class WPWatcher():
     def wpscan(self, *args):
         (exit_code, output)=(0,"")
         # WPScan arguments
-        cmd=[self.conf['wpscan_path']] + list(args) 
+        cmd=shlex.split(self.conf['wpscan_path']) + list(args) 
         # Log wpscan command without api token
         log.debug("Running WPScan command: %s" % ' '.join(self.safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
