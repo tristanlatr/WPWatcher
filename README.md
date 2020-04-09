@@ -5,7 +5,7 @@
 
 WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
 
-## In a Nutshell
+## Features
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
   - Mail messages are divided in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
@@ -14,6 +14,8 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
+  - Speed up scans using several asynchronous workers
+  - Optionnal follow URL redirection if WPScan fails and propose to ignore main redirect 
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
 
 ## Prerequisites 
@@ -70,7 +72,7 @@ If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.
 
 Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
 
-See complete list of supported arguments in the sction *Full configuration options* bellow or use `wpwatcher --help`
+See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
 #### Notes
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
@@ -424,13 +426,13 @@ If missing, will figure out a place based on your environment to store the datab
 wp_reports=/home/user/.wpwatcher/wp_reports.json
 ```
 Overwrite with arguments: `--reports File path`
-- Number of asynchronous workers. Speed up the scans. 
-If missing, default to `1`, classic iterating. 
+- Number of asynchronous workers. Speed up the scans.  
+If missing, default to `1`, synchronous iterating. 
 ```ini
 asynch_workers=5
 ```
 Overwrite with arguments: `--workers Number`
-- Follow redirection when WPScan failed and propose to use `--ignore-main-redirect`
+- Follow redirection when WPScan failed and propose to use `--ignore-main-redirect`.  
 If missing, default to `No` 
 ```ini
 follow_redirect=Yes
@@ -453,7 +455,6 @@ Email notification can have 5 status:
 - `ERROR`: WPScan failed
 
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
-
 
 Tip: set `"--format","json"` in  `wpscan_args` config option to use the json parsing feature and have more concise email text. 
 
