@@ -67,7 +67,8 @@ class WPWatcher():
         init_log(verbose=self.conf['verbose'],
             quiet=self.conf['quiet'],
             logfile=self.conf['log_file'])
-        
+        # Dump config
+        log.info("WordPress sites and configuration:{}".format(self.dump_config()))
         # Check sites are in the config
         if len(self.conf['wp_sites'])==0:
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
@@ -85,8 +86,6 @@ class WPWatcher():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-        # log.info("Configured WordPress sites: %s"%([s['url'] for s in self.conf['wp_sites'] if 'url' in s]) )
-        log.info("WordPress sites and configuration:{}".format(self.dump_config()))
         # Read DB
         self.wp_reports=self.build_wp_reports()
         
@@ -948,6 +947,7 @@ def wpwatcher():
     if args.template_conf:
         print(TEMPLATE_FILE)
         exit(0)
+    log.info("WPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites")
     # If version, print and exit
     if args.version:
         log.info("Version:\t\t%s"%VERSION)
