@@ -1,7 +1,15 @@
 
+"""
+Requirements
+
+pip install pytest
+pip install codecov
+pip install pytest-cov
+"""
 import json
 import re
 import sys
+import os
 import argparse
 from datetime import datetime, timedelta
 import unittest
@@ -16,17 +24,18 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
-    # Init scan messages
-    ( messages, warnings, alerts ) = ([],[],[])
-    args=parse_args()
-
-SITES=[{'url':''}]
+    os.system('pytest --cov=./ --cov-report=xml ./test.py')
 
 class WPWatcherTests(unittest.TestCase):
+    def get_sites(self):
+        s=[]
+        with open('./sites.conf', 'r') as f:
+            [ s.append({'url':url}) for url in f.readlines() ]
+        return s
 
     def test_simple(self):
         w=WPWatcher({
-            'wp_sites' :SITES,
+            'wp_sites' :self.get_sites(),
             'false_positive_strings' : ['No WPVulnDB API Token given, as a result vulnerability data has not been output'],                        
             'wpscan_path':'wpscan',
             'log_file':"",
@@ -53,7 +62,7 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'./test.json',
             'asynch_workers':3,
-            'follow_redirect':False
+            'follow_redirect':True
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
@@ -87,14 +96,14 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'',
             'asynch_workers':3,
-            'follow_redirect':False
+            'follow_redirect':True
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(-1, exit_code)
 
     def test_json(self):
         w=WPWatcher({
-            'wp_sites' :SITES,
+            'wp_sites' :self.get_sites(),
             'false_positive_strings' : ['No WPVulnDB API Token given, as a result vulnerability data has not been output'],                        
             'wpscan_path':'wpscan',
             'log_file':"",
@@ -121,7 +130,7 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'./test-parse-json.json',
             'asynch_workers':3,
-            'follow_redirect':False
+            'follow_redirect':True
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
@@ -168,7 +177,9 @@ wp_reports=./test.json
 # Exit if any errors (--ff)
 # fail_fast=Yes 
 
-"""%(json.dumps(SITES))
+follow_redirect=Yes
+
+"""%(json.dumps(self.get_sites()))
         with open('./wpwatcher.conf', 'w') as configfile:
             configfile.write(config)
         w=WPWatcher(build_config({ 'quiet':True }))
