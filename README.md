@@ -606,5 +606,5 @@ If you like the project and think you could help with making it better, there ar
 - Any contribution would be of great help
 
 ## Authors
-- Florian Roth
+- Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))
 - Tristan Landès
