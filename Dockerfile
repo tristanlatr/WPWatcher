@@ -23,13 +23,14 @@ RUN echo "**** install Python ****" && \
     # if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
 
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
-
-# Add script
-ADD wpwatcher.conf /wpwatcher/
-ADD wpwatcher.py /wpwatcher/
-
+# Add script repo
+COPY . /wpwatcher
 WORKDIR /wpwatcher
+# Install
+RUN python ./setup.py install
+# Setup user and group
 RUN adduser -h /wpwatcher -g WPWatcher -D wpwatcher
 RUN chown -R wpwatcher:wpwatcher /wpwatcher
 USER wpwatcher
-ENTRYPOINT ["python /wpwatcher/wpwatcher.py"]
+# Run command
+ENTRYPOINT ["wpwatcher"]
