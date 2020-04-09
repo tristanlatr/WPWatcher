@@ -565,6 +565,21 @@ INFO - Scans finished with errors.
 </p>
 </details>
 
+## Tools
+### `wprs.py`
+WPWatcher reports Json database summary generator.  
+Do not use on a json file currently used by a `wpwatcher` execution.  
+
+    python3 ./tools/wprs.py --input ~/.wpwatcher/wp_reports.json
+
+<details><summary><b>See</b></summary>
+<p>
+
+![WPWatcher Report summary](/screens/reports-summary-wprs.png "WPWatcher Reports summary")
+
+</p>
+</details>
+
 ## Library usage
 
 <details><summary><b>See</b></summary>
@@ -592,6 +607,9 @@ for r in reports:
 ```
 </p>
 </details>
+
+## Changelog
+See [Releases](https://github.com/tristanlatr/WPWatcher/releases)
 
 ## Questions ?
 If you have any questions, please create a new issue.
