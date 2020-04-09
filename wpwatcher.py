@@ -28,6 +28,7 @@ import collections.abc
 import time
 import copy
 import threading
+from urllib.parse import urljoin, urlparse, urlunparse
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -362,8 +363,13 @@ class WPWatcher():
     
     def format_site(self, wp_site):
         if 'url' not in wp_site :
-            log.info("Invalid site %s"%wp_site)
+            log.error("Invalid site %s"%wp_site)
             wp_site={'url':''}
+        else:
+            # Format sites with scheme indication
+            p_url=list(urlparse(wp_site['url']))
+            if p_url[0]=="": 
+                wp_site['url']='http://'+wp_site['url']
         # Read the wp_site dict and assing default values if needed
         if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
         if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
@@ -410,7 +416,6 @@ class WPWatcher():
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code not in [0,5]:
             # Handle scan error
-            log.error("Could not scan site %s"%wp_site['url'])
             wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
@@ -419,13 +424,20 @@ class WPWatcher():
                 self.update_wpscan()
                 return self.scan_site(wp_site, scanned_sites)
             # Following redirection
-            if "Use the --ignore-main-redirect option to ignore the redirection and scan the target, or change the --url option value to the redirected URL." in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
-                url = wp_report["wpscan_output"].split("The URL supplied redirects to")[1].split(". Use the --ignore-main-redirect")[0].strip()
-                log.info("Following redirection to %s"%url)
-                wp_site['url']=url
-                return self.scan_site(wp_site, scanned_sites)
+            if "The URL supplied redirects to" in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
+                url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+                    wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
+                if len(url)==1:
+                    wp_site['url']=url[0].strip()
+                    log.info("Following redirection to %s"%wp_site['url'])
+                    return self.scan_site(wp_site, scanned_sites)
+                else:
+                    log.error("Could not parse url to follow redirection or several URLs where found in the WPScan output after words 'The URL supplied redirects to'")
+                    wp_report['errors'].append("Could not parse url to follow redirection or several URLs where found in the WPScan output after words 'The URL supplied redirects to'")
+            
+            log.error("Could not scan site %s"%wp_site['url'])
             # Fail fast
-            elif self.conf['fail_fast']: 
+            if self.conf['fail_fast']: 
                 log.info("Failure. Scans aborted.")
                 exit(-1)
         

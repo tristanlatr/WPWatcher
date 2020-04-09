@@ -3,7 +3,7 @@
 # WPWatcher reports summary generator
 #
 # DISCLAIMER - USE AT YOUR OWN RISK.
-# 
+# Do not use on a json file currently used by a wpwatcher execution
 # 
 # Exemple stdin usage:
 #   $ cat ~/.wpwatcher/wp_reports.json | python3 ./tools/wprs.py

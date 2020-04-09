@@ -24,13 +24,13 @@ def parse_args():
     return args
 
 if __name__ == '__main__':
-    os.system('pytest --cov=./ --cov-report=xml ./test.py')
+    os.system('python3 -m unittest test')
 
 class WPWatcherTests(unittest.TestCase):
     def get_sites(self):
         s=[]
         with open('./sites.conf', 'r') as f:
-            [ s.append({'url':url}) for url in f.readlines() ]
+            [ s.append({'url':url.strip()}) for url in f.readlines() ]
         return s
 
     def test_simple(self):
@@ -182,7 +182,7 @@ follow_redirect=Yes
 """%(json.dumps(self.get_sites()))
         with open('./wpwatcher.conf', 'w') as configfile:
             configfile.write(config)
-        w=WPWatcher(build_config({ 'quiet':True }))
+        w=WPWatcher(build_config({}))
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
 
