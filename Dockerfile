@@ -1,4 +1,4 @@
-
+# WPWatcher Dockerfile
 FROM ruby:alpine
 # Install dependencies
 RUN apk --update add --virtual build-dependencies ruby-dev build-base &&\
@@ -13,18 +13,12 @@ ENV PYTHONUNBUFFERED=1
 RUN echo "**** install Python ****" && \
     apk add --no-cache python3 && \
     if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi 
-    
-    # && \
-    # \
-    # echo "**** install pip ****" && \
-    # python3 -m ensurepip && \
-    # rm -r /usr/lib/python*/ensurepip && \
-    # pip3 install --no-cache --upgrade pip setuptools wheel && \
-    # if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
-
+# Init folder tree
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
-# Add script repo
-COPY . /wpwatcher
+# Add scripts repo
+ADD setup.py /wpwatcher
+ADD wpwatcher.py /wpwatcher
+ADD wpscan_parser.py /wpwatcher
 WORKDIR /wpwatcher
 # Install
 RUN python ./setup.py install
