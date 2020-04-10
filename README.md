@@ -75,8 +75,8 @@ docker run -it -v 'wpwatcher_data:/wpwatcher/.wpwatcher/' wpwatcher
 ```
 - Then, as root, check `docker volume inspect wpwatcher_data` to see mountpoint and init new config file with (for exemple)
 ```bash
-docker run -it wpwatcher --template_conf > /var/lib/docker/volumes/wp_new_storage/_data/wpwatcher.conf
-vim /var/lib/docker/volumes/wp_new_storage/_data/wpwatcher.conf
+docker run -it wpwatcher --template_conf > /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
+vim /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
 ```
 
 Try it out (No persistent storage)
