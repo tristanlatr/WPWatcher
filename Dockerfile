@@ -33,4 +33,5 @@ RUN adduser -h /wpwatcher -g WPWatcher -D wpwatcher
 RUN chown -R wpwatcher:wpwatcher /wpwatcher
 USER wpwatcher
 # Run command
+WORKDIR /
 ENTRYPOINT ["wpwatcher"]
