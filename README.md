@@ -49,24 +49,35 @@ cd WPWatcher && python3 setup.py install
 <details><summary><b>See</b></summary>
 <p>
 
-Clone the repository and build docker image with the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Try to build as root will generate an error.  
+- Clone the repository
+- Install docker image 
+With the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Won't work if you build the image as root.
 ```bash
-docker build --build-arg USER_ID=$(id -u ${USER}) -t wpwatcher .
+docker image build \
+    --build-arg USER_ID=$(id -u ${USER}) \
+    --build-arg GROUP_ID=$(id -g ${USER}) \
+    -t wpwatcher .
 ```
-`--build-arg USER_ID=` is optionnal: it assing the docker runner the right UID to be able to write to files
+Or install without UID mapping, you'll then need to [create a persistent docker volume](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports.
+```bash
+docker image build -t wpwatcher .
+```
 
-Try it out (No volume mapping)
+- Try it out (No persistent storage)
 ```bash
 docker run -it wpwatcher --url exemple1.com
 ```
 
-To enable full features (configuration file, local json database, etc.): create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
+-Enable full features (configuration file, local json database, etc.): create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
 
 `wpwatcher` command would look like :  
 ```bash
-docker run -it -v '/home/user/wpwatcher-folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
+docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
 ```
-
+Create an alias and your good to go
+```
+alias wpwatcher="docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher"
+```
 </p>
 </details>
 
