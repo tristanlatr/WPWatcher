@@ -9,8 +9,6 @@ RUN gem install wpscan -v 3.7.11
 # Python install
 ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache python3
-# Init folder tree
-RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 
 ADD setup.py /wpwatcher
 ADD wpwatcher.py /wpwatcher
@@ -22,6 +20,8 @@ RUN python3 ./setup.py install
 # Setup user and group
 ARG USER_ID
 RUN deluser --remove-home wpwatcher || true
+# Init folder tree
+RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 RUN if [ ${USER_ID:-0} -ne 0 ]; then adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher; fi
 RUN adduser -h /wpwatcher -D wpwatcher || true
 RUN chown -R wpwatcher /wpwatcher

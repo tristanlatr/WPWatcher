@@ -38,7 +38,7 @@ Tested with WPScan 3.7 on :
 pip3 install wpwatcher --upgrade
 ```
 
-#### Or manually
+#### Manually
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
@@ -49,17 +49,18 @@ cd WPWatcher && python3 setup.py install
 <details><summary><b>See</b></summary>
 <p>
 
-Clone the repository and build docker image with the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID.
+Clone the repository and build docker image with the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Try to build as root will generate an error.  
 ```bash
 docker build --build-arg USER_ID=$(id -u ${USER}) -t wpwatcher .
 ```
+`--build-arg USER_ID=` is optionnal: it assing the docker runner the right UID to be able to write to files
 
-Try it out
+Try it out (No volume mapping)
 ```bash
-docker run -it wpwatcher --urls exemple1.com wp.mysite.ca
+docker run -it wpwatcher --url exemple1.com
 ```
 
-To enable full features (full options in configuration file and the local json database): create and map a WPWatcher folder containing your `wpwatcher.conf` to the docker runner.
+To enable full features (configuration file, local json database, etc.): create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
 
 `wpwatcher` command would look like :  
 ```bash
