@@ -31,6 +31,5 @@ RUN adduser -h /wpwatcher -D wpwatcher >/dev/null 2>&1 || true
 # RUN if [ ${GROUP_ID:-0} -ne 0 ]; then addgroup -g ${GROUP_ID} wp && addgroup wpwatcher wp ; fi
 RUN chown -R wpwatcher /wpwatcher
 USER wpwatcher
-RUN echo -e "\n\n\tWPWatcher installed\n\tUse: docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher\n\n"
 # Run command
 ENTRYPOINT ["wpwatcher"]
