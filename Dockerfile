@@ -15,7 +15,7 @@ ARG USER_ID
 ARG GROUP_ID
 # Delete curent user and group
 RUN deluser --remove-home wpwatcher >/dev/null 2>&1 || true
-RUN delgroup wpwatcher >/dev/null 2>&1 || true
+RUN delgroup wp >/dev/null 2>&1 || true
 # Init folder tree
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 
@@ -28,7 +28,7 @@ WORKDIR /wpwatcher
 RUN python3 ./setup.py install
 RUN if [ ${USER_ID:-0} -ne 0 ]; then adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher; fi
 RUN adduser -h /wpwatcher -D wpwatcher >/dev/null 2>&1 || true
-RUN if [ ${GROUP_ID:-0} -ne 0 ]; then addgroup -g ${GROUP_ID} wpwatcher && addgroup wpwatcher wpwatcher ; fi
+RUN if [ ${GROUP_ID:-0} -ne 0 ]; then addgroup -g ${GROUP_ID} wp && addgroup wpwatcher wp ; fi
 RUN chown -R wpwatcher /wpwatcher
 USER wpwatcher
 RUN echo -e "\n\n\tWPWatcher installed\n\tUse: docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher\n\n"
