@@ -1,9 +1,19 @@
 
 
-# WPWatcher
-[![PyPI version](https://badge.fury.io/py/wpwatcher.svg)](https://pypi.org/project/WPWatcher/)
 
-WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
+<h1 align="center">WPWatcher</h1>
+
+<p align="center">
+  Automating WPScan to scan and report vulnerable Wordpress sites
+  <br>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
+
+</p>
+
+
 
 ## Features
   - Scan multiple sites with WPScan
