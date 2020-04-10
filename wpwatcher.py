@@ -41,7 +41,7 @@ from wpscan_parser import parse_results
 # Setup configuration: will be parsed by setup.py -------------------
 # Values must be in one line
 # Project version.
-VERSION='0.5.6'
+VERSION='0.5.7.dev0'
 # URL that will be displayed in help and other places
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
@@ -94,7 +94,11 @@ class WPWatcher():
             self.update_and_write_wp_reports(self.wp_reports)
         except:
             log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database:\n{}".format(self.conf['wp_reports'], traceback.format_exc()))
-            exit(-1)                
+            exit(-1)
+        
+        # Init wpscan output folder
+        if self.conf['wpscan_output_folder'] : 
+            os.makedirs(self.conf['wpscan_output_folder'], exist_ok=True)
 
     def dump_config(self):
         bump_conf=copy.deepcopy(self.conf)
@@ -280,7 +284,7 @@ class WPWatcher():
                 # Encode file in ASCII characters to send by email    
                 encoders.encode_base64(part)
                 # Sanitize WPScan report filename 
-                wpscan_report_filename=self.get_valid_filename('WPScan_report_%s_%s' % (wp_site['url'], wp_report['datetime']))
+                wpscan_report_filename=self.get_valid_filename('WPScan_results_%s_%s' % (wp_site['url'], wp_report['datetime']))
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
@@ -413,6 +417,12 @@ class WPWatcher():
         # Launch WPScan -------------------------------------------------------
         (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan(*wpscan_arguments)
 
+        # Write wpscan output 
+        if self.conf['wpscan_output_folder'] :
+            with open(os.path.join(self.conf['wpscan_output_folder'],
+                self.get_valid_filename('WPScan_results_%s_%s.txt' % (wp_site['url'], wp_report['datetime']))), 'w') as wpout:
+                wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
+
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code not in [0,5]:
             # Handle scan error
@@ -525,9 +535,9 @@ class WPWatcher():
         else:
             # No report notice
             log.info("No WPWatcher %s email report have been sent for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_site['url']))
-        
         # Save scanned site
         scanned_sites.append(wp_site['url'])
+        
         # Discard wpscan_output from report
         del wp_report['wpscan_output']
         # Save report in global instance database when a site has been scanned
@@ -673,6 +683,7 @@ smtp_ssl=Yes
 # log_file=/home/user/.wpwatcher/wpwatcher.log
 # quiet=Yes
 # verbose=Yes
+# wpscan_output_folder=/home/user/.wpwatcher/wpscan-results/
 
 # Custom database (--reports)
 # wp_reports=/home/user/.wpwatcher/wp_reports.json
@@ -716,7 +727,8 @@ DEFAULT_CONFIG={
     'resend_emails_after':'0s',
     'wp_reports':'',
     'asynch_workers':'1',
-    'follow_redirect':'No'
+    'follow_redirect':'No',
+    'wpscan_output_folder':''
 }
 
 def parse_timedelta(time_str):
@@ -824,6 +836,7 @@ def build_config_files(files=None):
             'asynch_workers':conf_parser.getint('wpwatcher','asynch_workers'),
             'log_file':conf_parser.get('wpwatcher','log_file'),
             'follow_redirect':getbool(conf_parser, 'follow_redirect'),
+            'wpscan_output_folder':conf_parser.get('wpwatcher','wpscan_output_folder'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
@@ -899,6 +912,7 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--asynch_workers','--workers', metavar="Number of asynchronous workers", help="Configure asynch_workers", type=int)
     parser.add_argument('--log_file','--log', metavar="Logfile path", help="Configure log_file")
     parser.add_argument('--follow_redirect','--follow',  help="Configure follow_redirect=Yes", action='store_true')
+    parser.add_argument('--wpscan_output_folder','--wpout', metavar="WPScan results folder", help="Configure wpscan_output_folder")
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
     parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
     args = parser.parse_args()
