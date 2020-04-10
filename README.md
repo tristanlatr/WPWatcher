@@ -44,6 +44,31 @@ git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
+#### With docker
+
+<details><summary><b>See</b></summary>
+<p>
+
+Clone the repository and build docker image with the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID.
+```bash
+docker build --build-arg USER_ID=$(id -u ${USER}) -t wpwatcher .
+```
+
+Try it out
+```bash
+docker run -it wpwatcher --urls exemple1.com wp.mysite.ca
+```
+
+To enable full features (full options in configuration file and the local json database): create and map a WPWatcher folder containing your `wpwatcher.conf` to the docker runner.
+
+`wpwatcher` command would look like :  
+```bash
+docker run -it -v '/home/user/wpwatcher-folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
+```
+
+</p>
+</details>
+
 #### Try it out
 
     wpwatcher --url exemple.com exemple1.com
