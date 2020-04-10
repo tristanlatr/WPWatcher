@@ -13,7 +13,9 @@ RUN apk add --no-cache python3
 # Setup user and group if specified
 ARG USER_ID
 ARG GROUP_ID
+# Delete curent user and group
 RUN deluser --remove-home wpwatcher >/dev/null 2>&1 || true
+RUN delgroup wpwatcher >/dev/null 2>&1 || true
 # Init folder tree
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 

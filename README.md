@@ -58,7 +58,7 @@ docker image build \
     --build-arg GROUP_ID=$(id -g ${USER}) \
     -t wpwatcher .
 ```
-Or install without UID mapping, you'll then need to [create a persistent docker volume](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports.
+Or install without UID mapping, you'll then need to [create a persistent docker volume](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
 ```bash
 docker image build -t wpwatcher .
 ```
