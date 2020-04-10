@@ -1,16 +1,14 @@
 # WPWatcher Dockerfile
 FROM ruby:alpine
-# Install dependencies ruby
+# Install dependencies ruby gem 
 RUN apk --update add --virtual build-dependencies ruby-dev build-base &&\
     apk --update add curl &&\
     apk --update add git
 # Install WPScan lastest tested version
 RUN gem install wpscan -v 3.7.11
-# Python install from frolvlad/alpine-python3
+# Python install
 ENV PYTHONUNBUFFERED=1
-RUN echo "**** install Python ****" && \
-    apk add --no-cache python3 && \
-    if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi 
+RUN apk add --no-cache python3
 # Init folder tree
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 
@@ -23,8 +21,11 @@ WORKDIR /wpwatcher
 RUN python ./setup.py install
 # Setup user and group
 ARG USER_ID
-RUN adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher
-RUN chown -R wpwatcher:wpwatcher /wpwatcher
+RUN if [ ${USER_ID:-0} -ne 0 ]; then \
+    deluser --remove-home wpwatcher &&\
+    adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher &&\
+    chown -R wpwatcher:wpwatcher /wpwatcher \
+;fi
 USER wpwatcher
 # Run command
 ENTRYPOINT ["wpwatcher"]
