@@ -89,7 +89,13 @@ class WPWatcher():
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
         # Read DB
         self.wp_reports=self.build_wp_reports()
-        
+        # Try if local Json databse is accessible
+        try:
+            self.update_and_write_wp_reports(self.wp_reports)
+        except:
+            log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database\nError:\n{}".format(self.conf['wp_reports'], traceback.format_exc()))
+            exit(-1)                
+
     def dump_config(self):
         bump_conf=copy.deepcopy(self.conf)
         string=''
@@ -97,7 +103,7 @@ class WPWatcher():
             v=bump_conf[k]
             if k == 'wpscan_args':
                 v=self.safe_log_wpscan_args(v)
-            if k == 'smtp_pass':
+            if k == 'smtp_pass' and bump_conf[k] != "" :
                 v = '***'
             if isinstance(v, (list, dict)):
                 v=json.dumps(v)
@@ -166,16 +172,10 @@ class WPWatcher():
                 time.sleep(0.01)
                 continue
             wp_report_lock.acquire()
-            try:
-                with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(self.wp_reports, reportsfile, indent=4)
-                    log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
-                wp_report_lock.release()
-            except Exception:
-                log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database".format(self.conf['wp_reports']))
-                raise
-
-        return self.wp_reports
+            with open(self.conf['wp_reports'],'w') as reportsfile:
+                json.dump(self.wp_reports, reportsfile, indent=4)
+                # log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
+            wp_report_lock.release()
 
     # Replace --api-token param with *** for safe logging
     @staticmethod
@@ -531,7 +531,7 @@ class WPWatcher():
         # Discard wpscan_output from report
         del wp_report['wpscan_output']
         # Save report in global instance database when a site has been scanned
-        self.wp_reports=self.update_and_write_wp_reports([wp_report])
+        self.update_and_write_wp_reports([wp_report])
         # Print progress
         self.print_progress_bar(len(scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
