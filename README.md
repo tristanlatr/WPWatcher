@@ -8,7 +8,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
 ## Features
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
-  - Mail messages are divided in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
+  - Parse WPScan output and divide the results in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
   - Mail notification and verbosity can be configred in config file, additionnaly WPScan output can be attached to emails. 
   - Scan sites continuously at defined interval and handled VulnDB API limit.  
   - Local log file can be configured and also lists all the findings 
@@ -16,6 +16,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Define WPScan arguments for every configured site individually and globally
   - Speed up scans using several asynchronous workers
   - Optionnal follow URL redirection if WPScan fails and propose to ignore main redirect 
+  - Save raw WPScan results into files
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
 
 ## Prerequisites 
@@ -460,6 +461,11 @@ Overwrite with arguments: `--verbose`
 ```ini
 log_file=/home/user/.wpwatcher/wpwatcher.log
 ```
+- Save WPScan results to files as they are scanned
+```
+wpscan_output_folder=/home/user/Documents/WPScanResults/
+```
+Overwrite with argument `--wpout Folder path`
 #### Misc
 - Raise exceptions with stack trace or exit when WPScan failed.  
 Default behaviour is to log error, continue scans and return non zero status code when all scans are over
