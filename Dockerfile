@@ -19,6 +19,7 @@ RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 ADD setup.py /wpwatcher
 ADD wpwatcher.py /wpwatcher
 ADD wpscan_parser.py /wpwatcher
+ADD README.md /wpwatcher
 WORKDIR /wpwatcher
 # Install
 RUN python ./setup.py install
