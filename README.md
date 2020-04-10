@@ -24,7 +24,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Tested on Linux and MacOS
 
 <!-- #### Compatibility
-Tested with WPScan 3.7 on :
+Tested with WPScan 3.7.11 on :
 - MacOS (WPScan install wil `HomeBrew`)
 - Linux (WPScan installed with `RubyGems`)  
 - Raspbian (WPScan installed with `RubyGems`)   -->
@@ -51,32 +51,42 @@ cd WPWatcher && python3 setup.py install
 
 - Clone the repository
 - Install docker image 
+
 With the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Won't work if you build the image as root.
 ```bash
 docker image build \
     --build-arg USER_ID=$(id -u ${USER}) \
-    --build-arg GROUP_ID=$(id -g ${USER}) \
     -t wpwatcher .
 ```
-Or install without UID mapping, you'll then need to [create a persistent docker volume](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
+- Create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
+`wpwatcher` command would look like :  
+```bash
+docker run -it -v '/path/to/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
+```
+
+Or install without UID mapping, it will use [docker volumes](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
 ```bash
 docker image build -t wpwatcher .
 ```
 
-- Try it out (No persistent storage)
+- `wpwatcher` command would look like :  
+```
+docker run -it -v 'wpwatcher_data:/wpwatcher/.wpwatcher/' wpwatcher
+```
+- Then, as root, check `docker volume inspect wpwatcher_data` to see mountpoint and init new config file with (for exemple)
+```bash
+docker run -it wpwatcher --template_conf > /var/lib/docker/volumes/wp_new_storage/_data/wpwatcher.conf
+vim /var/lib/docker/volumes/wp_new_storage/_data/wpwatcher.conf
+```
+
+Try it out (No persistent storage)
 ```bash
 docker run -it wpwatcher --url exemple1.com
 ```
 
--Enable full features (configuration file, local json database, etc.): create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
-
-`wpwatcher` command would look like :  
-```bash
-docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
+Create an alias with volume mapping your good to go
 ```
-Create an alias and your good to go
-```
-alias wpwatcher="docker run -it -v '/path/to/your/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher"
+alias wpwatcher="docker run -it -v 'volume-name-or-path-to-folder:/wpwatcher/.wpwatcher/' wpwatcher"
 ```
 </p>
 </details>
