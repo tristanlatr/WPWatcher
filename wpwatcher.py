@@ -93,7 +93,7 @@ class WPWatcher():
         try:
             self.update_and_write_wp_reports(self.wp_reports)
         except:
-            log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database\nError:\n{}".format(self.conf['wp_reports'], traceback.format_exc()))
+            log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database:\n{}".format(self.conf['wp_reports'], traceback.format_exc()))
             exit(-1)                
 
     def dump_config(self):
