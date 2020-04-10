@@ -684,7 +684,7 @@ smtp_ssl=Yes
 # asynch_workers=5
 
 # Follow main redirection when WPScan failed
-follow_redirect=No
+# follow_redirect=Yes
 
 """%(GIT_URL)
 # Config default values
