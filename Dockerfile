@@ -18,14 +18,13 @@ ADD wpscan_parser.py /wpwatcher
 ADD README.md /wpwatcher
 WORKDIR /wpwatcher
 # Install WPWatcher
-RUN python ./setup.py install
+RUN python3 ./setup.py install
 # Setup user and group
 ARG USER_ID
-RUN if [ ${USER_ID:-0} -ne 0 ]; then \
-    deluser --remove-home wpwatcher &&\
-    adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher &&\
-    chown -R wpwatcher:wpwatcher /wpwatcher \
-;fi
+RUN deluser --remove-home wpwatcher || true
+RUN if [ ${USER_ID:-0} -ne 0 ]; then adduser -h /wpwatcher -D -u ${USER_ID} wpwatcher; fi
+RUN adduser -h /wpwatcher -D wpwatcher || true
+RUN chown -R wpwatcher /wpwatcher
 USER wpwatcher
 # Run command
 ENTRYPOINT ["wpwatcher"]
