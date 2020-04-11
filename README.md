@@ -111,7 +111,6 @@ alias wpwatcher="docker run -it -v 'volume-name-or-path-to-folder:/wpwatcher/.wp
 
 The command should be in your `PATH`, as well as `wpwatcher.py` (synonym of `wpwatcher`) and `wpscan_parser.py` (standalone WPScan output parser).
 
-
 <!-- ### Configure
 Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
 
@@ -122,8 +121,6 @@ vim ./wpwatcher.conf
 See *Configuration* bellow to learn more about options and how to and configure the script.    
 
 #### Execute -->
-
-
 
     wpwatcher [--conf File path [File path ...]] [...]
 
@@ -136,6 +133,7 @@ Other arguments will simply overwrite config values.
 See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
 #### Notes on script behaviours
+- The script must read a configuration file to setup mail server settings and other otions. Setup mail server settings and turn on send_email_report in the config file or use `--send` if you want to receive reports.
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
@@ -148,34 +146,21 @@ See complete list of options in the section *Full configuration options* bellow 
 
 ## Configuration
 
-The script **must read a configuration file to setup mail server settings and other otions**. 
-
-Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
-
-All options can be missing from config file.
-
+The script **must read a configuration file to setup mail server settings and other otions**. Setup mail server settings and turn on `send_email_report` in the config file or use `--send` if you want to receive reports.  
 See *Full configuration options* section below to see list of configurables values with CLI arguments and shortcuts. 
 
 ### Notes about WPScan API token
 
-You need a WPScan API token in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. 
-
+You need a WPScan API token in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. If you have large number of sites to scan, you'll probably can't scan all your sites because of the limited amount of daily API request. Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reached.  
+If no API token is provided to WPScan, scans will still trigger WARNING emails with outdated plugin or WordPress version.
 <!-- You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have reached yout API limit.  -->
-
-Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reached.
-
-If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
-
-### Scanning a large number of sites
+<!-- ### Scanning a large number of sites
 Tips: 
 - You can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
-- Speed up the scans with multiple asynchronous workers `--workers Number` option  
-
-If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
-
+- Speed up the scans with multiple asynchronous workers `--workers Number` option   -->
 Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
 
-#### Setup continuous scanning service
+#### Setup continuous scanning service, daemon mode
 
 <details><summary><b>See details and how to</b></summary>
 <p>
@@ -297,8 +282,6 @@ from_email=WordPressWatcher@exemple.com
 You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
 ### Full configuration options
-
-
 
 <details><summary><b>See all configuration options with explanatory comments.</b></summary>
 <p>
