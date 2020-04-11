@@ -110,7 +110,7 @@ Simple usage, scan 2 sites with default config
 
     wpwatcher --url exemple.com exemple1.com
 
-Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached and ignore the WPScan No WPVulnDB API Token warningt
+Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached and ignore the WPScan No WPVulnDB API Token warning.
 
 ```bash
 wpwatcher --urls sites.txt \
@@ -120,20 +120,6 @@ wpwatcher --urls sites.txt \
     --email_to collaborator1@office.ca collaborator2@office.ca \
 	--fpstr "No WPVulnDB API Token given"
 ```
-
-
-<!-- ### Configure
-Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
-
-```bash
-wpwatcher --template_conf > ./wpwatcher.conf
-vim ./wpwatcher.conf
-```
-See *Configuration* bellow to learn more about options and how to and configure the script.    
-
-#### Execute -->
-<!-- #### Config file -->
-
 
 #### Notes on script behaviours
 - The script must read a configuration file to setup mail server settings and other otions. Setup mail server settings and turn on send_email_report in the config file or use `--send` if you want to receive reports.
@@ -154,6 +140,12 @@ See *Full configuration options* section below to see list of configurables valu
 
 Select config file with `--conf File path`. You can specify multiple files. Will overwrites the keys with each successive file. If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
 
+Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
+
+```bash
+wpwatcher --template_conf > ./wpwatcher.conf
+vim ./wpwatcher.conf
+```
 Other arguments will simply overwrite config values.
 
 See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
