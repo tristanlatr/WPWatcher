@@ -1,4 +1,8 @@
-
+#! /usr/bin/env python3
+#
+# Wordpress Watcher test script
+#
+# DISCLAIMER - USE AT YOUR OWN RISK.
 """
 Requirements
 
@@ -62,7 +66,8 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'./test.json',
             'asynch_workers':3,
-            'follow_redirect':True
+            'follow_redirect':True,
+            'wpscan_output_folder':''
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
@@ -96,7 +101,8 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'',
             'asynch_workers':3,
-            'follow_redirect':True
+            'follow_redirect':True,
+            'wpscan_output_folder':''
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(-1, exit_code)
@@ -130,7 +136,8 @@ class WPWatcherTests(unittest.TestCase):
             'resend_emails_after':timedelta(seconds=0),
             'wp_reports':'./test-parse-json.json',
             'asynch_workers':3,
-            'follow_redirect':True
+            'follow_redirect':True,
+            'wpscan_output_folder':''
         })
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
@@ -173,9 +180,6 @@ daemon_loop_sleep=5m
 
 # Custom database (--reports)
 wp_reports=./test.json
-
-# Exit if any errors (--ff)
-# fail_fast=Yes 
 
 follow_redirect=Yes
 
