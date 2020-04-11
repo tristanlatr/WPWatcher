@@ -62,24 +62,15 @@ def parse_results(wpscan_output, false_positives=[]):
     else: 
         (messages, warnings, alerts)=parse_cli(wpscan_output)
     #Process false positives
-    # for alert in alerts:
-    # [ messages.append("[False positive]\n"+a) for a in alerts if is_false_positive(a, false_positives) ]
-    for a in alerts:
-        if is_false_positive(a, false_positives): 
-            messages.append("[False positive]\n"+a)
-            del alerts[alerts.index(a)]
-    # [ messages.append("[False positive]\n"+a) for a in warnings if is_false_positive(a, false_positives) ]
-    for a in warnings:
-        if is_false_positive(a, false_positives): 
-            messages.append("[False positive]\n"+a)
-            del warnings[warnings.index(a)]
+    for alert in alerts:
+        if is_false_positive(alert, false_positives):
+            alerts.remove(alert)
+            messages.append("[False positive]\n"+alert)
 
-    # warnings=[ a for a in warnings if not is_false_positive(warnings, false_positives) ]
-    
-    # for warn in warnings:
-    #     if is_false_positive(warn, false_positives):
-    #         warnings.remove(warn)
-    #         messages.append("[False positive]\n"+warn)
+    for warn in warnings:
+        if is_false_positive(warn, false_positives):
+            warnings.remove(warn)
+            messages.append("[False positive]\n"+warn)
     
     return (( messages, warnings, alerts ))
 
@@ -442,7 +433,7 @@ def parse_warning_theme_or_plugin(finding_type,finding):
 # False Positive Detection
 def is_false_positive(string, false_positives):
     for fp_string in false_positives:
-        if fp_string and fp_string in string:
+        if fp_string in string:
             return True
     return False
 
