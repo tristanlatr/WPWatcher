@@ -114,11 +114,11 @@ Load sites from text file , pass WPScan arguments , follow redirection if WPScan
 
 ```bash
 wpwatcher --urls sites.txt \
-	--wpscan_args "--rua --force --stealthy" \
-	--follow_redirect --workers 5 \
-	--send --attach \
-    --email_to collaborator1@office.ca collaborator2@office.ca \
-	--fpstr "No WPVulnDB API Token given"
+        --wpscan_args "--rua --force --stealthy" \
+        --follow_redirect --workers 5 \
+        --send --attach \
+        --email_to collaborator1@office.ca collaborator2@office.ca \
+        --fpstr "No WPVulnDB API Token given"
 ```
 
 #### Notes on script behaviours
