@@ -13,8 +13,6 @@
 
 </p>
 
-
-
 ## Features
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
@@ -443,6 +441,7 @@ If missing, default to `0s`
 ```ini
 daemon_loop_sleep=12h
 ```
+Overwrite with argument: `--loop Time string`
 #### Output
 - Quiet
 Print only errors and WPScan ALERTS
@@ -460,11 +459,12 @@ Overwrite with arguments: `--verbose`
 ```ini
 log_file=/home/user/.wpwatcher/wpwatcher.log
 ```
+Overwrite with argument: `--log File path`
 - Save WPScan results to files as they are scanned
 ```ini
 wpscan_output_folder=/home/user/Documents/WPScanResults/
 ```
-Overwrite with argument `--wpout Folder path`
+Overwrite with argument: `--wpout Folder path`
 #### Misc
 - Raise exceptions with stack trace or exit when WPScan failed.  
 Default behaviour is to log error, continue scans and return non zero status code when all scans are over
@@ -634,7 +634,7 @@ Do not use on a json file currently used by a `wpwatcher` execution.
 
 ## Library usage
 
-<details><summary><b>See guilines</b></summary>
+<details><summary><b>See guidelines and exemple</b></summary>
 <p>
 
 - Init config dict from file with `build_config_files()` method  
