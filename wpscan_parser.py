@@ -150,163 +150,160 @@ def parse_cli(wpscan_output):
     else: 
         raise Exception("The file does not seem to be a WPScan CLI log.")
 
+def parse_vulnerabilities_and_warnings_only(data):
+    alerts=[]
+    warnings=[]
+    for section in data:
+        node=data[section]
+        if section=='version':
+            warnings.extend(parse_warning_wordpress(node))
+        if section=='main_theme':
+            warnings.extend(parse_warning_theme_or_plugin(node))
+        if any ([section==c for c in ['main_theme','version']]):
+            try: alerts.extend(parse_findings(node['vulnerabilities']))
+            except: pass
+        if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
+            for slug in node:
+                try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
+                except: pass
+                try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
+                except: pass
+    return ((warnings, alerts))
+
 def parse_json(data):
-     # Init scan messages
-    ( messages, warnings, alerts ) = ([],[],[])
-
-    # try :
-    if True:
-        # data=json.loads(wpscan_output)
-        # Do a sanity check to confirm the data is ok
-        if data and 'target_url' in data and data['target_url']:
-
-            messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
-                data['target_url'],
-                data["target_ip"],
-                data["effective_url"]))
-            
-            if "banner" in data:
-                messages.append("Scanned with WPScan version {}".format(data['banner']['version']))
-
-            if "last_db_update" in data:
-                messages.append("Last WPScan database update: {}".format(data['last_db_update']))
-
-            # Parse know vulnerabilities
-            # Parse vulnerability data and make more human readable.
-            # NOTE: You need an API token for the WPVulnDB vulnerability data.
-
-
-            if "interesting_findings" in data:
-                if data["interesting_findings"]==None or len(data["interesting_findings"])==0:
-                    messages.append("WPScan did not find any interesting informations")
-                else:
-                    # Parse informations
-                    messages.extend(parse_findings('Interesting finding', data["interesting_findings"]) )
-            
-            if "main_theme" in data:
-                if data["main_theme"]==None or len(data["main_theme"])==0:
-                    messages.append("WPScan did not find any main theme information")
-                else:
-                    # Parse theme warnings
-                    warnings.extend(parse_warning_theme_or_plugin('main theme',data['main_theme']) )
-
-                    if "vulnerabilities" in data["main_theme"]:
-                        # Parse Vulnerable themes
-                        alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) )
-
-                    if "version" in data["main_theme"] and data["main_theme"]["version"] != None and "vulnerabilities" in data["main_theme"]["version"] :
-                        # Parse vulnerable theme version
-                        alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
-            
-            if "version" in data:
-                if data["version"]==None or len(data["version"])==0:
-                    messages.append("WPScan did not find any WordPress version")
-                else:
-                    # Parse WordPress version
-                    messages.append(parse_version_info(data['version']))
-                    # Parse outdated WordPress version
-                    warnings.extend(parse_warning_wordpress(data['version']) )
-                    # Parse vulnerable WordPress version
-                    alerts.extend(parse_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
-            
-            if "themes" in data:
-                if data["themes"]==None or len(data["themes"])==0:
-                    messages.append("WPScan did not find any theme information")
-                else:
-                    for theme in data["themes"]:
-                        # Parse secondary theme warnings
-                        warnings.extend(parse_warning_theme_or_plugin('theme',theme) )
-                        # Parse secondary Vulnerable themes
-                        alerts.extend(parse_findings('Vulnerable theme', data["themes"][theme]["vulnerabilities"]) )
-            
-            if "plugins" in data:
-                if data["plugins"]==None or len(data["plugins"])==0:
-                    messages.append("WPScan did not find any WordPress plugins")
-                else:
-                    plugins = data["plugins"]
-                    for plugin in plugins:
-                        # Parse vulnerable plugins
-                        alerts.extend(parse_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) )
-                        # Parse outdated plugins
-                        warnings.extend(parse_warning_theme_or_plugin('plugin',plugins[plugin]) )
-
-            if "users" in data:
-                if data["users"]==None or len(data["users"])==0:
-                    messages.append("WPScan did not find any WordPress users")
-                else:
-                    users = data["users"]
-                    for name in users:
-                        # Parse users users
-                        messages.append( 'WordPress user found: %s'%name )
-            
-            if "config_backups" in data:
-                if data["config_backups"]==None or len(data["config_backups"])==0:
-                    messages.append("WPScan did not find any WordPress config backups")
-                else:
-                    for url in data['config_backups']:
-                        alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
-
-            if "db_exports" in data :
-                if data['db_exports']==None or len(data['db_exports'])==0:
-                    messages.append("WPScan did not find any WordPress db exports")
-                else:
-                    alerts.extend(parse_findings("WordPress Database Export Found", data['db_exports'] ))
-
-            if "timthumbs" in data :
-                if data['timthumbs']==None or len(data['timthumbs'])==0:
-                    messages.append("WPScan did not find any timthumbs")
-                else:
-                    for tt in data['timthumbs']:
-                        if "vulnerabilities" in tt and tt["vulnerabilities"]!=None:
-                            alerts.extend(parse_findings("Timthumbs Vulnerability",data['timthumbs'][tt]["vulnerabilities"]) )
-                        messages.extend(parse_findings("Timthumb" , data['timthumbs'][tt]) )
-
-            if "password_attack" in data :
-                if data['password_attack']==None or len(data['password_attack'])==0:
-                    messages.append("WPScan did not find any valid passwords")
-                else:
-                    for passwd in data['password_attack']:
-                        alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
-
-            if "medias" in data :
-                if data['medias']==None or len(data['medias'])==0:
-                    messages.append("WPScan did not find any medias")
-                else:
-                    warnings.extend(parse_findings("WordPress Media found", data['medias'] ))
-
-            if "vuln_api" in data :
-                if "error" in data['vuln_api']:
-                    warnings.append(data['vuln_api']["error"])
-
-            if "not_fully_configured" in data and data['not_fully_configured']!=None :
-                alerts.append(data['not_fully_configured'])
-
-        else: 
-            raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
+    # Do a sanity check to confirm the data is ok
+    if data and 'target_url' in data and data['target_url']:
+        warnings, alerts=parse_vulnerabilities_and_warnings_only(data)
+        infos, w1, a1=parse_other_infos(data)
+        warnings.extend(w1)
+        alerts.extend(a1)
+        return (( infos, warnings, alerts ))
+    else: 
+        raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
     
-    # except Exception as err:
-    #     # Default parsing is json, if fails will try cli
-    #     try: (messages, warnings, alerts)=parse_cli(wpscan_output)
-    #     except Exception as err2: 
-    #         raise Exception("Could not parse wpscan Json output. Error:\n"+str(err)+"\nCould not parse neither CLI output: "+str(err2))
+def parse_other_infos(data):
+    messages=[]
+    warnings=[]
+    alerts=[]
+    messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
+        data['target_url'],
+        data["target_ip"],
+        data["effective_url"]))
+    
+    if "banner" in data:
+        messages.append("Scanned with WPScan version {}".format(data['banner']['version']))
+
+    if "last_db_update" in data:
+        messages.append("Last WPScan database update: {}".format(data['last_db_update']))
+
+    # Parse know vulnerabilities
+    # Parse vulnerability data and make more human readable.
+    # NOTE: You need an API token for the WPVulnDB vulnerability data.
+
+    if "interesting_findings" in data:
+        if data["interesting_findings"] is not None and len(data["interesting_findings"])>0:
+            # Parse informations
+            messages.extend(parse_findings(data["interesting_findings"]) )
+
+    if "users" in data:
+        if data["users"] is not None and len(data["users"])>0:
+            users = data["users"]
+            for name in users:
+                # Parse users
+                messages.append( 'WordPress user found: %s'%name )
+    
+    if "config_backups" in data:
+        if data["config_backups"] is not None or len(data["config_backups"])>0:
+            for url in data['config_backups']:
+                alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
+
+    if "db_exports" in data :
+        if data['db_exports'] is not None and len(data['db_exports'])>0:
+            alerts.extend(parse_vulnerability_or_finding(data['db_exports'] ))
+
+    if "password_attack" in data :
+        if data['password_attack'] is not None and len(data['password_attack'])>0:
+            for passwd in data['password_attack']:
+                alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
+
+    if "medias" in data :
+        if data['medias'] is not None and len(data['medias'])>0:
+            warnings.extend(parse_vulnerability_or_finding(data['medias']))
+
+    if "vuln_api" in data :
+        if "error" in data['vuln_api']:
+            warnings.append(data['vuln_api']["error"])
+
+    if "not_fully_configured" in data and data['not_fully_configured']!=None :
+        alerts.append(data['not_fully_configured'])
 
     return (( messages, warnings, alerts ))
 
-def parse_a_finding(finding_type,finding):
+    # Older code not ised anymore
+
+    # if "main_theme" in data:
+    #     if data["main_theme"]==None or len(data["main_theme"])==0:
+    #         messages.append("WPScan did not find any main theme information")
+    #     else:
+    #         # Parse theme warnings
+    #         warnings.extend(parse_warning_theme_or_plugin('main theme',data['main_theme']) )
+
+    #         if "vulnerabilities" in data["main_theme"]:
+    #             # Parse Vulnerable themes
+    #             alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) )
+
+    #         if "version" in data["main_theme"] and data["main_theme"]["version"] != None and "vulnerabilities" in data["main_theme"]["version"] :
+    #             # Parse vulnerable theme version
+    #             alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
+    
+    # if "version" in data:
+    #     if data["version"]==None or len(data["version"])==0:
+    #         messages.append("WPScan did not find any WordPress version")
+    #     else:
+    #         # Parse WordPress version
+    #         messages.append(parse_version_info(data['version']))
+    #         # Parse outdated WordPress version
+    #         warnings.extend(parse_warning_wordpress(data['version']) )
+    #         # Parse vulnerable WordPress version
+    #         alerts.extend(parse_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
+    
+    # if "themes" in data:
+    #     if data["themes"]==None or len(data["themes"])==0:
+    #         messages.append("WPScan did not find any theme information")
+    #     else:
+    #         for theme in data["themes"]:
+    #             # Parse secondary theme warnings
+    #             warnings.extend(parse_warning_theme_or_plugin('theme',theme) )
+    #             # Parse secondary Vulnerable themes
+    #             alerts.extend(parse_findings('Vulnerable theme', data["themes"][theme]["vulnerabilities"]) )
+    
+    # if "plugins" in data:
+    #     if data["plugins"]==None or len(data["plugins"])==0:
+    #         messages.append("WPScan did not find any WordPress plugins")
+    #     else:
+    #         plugins = data["plugins"]
+    #         for plugin in plugins:
+    #             # Parse vulnerable plugins
+    #             alerts.extend(parse_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) )
+    #             # Parse outdated plugins
+    #             warnings.extend(parse_warning_theme_or_plugin('plugin',plugins[plugin]) )
+
+def parse_vulnerability_or_finding(finding):
     # Finding can be a vulnerability or other
     findingData = ""
     refData = ""
-    title = "%s:" % finding_type
+    title=""
+    # title = "%s:"%(finding_type) if finding_type else ""
 
     if type(finding) is dict:
-        if "type" in finding:
-            title += " [%s]" % finding["type"]
-
-        if "title" in finding:
-            title += " %s" % finding["title"]
-
+        # For interesting findings
+        # if "type" in finding:
+        #     title += "[%s]" % finding["type"]
         if "to_s" in finding:
-            title += " %s" % finding["to_s"]
+            title += "%s" % finding["to_s"]
+        # For vulnerabilities
+        if "title" in finding:
+            title += "%s" % finding["title"]
 
         findingData += "%s" % title
 
@@ -319,8 +316,8 @@ def parse_a_finding(finding_type,finding):
         # if "found_by" in finding:
         #     findingData += "\nFound by: %s" % finding["found_by"]
 
-        # if "confidence" in finding:
-        #     findingData += "\nConfidence: %s" % finding["confidence"]
+        if "confidence" in finding:
+            findingData += "\nConfidence: %s" % finding["confidence"]
 
         if "interesting_entries" in finding:
             if len(finding["interesting_entries"]) > 0:
@@ -331,61 +328,58 @@ def parse_a_finding(finding_type,finding):
         #         findingData += "\nConfirmed By:\n"
         #         findingData+="\n- ".join(finding["confirmed_by"])
 
-        # if "evidence" in finding:
-        #     findingData+='Evidence: %s' % finding['evidence']
-
         if "references" in finding and len(finding["references"]) > 0:
             refData += "\nReferences:"
             for ref in finding["references"]:
                 if ref =='cve':
-                    for cve in finding["references"][ref]: refData+="\n- CVE-"+cve
+                    for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
                 elif ref == 'wpvulndb': 
-                    for wpvulndb in finding["references"][ref]: refData+="\n- WPVulnDB(%s): https://wpvulndb.com/vulnerabilities/%s" %(wpvulndb,wpvulndb)
+                    for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
                 else:
-                    refData += "\n  %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+                    refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
 
     else: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
     return ("%s %s" % (findingData, refData) )
 
 # Wrapper to parse findings can take list or dict type
-def parse_findings(finding_type,findings):
+def parse_findings(findings):
     summary = []
     if type(findings) is list:
         for finding in findings:
-            summary.append(parse_a_finding(finding_type,finding))
+            summary.append(parse_vulnerability_or_finding(finding))
     elif type(findings) is dict:
         for finding in findings:
-            summary.append(parse_a_finding(finding_type,findings[finding]))
+            summary.append(parse_vulnerability_or_finding(findings[finding]))
     else:
         raise TypeError("Must be a list or dict, method parse_findings() for data: {}".format(findings)) 
     return(summary)
 
-def parse_version_info(version):
-    headerInfo = ""
+# def parse_version_info(version):
+#     headerInfo = ""
 
-    if "number" in version:
-        headerInfo += "Running WordPress version: %s\n" % version["number"]
+#     if "number" in version:
+#         headerInfo += "Running WordPress version: %s\n" % version["number"]
 
-    if "interesting_entries" in version:
-            if len(version["interesting_entries"]) > 0:
-                headerInfo += "\nInteresting Entries: %s" % (", ".join(version["interesting_entries"]))
+#     if "interesting_entries" in version:
+#             if len(version["interesting_entries"]) > 0:
+#                 headerInfo += "\nInteresting Entries: %s" % (", ".join(version["interesting_entries"]))
 
-    return headerInfo
+#     return headerInfo
 
 def parse_warning_wordpress(finding):
     summary=[]
+    if not finding: return summary
     warn=False
     findingData=""
-    if 'status' in finding and finding['status']!="latest":
-        findingData+="The version of your WordPress site is out of date.\n"
-        findingData+="Status %s for version %s" % (finding['status'], finding['number'])
+    if 'status' in finding and finding['status']=="insecure":
+        findingData+="Insecure WordPress version %s identified (released on %s)"%(finding['number'], finding['release_date'])
         warn=True
 
     # if "found_by" in finding:
     #         findingData += "\nFound by: %s" % finding["found_by"]
 
-    # if "confidence" in finding:
-    #     findingData += "\nConfidence: %s" % finding["confidence"]
+    if "confidence" in finding:
+        findingData += "\nConfidence: %s" % finding["confidence"]
 
     # if "interesting_entries" in finding:
     #         if len(finding["interesting_entries"]) > 0:
@@ -394,34 +388,35 @@ def parse_warning_wordpress(finding):
     if warn: summary.append(findingData)
     return(summary)
 
-def parse_warning_theme_or_plugin(finding_type,finding):
+def parse_warning_theme_or_plugin(finding):
     summary=[]
+    if not finding: return summary
     warn=False
     findingData=""
 
     if 'slug' in finding:
         findingData+="%s" % finding['slug']
-    
-    if "location" in finding:
-            findingData += "\nLocation: %s" % finding["location"]
 
     if 'outdated' in finding and finding['outdated']==True:
-        findingData+="\nThe version of your %s is out of date. The latest version is %s." % (finding_type,finding["latest_version"])
+        findingData+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
         warn=True
 
     if "directory_listing" in finding and finding['directory_listing']:
-        findingData+="\nThe %s allows directory listing: %s" % (finding_type,finding["location"])
+        findingData+="\nDirectory listing is enabled"
         warn=True
 
     if "error_log_url" in finding and finding['error_log_url']:
-        findingData+="\nThe %s error log accessible: %s" % (finding_type,finding["error_log_url"])
+        findingData+="\nAn error log file has been found: %s" % (finding["error_log_url"])
         warn=True
+
+    if "location" in finding:
+        findingData += "\nLocation: %s" % finding["location"]
 
     # if "found_by" in finding:
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
-    # if "confidence" in finding:
-    #     findingData += "\nConfidence: %s" % finding["confidence"]
+    if "confidence" in finding:
+        findingData += "\nConfidence: %s" % finding["confidence"]
 
     if "interesting_entries" in finding:
         if len(finding["interesting_entries"]) > 0:
@@ -439,7 +434,7 @@ def is_false_positive(string, false_positives):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='WPscan output parser')
-    parser.add_argument('--input', metavar='path', help="WPScan Json or CLI output")
+    parser.add_argument('--input', '-i', metavar='path', help="WPScan Json or CLI output")
     args = parser.parse_args()
     return args
 
