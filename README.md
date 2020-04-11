@@ -4,7 +4,7 @@
 <h1 align="center">WPWatcher</h1>
 
 <p align="center">
-  Automating WPScan to scan and report vulnerable Wordpress sites
+  Automating <a href="https://wpscan.org/" title="homepage" target="_blank">WPScan</a> to scan and report vulnerable Wordpress sites
   <br>
 </p>
 
@@ -19,7 +19,7 @@
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
   - Parse WPScan output and divide the results in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
-  - Mail notification and verbosity can be configred in config file, additionnaly WPScan output can be attached to emails. 
+  - Mail notification and verbosity can be configred, additionnaly WPScan output can be attached to emails. 
   - Scan sites continuously at defined interval and handled VulnDB API limit.  
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
@@ -106,10 +106,21 @@ alias wpwatcher="docker run -it -v 'volume-name-or-path-to-folder:/wpwatcher/.wp
 </details>
 
 #### Try it out
+Simple usage, scan 2 sites with default config
 
     wpwatcher --url exemple.com exemple1.com
 
-The command should be in your `PATH`, as well as `wpwatcher.py` (synonym of `wpwatcher`) and `wpscan_parser.py` (standalone WPScan output parser).
+Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached and ignore the WPScan No WPVulnDB API Token warningt
+
+```bash
+wpwatcher --urls sites.txt \
+	--wpscan_args "--rua --force --stealthy" \
+	--follow_redirect --workers 5 \
+	--send --attach \
+    --email_to collaborator1@office.ca collaborator2@office.ca \
+	--fpstr "No WPVulnDB API Token given"
+```
+
 
 <!-- ### Configure
 Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
@@ -121,16 +132,8 @@ vim ./wpwatcher.conf
 See *Configuration* bellow to learn more about options and how to and configure the script.    
 
 #### Execute -->
+<!-- #### Config file -->
 
-    wpwatcher [--conf File path [File path ...]] [...]
-
-#### Config file
- `--conf`. You can specify multiple files. Will overwrites the keys with each successive file.  
-If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
-
-Other arguments will simply overwrite config values.
-
-See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
 #### Notes on script behaviours
 - The script must read a configuration file to setup mail server settings and other otions. Setup mail server settings and turn on send_email_report in the config file or use `--send` if you want to receive reports.
@@ -148,6 +151,12 @@ See complete list of options in the section *Full configuration options* bellow 
 
 The script **must read a configuration file to setup mail server settings and other otions**. Setup mail server settings and turn on `send_email_report` in the config file or use `--send` if you want to receive reports.  
 See *Full configuration options* section below to see list of configurables values with CLI arguments and shortcuts. 
+
+Select config file with `--conf File path`. You can specify multiple files. Will overwrites the keys with each successive file. If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
+
+Other arguments will simply overwrite config values.
+
+See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
 ### Notes about WPScan API token
 
@@ -523,7 +532,7 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
 In addition to log messages, the readable report, and raw WPScan output can be printed with `--verbose`.
-<details><summary><b>See</b></summary>
+<details><summary><b>See output sample</b></summary>
 <p>
 
 ```log
@@ -623,7 +632,7 @@ Do not use on a json file currently used by a `wpwatcher` execution.
 
     python3 ./tools/wprs.py --input ~/.wpwatcher/wp_reports.json
 
-<details><summary><b>See</b></summary>
+<details><summary><b>See screenshot</b></summary>
 <p>
 
 ![WPWatcher Report summary](/screens/reports-summary-wprs.png "WPWatcher Reports summary")
@@ -633,7 +642,7 @@ Do not use on a json file currently used by a `wpwatcher` execution.
 
 ## Library usage
 
-<details><summary><b>See</b></summary>
+<details><summary><b>See guilines</b></summary>
 <p>
 
 - Init config dict from file with `build_config_files()` method  
