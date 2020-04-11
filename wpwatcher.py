@@ -46,11 +46,8 @@ VERSION='0.5.7.dev0'
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
 AUTHORS="Florian Roth, Tristan Landès"
-
-# How many seconds to wait when API limit reached
-# 86400s=24h
+# Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
-
 # Writing into the database file is thread safe
 wp_report_lock = threading.Lock()
 # Global log handler
@@ -93,8 +90,8 @@ class WPWatcher():
         try:
             self.update_and_write_wp_reports(self.wp_reports)
         except:
-            log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database:\n{}".format(self.conf['wp_reports'], traceback.format_exc()))
-            exit(-1)
+            log.error("Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database".format(self.conf['wp_reports']))
+            raise
         
         # Init wpscan output folder
         if self.conf['wpscan_output_folder'] : 
@@ -495,7 +492,6 @@ class WPWatcher():
         wp_report['warnings']=wp_report['warnings'] if self.conf['send_warnings'] or self.conf['send_infos'] else []
         wp_report['infos']=wp_report['infos'] if self.conf['send_infos'] else []
 
-        # Printing to stdout if not quiet
         # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
         log.debug("\n"+self.build_message(wp_report)+"\n")
 
@@ -808,7 +804,7 @@ def build_config_files(files=None):
             files=find_config_files()
         # No config file notice
         if not files or len(files)==0: 
-            log.info("No config file selected and could not find default config `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`. The script must read a configuration file to setup mail server settings, WPScan options and other features.")
+            log.info("No config file selected and could not find default config `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
         # Reading config 
         else:
             read_files=conf_parser.read(files)
@@ -837,12 +833,12 @@ def build_config_files(files=None):
             'log_file':conf_parser.get('wpwatcher','log_file'),
             'follow_redirect':getbool(conf_parser, 'follow_redirect'),
             'wpscan_output_folder':conf_parser.get('wpwatcher','wpscan_output_folder'),
+            'wpscan_args':getjson(conf_parser,'wpscan_args'),
             # Not configurable with cli arguments
             'send_warnings':getbool(conf_parser, 'send_warnings'),
             'false_positive_strings' : getjson(conf_parser,'false_positive_strings'), 
             'email_errors_to':getjson(conf_parser,'email_errors_to'),
             'wpscan_path':conf_parser.get('wpwatcher','wpscan_path'),
-            'wpscan_args':getjson(conf_parser,'wpscan_args'),
             'smtp_server':conf_parser.get('wpwatcher','smtp_server'),
             'smtp_auth':getbool(conf_parser, 'smtp_auth'),
             'smtp_user':conf_parser.get('wpwatcher','smtp_user'),
@@ -913,6 +909,8 @@ Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to cr
     parser.add_argument('--log_file','--log', metavar="Logfile path", help="Configure log_file")
     parser.add_argument('--follow_redirect','--follow',  help="Configure follow_redirect=Yes", action='store_true')
     parser.add_argument('--wpscan_output_folder','--wpout', metavar="WPScan results folder", help="Configure wpscan_output_folder")
+    parser.add_argument('--wpscan_args','--wpargs', metavar='WPScan arguments as string', help='Configure wpscan_args')
+    parser.add_argument('--false_positive_strings','--fpstr', metavar='False positive strings', help='Configure false_positive_strings', nargs='+', default=None)
     parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
     parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
     args = parser.parse_args()
@@ -945,14 +943,15 @@ def build_config(args):
     # Adjust special case of daemon_loop_sleep
     if 'daemon_loop_sleep' in conf_args:
         conf_args['daemon_loop_sleep']=parse_timedelta(conf_args['daemon_loop_sleep'])
+    # Adjust special case of wpscan_args
+    if 'wpscan_args' in conf_args:
+        conf_args['wpscan_args']=shlex.split(conf_args['wpscan_args'])
    
     # if vars(args)['resend']: conf_args['resend_email_after']=timedelta(seconds=0)
     # Overwrite with conf dict biult from CLI Args
     if conf_args: configuration.update(conf_args)
 
     return configuration
-
-
 
 # Main program, parse the args, read config and launch scans
 def wpwatcher():
