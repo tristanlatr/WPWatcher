@@ -173,10 +173,17 @@ class WPWatcher():
                 time.sleep(0.01)
                 continue
             wp_report_lock.acquire()
-            with open(self.conf['wp_reports'],'w') as reportsfile:
-                json.dump(self.wp_reports, reportsfile, indent=4)
-                # log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
-            wp_report_lock.release()
+            try:
+                with open(self.conf['wp_reports'],'w') as reportsfile:
+                    json.dump(self.wp_reports, reportsfile, indent=4)
+                    wp_report_lock.release()
+                    # log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
+            except KeyboardInterrupt:
+                # Still writing into the databse if ^C then quitting
+                with open(self.conf['wp_reports'],'w') as reportsfile:
+                    json.dump(self.wp_reports, reportsfile, indent=4)
+                wp_report_lock.release()
+                raise
 
     # Replace --api-token param with *** for safe logging
     @staticmethod
@@ -195,7 +202,7 @@ class WPWatcher():
         log.debug("Running WPScan command: %s" % ' '.join(self.safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
         try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE )
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull,'w') )
             wpscan_output, _  = process.communicate()
             try: wpscan_output=wpscan_output.decode("utf-8")
             except UnicodeDecodeError: wpscan_output=wpscan_output.decode("latin1")
@@ -204,7 +211,7 @@ class WPWatcher():
             #   See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
             if process.returncode not in [0,5]:
                 # Handle error
-                err_string="WPScan failed with exit code %s. WPScan output: \n%s" % (str(process.returncode), wpscan_output)
+                err_string="WPScan failed with exit code %s %s" % (str(process.returncode), ". WPScan output: %s"%wpscan_output if wpscan_output else '')
                 log.error(self.oneline(err_string))
             else :
                 # WPScan comamnd success
@@ -414,16 +421,10 @@ class WPWatcher():
         # Launch WPScan -------------------------------------------------------
         (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan(*wpscan_arguments)
 
-        # Write wpscan output 
-        if self.conf['wpscan_output_folder'] :
-            with open(os.path.join(self.conf['wpscan_output_folder'],
-                self.get_valid_filename('WPScan_results_%s_%s.txt' % (wp_site['url'], wp_report['datetime']))), 'w') as wpout:
-                wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code not in [0,5]:
             # Handle scan error
-            wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
                 log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
@@ -441,8 +442,16 @@ class WPWatcher():
                 else:
                     log.error("Could not parse url to follow redirection or several URLs where found in the WPScan output after words 'The URL supplied redirects to'")
                     wp_report['errors'].append("Could not parse url to follow redirection or several URLs where found in the WPScan output after words 'The URL supplied redirects to'")
-            
+            # Quick return if user cacelled scans
+            if wpscan_exit_code in [2] or "Canceled by User" in str(wp_report["wpscan_output"]):
+                return None
             log.error("Could not scan site %s"%wp_site['url'])
+            # If WPScan error, add the error to the reports
+            if wpscan_exit_code in [3, 4]:
+                wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, self.safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
+            # Other errors codes : 1, -2, 127, etc: Just skip the site 
+            elif not self.conf['fail_fast']: # If not --ff
+                return None 
             # Fail fast
             if self.conf['fail_fast']: 
                 log.info("Failure. Scans aborted.")
@@ -450,36 +459,32 @@ class WPWatcher():
         
         # Parse the results if no errors with wpscan -----------------------------
         else:
-            try:
-                log.debug("Parsing WPScan output")
-                # Call parse_result from wpscan_parser.py ------------------------
-                wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
-                    self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
+            # Write wpscan output 
+            wpscan_results_file=None
+            if self.conf['wpscan_output_folder'] :
+                wpscan_results_file=os.path.join(self.conf['wpscan_output_folder'],
+                    self.get_valid_filename('WPScan_results_%s_%s.txt' % (wp_site['url'], wp_report['datetime'])))
+                with open(wpscan_results_file, 'w') as wpout:
+                    wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
+            
+            log.debug("Parsing WPScan output")
+            # Call parse_result from wpscan_parser.py ------------------------
+            wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
+                self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
+            if last_wp_report:
+                self.update_report(wp_report, last_wp_report)
+            
+            # Print WPScan findings ------------------------------------------------------
+            for info in wp_report['infos']:
+                log.info(self.oneline("** WPScan INFO %s ** %s" % (wp_site['url'], info )))
+            for fix in wp_report['fixed']:
+                log.info(self.oneline("** FIXED %s ** %s" % (wp_site['url'], fix )))
+            for warning in wp_report['warnings']:
+                log.warning(self.oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
+            for alert in wp_report['alerts']:
+                log.critical(self.oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
 
-            except Exception:
-                # Handle parsing error
-                err_string="Something is wrong with the parser. Maybe because you're using a new version of WPScan.\nCould not parse the results from wpscan command for site {}.\nError:\n{}\nWPScan output:\n{}".format(wp_site['url'], traceback.format_exc(), wp_report['wpscan_output'])
-                log.error(err_string)
-                wp_report['errors'].append(err_string)
-                # Fail fast
-                if self.conf['fail_fast']: 
-                    log.info("Failure. Scans aborted.")
-                    exit(-1)
-            else:
-                # Update report entry if any
-                if last_wp_report:
-                    self.update_report(wp_report, last_wp_report)
-                
-                # Print WPScan findings ------------------------------------------------------
-                for info in wp_report['infos']:
-                    log.info(self.oneline("** WPScan INFO %s ** %s" % (wp_site['url'], info )))
-                for fix in wp_report['fixed']:
-                    log.info(self.oneline("** FIXED %s ** %s" % (wp_site['url'], fix )))
-                for warning in wp_report['warnings']:
-                    log.warning(self.oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
-                for alert in wp_report['alerts']:
-                    log.critical(self.oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
-            # log.debug("Readable parsed report:\n%s"%self.build_message(warnings, alerts, messages))
+            if wpscan_results_file: log.info("Write wpscan output to file %s"%wpscan_results_file)
         
         # Report status ------------------------------------------------
         if len(wp_report['errors'])>0:wp_report['status']="ERROR"
@@ -547,49 +552,6 @@ class WPWatcher():
         percent = int(float(count)/float(total)*100)
         log.info( "Progress - [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
-    def perform(self, func, data, func_args=None, asynch=False,  workers=None):
-        """
-        Wrapper arround executable and a list of elements,
-
-        Arguments:  
-        
-        - `func`: callable function. `func` is going to be called like `func(item, **func_args)` for all items in data.
-        - `data`: will perfom the action on the `data` list.
-        - `func_args`: arguments that will be passed by default to `func` in all calls.
-        - `asynch`: execute the task asynchronously with `concurrent.futures.ThreadPoolExecutor`
-        - `workers`: number of parrallel tasks, mandatory if asynch is true.
-
-        Returns a list of returned results.
-        """
-
-        log.debug('Calling perform func='+str(func)+
-            ' data='+str(data)[:100]+
-            ' func_args='+str(func_args)+
-            ' asynch='+str(asynch)+
-            ' workers='+str(workers))
-        if not callable(func) :
-            raise ValueError('func must be callable')
-        #Setting the arguments on the function
-        func = functools.partial(func, **(func_args if func_args != None else {}))
-        #The data returned by function
-        returned=list()
-        if isinstance(data, list) and data != None:
-            elements=data
-        else :
-            AttributeError('data must be a list')
-        #Runs the callable on list on executor or by iterating
-        if asynch == True :
-            if isinstance(workers, int) :
-                returned=list(concurrent.futures.ThreadPoolExecutor(
-                    max_workers=workers ).map(
-                        func, elements))
-            else:
-                raise AttributeError('When asynch == True : You must specify a integer value for workers')
-        else :
-            for index_or_item in elements:
-                returned.append(func(index_or_item))
-        return(returned)
-    
     def results_summary(self, results):
         string='Results summary\n'
         header = ("Site", "Status", "Last email", "Issues", "Problematic component(s)")
@@ -615,11 +577,22 @@ class WPWatcher():
     def run_scans_and_notify(self):
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
         scanned_sites=[]
-        new_reports = self.perform(self.scan_site, 
-            self.conf['wp_sites'], 
-            func_args=dict(scanned_sites=scanned_sites), 
-            asynch=True, 
-            workers=self.conf['asynch_workers'])
+        func = functools.partial(self.scan_site, scanned_sites=scanned_sites)
+        try:
+            executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
+            new_reports=list(executor.map(func, self.conf['wp_sites']))
+                    
+        except KeyboardInterrupt:
+            log.error("Closing...")
+            # Mute everything
+            logging.lastResort=None
+            init_log(verbose=self.conf['verbose'],
+                quiet=self.conf['quiet'],
+                logfile=self.conf['log_file'], nostd=True)
+
+            executor.shutdown()
+            exit(-1)
+        
         log.info(self.results_summary(new_reports))
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
             log.info("Scans finished successfully.")
@@ -853,7 +826,7 @@ def build_config_files(files=None):
         raise
 
 # Setup stdout logger
-def init_log(verbose=False, quiet=False, logfile=None):
+def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
     format_string='%(asctime)s - %(levelname)s - %(message)s'
     format_string_cli='%(levelname)s - %(message)s'
     if verbose : verb_level=logging.DEBUG
@@ -865,7 +838,8 @@ def init_log(verbose=False, quiet=False, logfile=None):
     std.setLevel(verb_level)
     std.setFormatter(logging.Formatter(format_string_cli))
     log.handlers=[]
-    log.addHandler(std)
+    if not nostd: log.addHandler(std)
+    else: log.addHandler(logging.StreamHandler(open(os.devnull,'w')))
     if logfile :
         fh = logging.FileHandler(logfile)
         fh.setLevel(verb_level)
