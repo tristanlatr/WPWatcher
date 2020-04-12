@@ -1,21 +1,30 @@
 
 
-# WPWatcher
-[![PyPI version](https://badge.fury.io/py/wpwatcher.svg)](https://pypi.org/project/WPWatcher/)
 
-WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that manages scans on multiple sites and reports by email
+<h1 align="center">WPWatcher</h1>
+
+<p align="center">
+  Automating <a href="https://wpscan.org/" title="homepage" target="_blank">WPScan</a> to scan and report vulnerable Wordpress sites
+  <br>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
+
+</p>
 
 ## Features
   - Scan multiple sites with WPScan
   - Define reporting emails addresses for every configured site individually and globally
-  - Mail messages are divided in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
-  - Mail notification and verbosity can be configred in config file, additionnaly WPScan output can be attached to emails. 
+  - Parse WPScan output and divide the results in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
+  - Mail notification and verbosity can be configred, additionnaly WPScan output can be attached to emails. 
   - Scan sites continuously at defined interval and handled VulnDB API limit.  
   - Local log file can be configured and also lists all the findings 
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
   - Speed up scans using several asynchronous workers
   - Optionnal follow URL redirection if WPScan fails and propose to ignore main redirect 
+  - Save raw WPScan results into files
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
 
 ## Prerequisites 
@@ -24,7 +33,7 @@ WordPress Watcher is a Python wrapper for [WPScan](http://wpscan.org/) that mana
   - Tested on Linux and MacOS
 
 <!-- #### Compatibility
-Tested with WPScan 3.7 on :
+Tested with WPScan 3.7.11 on :
 - MacOS (WPScan install wil `HomeBrew`)
 - Linux (WPScan installed with `RubyGems`)  
 - Raspbian (WPScan installed with `RubyGems`)   -->
@@ -38,43 +47,87 @@ Tested with WPScan 3.7 on :
 pip3 install wpwatcher --upgrade
 ```
 
-#### Or manually
+#### Manually
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
+`wpwatcher` should be in your `PATH` but you can always run the python script directly 
+    
+    python3 ./wpwatcher/cli.py --url exemple3.com -v
+
+<!-- 
+Before version 0.5.7 
+
+    python3 ./wpwatcher.py --url exemple3.com -v
+ -->
+
+#### With docker
+
+<details><summary><b>See docker installation steps</b></summary>
+<p>
+
+- Clone the repository
+- Install docker image 
+
+With the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Won't work if you build the image as root.
+```bash
+docker image build \
+    --build-arg USER_ID=$(id -u ${USER}) \
+    -t wpwatcher .
+```
+- Create and map a WPWatcher folder containing your `wpwatcher.conf` file to the docker runner.
+`wpwatcher` command would look like :  
+```bash
+docker run -it -v '/path/to/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
+```
+
+Or install without UID mapping, it will use [docker volumes](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
+```bash
+docker image build -t wpwatcher .
+```
+
+- `wpwatcher` command would look like :  
+```
+docker run -it -v 'wpwatcher_data:/wpwatcher/.wpwatcher/' wpwatcher
+```
+<!-- - Then, as root, check `docker volume inspect wpwatcher_data` to see Mountpoint, other WPWatcher files and create your config file if you want
+```bash
+docker run -it wpwatcher --template_conf > /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
+vim /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
+``` -->
+
+Try it out (No persistent storage)
+```bash
+docker run -it wpwatcher --url exemple1.com
+```
+
+Create an alias with volume mapping your good to go
+```
+alias wpwatcher="docker run -it -v 'volume-name-or-path-to-folder:/wpwatcher/.wpwatcher/' wpwatcher"
+```
+</p>
+</details>
+
 #### Try it out
+Simple usage, scan 2 sites with default config
 
     wpwatcher --url exemple.com exemple1.com
 
-The command should be in your `PATH`, as well as `wpwatcher.py` (synonym of `wpwatcher`) and `wpscan_parser.py` (standalone WPScan output parser).
-
-You can always run the python script directly 
-                
-    python3 ./wpwatcher.py --url exemple3.com -v
-
-### Configure
-Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
+Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached and ignore the WPScan No WPVulnDB API Token warning.
 
 ```bash
-wpwatcher --template_conf > ./wpwatcher.conf
-vim ./wpwatcher.conf
+wpwatcher --urls sites.txt \
+        --wpscan_args "--rua --force --stealthy" \
+        --follow_redirect --workers 5 \
+        --send --attach \
+        --email_to collaborator1@office.ca collaborator2@office.ca \
+        --fpstr "No WPVulnDB API Token given"
 ```
-See *Configuration* bellow to learn more about options and how to and configure the script.    
 
-#### Execute
-
-    wpwatcher [--conf File path [File path ...]] [...]
-
-`--conf` is the main argument, you can specify multiple files. Will overwrites the keys with each successive file.  
-If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
-
-Other arguments will simply overwrite config values like `--url URL [URL ...]` or  `--verbose`.
-
-See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
-
-#### Notes
+#### Notes on script behaviours
+- The script must read a configuration file to setup mail server settings and other otions. Setup mail server settings and turn on send_email_report in the config file or use `--send` if you want to receive reports.
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
@@ -87,35 +140,36 @@ See complete list of options in the section *Full configuration options* bellow 
 
 ## Configuration
 
-The script **must read a configuration file to set mail server settings, WPScan path and arguments**. If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
-
-Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
-
-All options can be missing from config file.
-
+The script **must read a configuration file to setup mail server settings and other otions**. Setup mail server settings and turn on `send_email_report` in the config file or use `--send` if you want to receive reports.  
 See *Full configuration options* section below to see list of configurables values with CLI arguments and shortcuts. 
+
+Select config file with `--conf File path`. You can specify multiple files. Will overwrites the keys with each successive file. If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
+
+Create and edit a new config file from template.   (  `--template_conf` argument print a default config file  )
+
+```bash
+wpwatcher --template_conf > ./wpwatcher.conf
+vim ./wpwatcher.conf
+```
+Other arguments will simply overwrite config values.
+
+See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
 ### Notes about WPScan API token
 
-You need a WPScan API token (`--api-token`) in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. 
-
-You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have reached yout API limit. 
-
-Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reached.
-
-If no API token is provided to WPScan, scans will trigger WARNING emails with outdated plugin or WordPress version.
-
-### Scanning a large number of sites
+You need a WPScan API token in order to show vulnerability data and be alerted of vulnerable WordPress or plugin. If you have large number of sites to scan, you'll probably can't scan all your sites because of the limited amount of daily API request. Turn on `api_limit_wait` to wait 24h and contuinue scans when API limit si reached.  
+If no API token is provided to WPScan, scans will still trigger WARNING emails with outdated plugin or WordPress version.
+<!-- You can get a free API token with 50 daily requests. Scanning a site generates a undefined number of requests, it depends on the WPScan config and the number of WordPress plugins. WPScan will fail if you have reached yout API limit.  -->
+<!-- ### Scanning a large number of sites
 Tips: 
 - You can configure `wp_sites` from a text file (one URL per line) using `--urls File path` argument (overwrite sites from config files).
-- Speed up the scans with multiple asynchronous workers `--workers Number` option  
-
-If you have large number of sites to scan, you'll probably can't scan all your sites with 50 requests.  
-
+- Speed up the scans with multiple asynchronous workers `--workers Number` option   -->
 Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
 
-#### Setup continuous scanning service
-Caution: **do not configure crontab execution and continuous scanning at the same time** .   
+#### Setup continuous scanning service, daemon mode
+
+<details><summary><b>See details and how to</b></summary>
+<p>
 
 Configure :
 - `daemon_loop_sleep`: i.e. `12h` 
@@ -135,9 +189,6 @@ Note: By default a different database file will be used when using daemon mode `
 
 Setup WPWatcher as a service.
 -  With `systemctl`
-    
-    <details><summary><b>See</b></summary>
-    <p>
 
     Create and configure the service file `/lib/systemd/system/wpwatcher.service`
     ```bash
@@ -179,14 +230,16 @@ Setup WPWatcher as a service.
     ```
     [More infos on systemctl](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/system_administrators_guide/sect-managing_services_with_systemd-unit_files) 
 
-    </p>
-    </details>
-- [Other systems](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
+
+- For other systems, please refer to the appropriate [documentation](https://blog.frd.mn/how-to-set-up-proper-startstop-services-ubuntu-debian-mac-windows/)
+
+</p>
+</details>
 
 #### Or schedule scans with cron
-<details><summary><b>See</b></summary>
+Caution: **do not configure crontab execution and continuous scanning at the same time** .   
+<details><summary><b>See contab usage</b></summary>
 <p>
-Make sure daemon feature if turned off.
 
 - Crontab usage:
 
@@ -197,20 +250,19 @@ Make sure daemon feature if turned off.
 To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your config.  
 You'll receive email alerts with cron `MAILTO` feature. Add `>/dev/null` to ignore.  
 
-
 - Crontab with multiple config files usage:
     - `wpwatcher.conf`: contains all configurations except `wp_wites`
-    - `wp_sites_1.conf`: contains first X sites
-    - `wp_sites_2.conf`: contain the rest  ...  
+    - `site1.txt`: contains first X urls
+    - `site2.txt`: contain the rest  ...  
 
     In your crontab, configure script to run at your convenience. For exemple, with two lists :
 ```
 # Will run at 00:00 on Monday:
-0 0 * * 1 wpwatcher --conf wpwatcher.conf wp_sites_1.conf --quiet
+0 0 * * 1 wpwatcher --conf wpwatcher.conf --urls site1.txt --quiet
 # Will run at 00:00 on Tuesday:
-0 0 * * 2 wpwatcher --conf wpwatcher.conf wp_sites_2.conf --quiet
+0 0 * * 2 wpwatcher --conf wpwatcher.conf --urls sites2.txt --quiet
 ```
-Warning, this kind of setup can lead into having two `wpwatcher` executions at the same time. This might result into database corruption because of conccurent accesses to reports database file.
+Warning, this kind of setup can lead into having two `wpwatcher` executions at the same time. This might result into failure and/or database corruption because of conccurent accesses to reports database file.
 </p>
 </details>
 
@@ -237,15 +289,14 @@ You can store the API Token in the WPScan default config file at `~/.wpscan/scan
 
 ### Full configuration options
 
-All configuration options with explanatory comments.
-
-<details><summary><b>See</b></summary>
+<details><summary><b>See all configuration options with explanatory comments.</b></summary>
 <p>
 
 #### WPScan path
 Path to wpscan executable. 
 With RVM could be `/usr/local/rvm/gems/default/wrappers/wpscan`.  
-If missing, assume `wpscan` is in your `PATH`
+Path is parsed with shlex.  
+If missing, assume `wpscan` is in your `PATH`.  
 
 ```ini
 wpscan_path=wpscan
@@ -269,6 +320,7 @@ wpscan_args=[   "--format", "cli",
                 "--detection-mode", "aggressive",
                 "--enumerate", "t,p,tt,cb,dbe,u,m"]
 ```
+Overwrite with `--wpargs "WPScan arguments"`. If you run into option parsing error, start the arguments string with a space or use equals sign `--wpargs="[...]"` to avoid [argparse bug](https://stackoverflow.com/questions/16174992/cant-get-argparse-to-read-quoted-string-with-dashes-in-it?noredirect=1&lq=1).
 #### False positive strings
 You can use this to ignore some warnmings or alerts.  
 False positives will still be processed as infos: Use with care.   
@@ -396,6 +448,7 @@ If missing, default to `0s`
 ```ini
 daemon_loop_sleep=12h
 ```
+Overwrite with argument: `--loop Time string`
 #### Output
 - Quiet
 Print only errors and WPScan ALERTS
@@ -413,6 +466,12 @@ Overwrite with arguments: `--verbose`
 ```ini
 log_file=/home/user/.wpwatcher/wpwatcher.log
 ```
+Overwrite with argument: `--log File path`
+- Save WPScan results to files as they are scanned
+```ini
+wpscan_output_folder=/home/user/Documents/WPScanResults/
+```
+Overwrite with argument: `--wpout Folder path`
 #### Misc
 - Raise exceptions with stack trace or exit when WPScan failed.  
 Default behaviour is to log error, continue scans and return non zero status code when all scans are over
@@ -472,7 +531,7 @@ Log file and stdout outputs are easily grepable with the following log levels an
   - `DEBUG`: Used for debug outup and raw WPScan output. 
 
 In addition to log messages, the readable report, and raw WPScan output can be printed with `--verbose`.
-<details><summary><b>See</b></summary>
+<details><summary><b>See output sample</b></summary>
 <p>
 
 ```log
@@ -565,14 +624,19 @@ INFO - Scans finished with errors.
 </p>
 </details>
 
-## Tools
-### `wprs.py`
-WPWatcher reports Json database summary generator.  
+## Json database summary generator
+
 Do not use on a json file currently used by a `wpwatcher` execution.  
 
-    python3 ./tools/wprs.py --input ~/.wpwatcher/wp_reports.json
+Load default database
 
-<details><summary><b>See</b></summary>
+    wpwatcher --wprs
+
+Load specific file
+
+    wpwatcher --wprs ~/.wpwatcher/wp_reports.json
+
+<details><summary><b>See screenshot</b></summary>
 <p>
 
 ![WPWatcher Report summary](/screens/reports-summary-wprs.png "WPWatcher Reports summary")
@@ -582,18 +646,19 @@ Do not use on a json file currently used by a `wpwatcher` execution.
 
 ## Library usage
 
-<details><summary><b>See</b></summary>
+<details><summary><b>See guidelines and exemple</b></summary>
 <p>
 
-- Init config dict from file with `build_config_files()` method  
+- Init config dict from file with `WPWatcherConfig().build_config()` method  
 - Customize the config if you want, you can overwrite any config values  
 - Create a `WPWatcher` object with your desired configuration  
 - Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)` The prorgam will automatically load and use a local reports databse and return complete updated database. Set `wp_reports` to `null` to only return scanned site reports.
 
 
 ```python
-from wpwatcher import WPWatcher, build_config_files
-config, files = build_config_files(['./demo.conf']) # leave None to find default config file
+from wpwatcher.config import WPWatcherConfig
+from wpwatcher.core import WPWatcher
+config, files = WPWatcherConfig(files=['./demo.conf']).build_config() # leave None to find default config file
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
