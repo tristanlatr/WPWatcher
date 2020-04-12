@@ -6,9 +6,9 @@
 """
 Requirements
 
-pip install pytest
-pip install codecov
-pip install pytest-cov
+# pip install pytest
+# pip install codecov
+# pip install pytest-cov
 """
 import json
 import re
@@ -57,6 +57,3 @@ follow_redirect=Yes
         w=WPWatcher(WPWatcherConfig(string=config).build_config()[0])
         exit_code, results=w.run_scans_and_notify()
         self.assertEqual(0, exit_code)
-
-
-

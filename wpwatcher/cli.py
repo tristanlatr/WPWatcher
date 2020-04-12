@@ -31,9 +31,8 @@ class WPWatcherCLI():
             log.info("Version:\t\t%s"%VERSION)
             log.info("Authors:\t\t%s"""%AUTHORS)
             exit(0)
-
+        # Init WPWatcher obhect and dump reports
         if args.wprs!=False:
-            print(args.wprs)
             if args.wprs==None :
                 f=WPWatcher(WPWatcherConfig().build_config()[0]).find_wp_reports_file()
             else:
@@ -43,7 +42,7 @@ class WPWatcherCLI():
                 results=json.load(r)
             print(results_summary(results))
             exit(0)
-
+            
         # Read config
         configuration=self.build_config_cli(args)
         # Create main object

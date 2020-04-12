@@ -31,7 +31,7 @@ class WPWatcherConfig():
                 exit(-1)
 
         # No config file notice
-        if (not files or len(files)==0) and not string :
+        else :
             log.info("No config file loaded and could not find default config `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
     
     def build_config(self):

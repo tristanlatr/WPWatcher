@@ -53,9 +53,16 @@ git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
 ```
 
-You can always run the python script directly 
-                
+`wpwatcher` should be in your `PATH` but you can always run the python script directly 
+    
+    python3 ./wpwatcher/cli.py --url exemple3.com -v
+
+<!-- 
+Before version 0.5.7 
+
     python3 ./wpwatcher.py --url exemple3.com -v
+ -->
+
 #### With docker
 
 <details><summary><b>See docker installation steps</b></summary>
@@ -637,15 +644,16 @@ Do not use on a json file currently used by a `wpwatcher` execution.
 <details><summary><b>See guidelines and exemple</b></summary>
 <p>
 
-- Init config dict from file with `build_config_files()` method  
+- Init config dict from file with `WPWatcherConfig().build_config()` method  
 - Customize the config if you want, you can overwrite any config values  
 - Create a `WPWatcher` object with your desired configuration  
 - Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)` The prorgam will automatically load and use a local reports databse and return complete updated database. Set `wp_reports` to `null` to only return scanned site reports.
 
 
 ```python
-from wpwatcher import WPWatcher, build_config_files
-config, files = build_config_files(['./demo.conf']) # leave None to find default config file
+from wpwatcher.config import WPWatcherConfig
+from wpwatcher.core import WPWatcher
+config, files = WPWatcherConfig(files=['./demo.conf']).build_config() # leave None to find default config file
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
