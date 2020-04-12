@@ -1,9 +1,9 @@
 """
-# Wordpress Watcher
-# Automating WPscan to scan and report vulnerable Wordpress sites
-#
-# DISCLAIMER - USE AT YOUR OWN RISK.
-# """
+Wordpress Watcher
+Automating WPscan to scan and report vulnerable Wordpress sites
+
+DISCLAIMER - USE AT YOUR OWN RISK.
+"""
 import shlex
 import os 
 import traceback
