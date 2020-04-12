@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 """"
 # Wordpress Watcher
 # Automating WPscan to scan and report vulnerable Wordpress sites

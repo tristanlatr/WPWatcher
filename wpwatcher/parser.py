@@ -10,13 +10,13 @@
 # You can use --format cli to show all informations with Infos, Warnings and Alerts
 # 
 # Exemple stdin usage:
-#   $ wpscan --url https://exemple.com --format json | python3 ./wpscan_parser.py
+#   $ wpscan --url https://exemple.com --format json | python3 ./parser.py
 #
 # With param --input :
-#   $ python3 ./wpscan_parser.py --input wpscan.log
+#   $ python3 ./parser.py --input wpscan.log
 #
 # Or you can import this package into your application and call `parse_results` method.
-#   from wpscan_parser import parse_results
+#   from wpwatcher.parser import parse_results
 #   (messages, warnings, alerts) = parse_results(wpscan_output_string)
 
 """

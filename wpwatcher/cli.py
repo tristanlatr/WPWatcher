@@ -1,9 +1,8 @@
-""""
-# Wordpress Watcher
-# Automating WPscan to scan and report vulnerable Wordpress sites
-#
-# DISCLAIMER - USE AT YOUR OWN RISK.
-# 
+"""
+Wordpress Watcher
+Automating WPscan to scan and report vulnerable Wordpress sites
+
+DISCLAIMER - USE AT YOUR OWN RISK.
 """
 
 # Main program, parse the args, read config and launch scans
@@ -14,7 +13,7 @@ import shlex
 from wpwatcher import VERSION, AUTHORS, GIT_URL, log
 from wpwatcher.utils import init_log, parse_timedelta
 from wpwatcher.config import WPWatcherConfig
-from wpwatcher.wpwatcher import WPWatcher
+from wpwatcher.core import WPWatcher
 
 class WPWatcherCLI():
     def __init__(self):
