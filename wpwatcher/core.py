@@ -47,10 +47,6 @@ class WPWatcher():
             logfile=self.conf['log_file'])
         # Dump config
         log.info("WordPress sites and configuration:{}".format(self.dump_config()))
-        # Check sites are in the config
-        if len(self.conf['wp_sites'])==0:
-            log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
-            exit(-1)
         # Create wpscan link
         self.wpscan=WPScanWrapper(path=self.conf['wpscan_path'])
         # Check if WPScan exists
@@ -425,6 +421,11 @@ class WPWatcher():
     
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
+        # Check sites are in the config
+        if len(self.conf['wp_sites'])==0:
+            log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
+            return((-1, self.wp_reports))
+
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
         scanned_sites=[]
         new_reports=[]
