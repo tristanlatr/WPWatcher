@@ -24,8 +24,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
-from wpwatcher.parser import parse_results
 from wpwatcher import log
+from wpwatcher.parser import parse_results
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
 

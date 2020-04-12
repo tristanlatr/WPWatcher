@@ -126,7 +126,6 @@ class WPWatcherCLI():
         # Overwrite with conf dict biult from CLI Args
         if conf_args: configuration.update(conf_args)
         return configuration
-
-def main(): WPWatcherCLI()
-if __name__ == '__main__':
-    main()
+        
+def main(): 
+    WPWatcherCLI()
