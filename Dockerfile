@@ -21,7 +21,7 @@ RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 
 ADD setup.py /wpwatcher
 ADD README.md /wpwatcher
-COPY ./wpwatcher /wpwatcher/
+COPY ./wpwatcher/* /wpwatcher/wpwatcher/
 WORKDIR /wpwatcher
 # Install WPWatcher
 RUN python3 ./setup.py install
