@@ -12,9 +12,10 @@ import socket
 import copy
 from datetime import timedelta
 
-from wpwatcher import VERSION, log
+from . import VERSION, log
 
 # Few static helper methods -------------------
+
 # Setup stdout logger
 def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
     format_string='%(asctime)s - %(levelname)s - %(message)s'
@@ -38,6 +39,7 @@ def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
     if verbose and quiet :
         log.info("Verbose and quiet values are both set to True. By default, verbose value has priority.")
     return (log)
+
 # Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
     logged_cmd=copy.deepcopy(wpscan_args)

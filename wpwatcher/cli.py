@@ -9,11 +9,13 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import time
 import argparse
 import shlex
+import json
+import sys
 
-from wpwatcher import VERSION, AUTHORS, GIT_URL, log
-from wpwatcher.utils import init_log, parse_timedelta
-from wpwatcher.config import WPWatcherConfig
-from wpwatcher.core import WPWatcher
+from . import VERSION, AUTHORS, GIT_URL, log
+from .utils import init_log, parse_timedelta, results_summary
+from .config import WPWatcherConfig
+from .core import WPWatcher
 
 class WPWatcherCLI():
     def __init__(self):
@@ -29,6 +31,19 @@ class WPWatcherCLI():
             log.info("Version:\t\t%s"%VERSION)
             log.info("Authors:\t\t%s"""%AUTHORS)
             exit(0)
+
+        if args.wprs!=False:
+            print(args.wprs)
+            if args.wprs==None :
+                f=WPWatcher(WPWatcherConfig().build_config()[0]).find_wp_reports_file()
+            else:
+                f=args.wprs
+            log.info("Reports: %s"%(f))
+            with open(f) as r:
+                results=json.load(r)
+            print(results_summary(results))
+            exit(0)
+
         # Read config
         configuration=self.build_config_cli(args)
         # Create main object
@@ -86,6 +101,7 @@ class WPWatcherCLI():
         parser.add_argument('--wpscan_output_folder','--wpout', metavar="WPScan results folder", help="Configure wpscan_output_folder")
         parser.add_argument('--wpscan_args','--wpargs', metavar='WPScan arguments as string', help='Configure wpscan_args')
         parser.add_argument('--false_positive_strings','--fpstr', metavar='False positive strings', help='Configure false_positive_strings', nargs='+', default=None)
+        parser.add_argument('--wprs', metavar="Path to json file", help="wp_reports database summary generator", nargs='?', default=False)
         parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
         parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
         args = parser.parse_args()
@@ -126,6 +142,6 @@ class WPWatcherCLI():
         # Overwrite with conf dict biult from CLI Args
         if conf_args: configuration.update(conf_args)
         return configuration
-        
+
 def main(): 
     WPWatcherCLI()

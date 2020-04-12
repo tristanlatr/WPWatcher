@@ -7,8 +7,8 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import configparser
 import os
 import json
-from wpwatcher import log, GIT_URL
-from wpwatcher.utils import parse_timedelta
+from . import log, GIT_URL
+from .utils import parse_timedelta
 # Configuration handling -------------------------------------------------------
 class WPWatcherConfig():
     def __init__(self, files=None, string=None):

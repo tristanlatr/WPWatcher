@@ -9,8 +9,8 @@ import os
 import traceback
 import subprocess
 from subprocess import CalledProcessError
-from wpwatcher import log
-from wpwatcher.utils import safe_log_wpscan_args, oneline
+from . import log
+from .utils import safe_log_wpscan_args, oneline
 # WPScan helper class -----------
 class WPScanWrapper():
 
