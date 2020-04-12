@@ -624,12 +624,17 @@ INFO - Scans finished with errors.
 </p>
 </details>
 
-## Tools
-### `wprs.py`
-WPWatcher reports Json database summary generator.  
+## Json database summary generator
+
 Do not use on a json file currently used by a `wpwatcher` execution.  
 
-    python3 ./tools/wprs.py --input ~/.wpwatcher/wp_reports.json
+Load default database
+
+    wpwatcher --wprs
+
+Load specific file
+
+    wpwatcher --wprs ~/.wpwatcher/wp_reports.json
 
 <details><summary><b>See screenshot</b></summary>
 <p>
