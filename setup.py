@@ -15,7 +15,7 @@ def parse_setup(key):
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
 # Read and store wpwatcher.py file
-WPWATCHER = (HERE / "wpwatcher.py").read_text()
+WPWATCHER = (HERE / "wpwatcher" / "__init__.py").read_text()
 # The text of the README file
 README = (HERE / "README.md").read_text()
 
@@ -25,9 +25,10 @@ setup(
     url                 =   parse_setup('GIT_URL'),
     maintainer          =   parse_setup('AUTHORS'),
     version             =   parse_setup('VERSION'),
-    py_modules          =   ['wpscan_parser'],
-    entry_points        =   {'console_scripts': ['wpwatcher=wpwatcher:wpwatcher'],},
-    scripts             =   ['wpwatcher.py','wpscan_parser.py'],
+    packages            =   ['wpwatcher', ], # 'wpwatcher.cli', 'wpwatcher.parser', 'wpwatcher.wpwatcher', 'wpwatcher.wpscan', 'wpwatcher.utils'],
+    # py_modules          =   ['wpwatcher', ],
+    # scripts             =   ['wpwatcher.py'],
+    entry_points        =   {'console_scripts': ['wpwatcher=wpwatcher.cli:main'],},
     classifiers         =   ["Programming Language :: Python :: 3"],
     license             =   'Apache License 2.0',
     long_description    =   README,
