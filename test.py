@@ -17,7 +17,7 @@ import os
 import argparse
 from datetime import datetime, timedelta
 import unittest
-from wpwatcher.wpwatcher import WPWatcher
+from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 
 def parse_args():
