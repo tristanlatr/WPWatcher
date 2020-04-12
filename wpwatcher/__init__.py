@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-# Wordpress Watcher
-# Automating WPscan to scan and report vulnerable Wordpress sites
-#
-# DISCLAIMER - USE AT YOUR OWN RISK.
+Wordpress Watcher
+Automating WPscan to scan and report vulnerable Wordpress sites
+
+DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import logging
 # Setup configuration: will be parsed by setup.py -------------------

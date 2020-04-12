@@ -12,7 +12,7 @@ import socket
 import copy
 from datetime import timedelta
 
-from . import VERSION, log
+from wpwatcher import VERSION, log
 
 # Few static helper methods -------------------
 

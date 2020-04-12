@@ -12,10 +12,10 @@ import shlex
 import json
 import sys
 
-from . import VERSION, AUTHORS, GIT_URL, log
-from .utils import init_log, parse_timedelta, results_summary
-from .config import WPWatcherConfig
-from .core import WPWatcher
+from wpwatcher import VERSION, AUTHORS, GIT_URL, log
+from wpwatcher.utils import init_log, parse_timedelta, results_summary
+from wpwatcher.config import WPWatcherConfig
+from wpwatcher.core import WPWatcher
 
 class WPWatcherCLI():
     def __init__(self):
@@ -144,4 +144,7 @@ class WPWatcherCLI():
         return configuration
 
 def main(): 
+    WPWatcherCLI()
+
+if __name__ == '__main__':
     WPWatcherCLI()
