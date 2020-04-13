@@ -441,7 +441,7 @@ class WPWatcher():
             p.send_signal(signal.SIGINT)
 
         # If called inside ThreadPoolExecutor, raise Exeception
-        if type(threading.current_thread()) is concurrent.futures.ThreadPoolExecutor:
+        if isinstance(threading.current_thread(), threading.Thread):
             raise InterruptedError()
         
         # Wait all scans finished, print results and quit
