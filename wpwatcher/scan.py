@@ -16,6 +16,7 @@ class WPScanWrapper():
 
     def __init__(self, path):
         self.path=path
+        # List of current WPScan processes
         self.processes=[]
 
     # Helper method: actually wraps wpscan
@@ -28,6 +29,7 @@ class WPScanWrapper():
         # Run wpscan -------------------------------------------------------------------
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull,'w') )
+            # Append process to current process list and launch
             self.processes.append(process)
             wpscan_output, _  = process.communicate()
             self.processes.remove(process)

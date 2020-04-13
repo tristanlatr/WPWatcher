@@ -80,6 +80,8 @@ class WPWatcherCLI():
         parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.
     Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
+        parser.add_argument('--wprs', metavar="Path to json file", help="wp_reports database summary generator", nargs='?', default=False)
+
         # Declare arguments that will overwrite config options
         parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)
         parser.add_argument('--wp_sites_list', '--urls', metavar="File path", help="Configure wp_sites from a list of URLs", default=None)
@@ -100,7 +102,6 @@ class WPWatcherCLI():
         parser.add_argument('--wpscan_output_folder','--wpout', metavar="WPScan results folder", help="Configure wpscan_output_folder")
         parser.add_argument('--wpscan_args','--wpargs', metavar='WPScan arguments as string', help='Configure wpscan_args')
         parser.add_argument('--false_positive_strings','--fpstr', metavar='False positive strings', help='Configure false_positive_strings', nargs='+', default=None)
-        parser.add_argument('--wprs', metavar="Path to json file", help="wp_reports database summary generator", nargs='?', default=False)
         parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
         parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
         args = parser.parse_args()

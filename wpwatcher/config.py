@@ -9,8 +9,10 @@ import os
 import json
 from wpwatcher import log, GIT_URL
 from wpwatcher.utils import parse_timedelta
+
 # Configuration handling -------------------------------------------------------
 class WPWatcherConfig():
+
     def __init__(self, files=None, string=None):
         self.files=files
         # Init config parser
