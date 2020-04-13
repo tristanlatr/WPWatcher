@@ -30,6 +30,8 @@ from wpwatcher.parser import parse_results
 from wpwatcher.scan import WPScanWrapper
 from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
 
+# Will send sigterm after 2s , then kill signal after 2 seconds when cancelling
+INTERRUPT_SLEEP=2
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
 # Writing into the database file is thread safe
@@ -426,6 +428,8 @@ class WPWatcher():
         print_progress_bar(len(self.scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
     
+
+
     def interrupt(self, sig=None, frame=None):
         log.error("Interrupting...")
 
@@ -439,7 +443,16 @@ class WPWatcher():
         # Send ^C to all WPScan
         for p in self.wpscan.processes: 
             p.send_signal(signal.SIGINT)
-
+        # Send SIGTERM
+        time.sleep(INTERRUPT_SLEEP)
+        if len(self.wpscan.processes)>0:
+            for p in self.wpscan.processes: 
+                p.terminate()
+            time.sleep(INTERRUPT_SLEEP)
+        # Kill
+        if len(self.wpscan.processes)>0:
+            for p in self.wpscan.processes: 
+                p.kill()
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
             raise InterruptedError()
