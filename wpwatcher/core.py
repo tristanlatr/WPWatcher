@@ -161,16 +161,9 @@ class WPWatcher():
                 time.sleep(0.01)
                 continue
             wp_report_lock.acquire()
-            try:
-                with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(self.wp_reports, reportsfile, indent=4)
-                    wp_report_lock.release()
-            except KeyboardInterrupt:
-                # Still writing into the databse if ^C then quitting
-                with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(self.wp_reports, reportsfile, indent=4)
+            with open(self.conf['wp_reports'],'w') as reportsfile:
+                json.dump(self.wp_reports, reportsfile, indent=4)
                 wp_report_lock.release()
-                raise
     
     # Send email report with status and timestamp
     def send_report(self, wp_site, wp_report):
@@ -336,7 +329,7 @@ class WPWatcher():
                 return None 
             # Fail fast
             if self.conf['fail_fast']: 
-                log.info("Failure. Scans aborted.")
+                log.info("Failure")
                 self.interrupt()
         
         # Parse the results if no errors with wpscan -----------------------------
@@ -413,7 +406,7 @@ class WPWatcher():
                 log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
                 wp_report['errors'].append("Unable to send mail report for site %s"%wp_site['url'])
                 if self.conf['fail_fast']: 
-                    log.info("Failure. Scans aborted.")
+                    log.info("Failure")
                     self.interrupt()
         else:
             # No report notice
