@@ -16,6 +16,8 @@ class WPScanWrapper():
 
     def __init__(self, path):
         self.path=path
+        # List of current WPScan processes
+        self.processes=[]
 
     # Helper method: actually wraps wpscan
     def wpscan(self, *args):
@@ -27,7 +29,10 @@ class WPScanWrapper():
         # Run wpscan -------------------------------------------------------------------
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull,'w') )
+            # Append process to current process list and launch
+            self.processes.append(process)
             wpscan_output, _  = process.communicate()
+            self.processes.remove(process)
             try: wpscan_output=wpscan_output.decode("utf-8")
             except UnicodeDecodeError: wpscan_output=wpscan_output.decode("latin1")
             # Error when wpscan failed, except exit code 5: means the target has at least one vulnerability.

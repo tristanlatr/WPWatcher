@@ -12,11 +12,12 @@ import json
 import threading
 import time
 import io
-import functools
 import concurrent.futures
 import unicodedata
 import smtplib
 import re
+import subprocess
+import signal
 from urllib.parse import urljoin, urlparse, urlunparse
 from email import encoders
 from email.mime.base import MIMEBase
@@ -26,7 +27,7 @@ from datetime import datetime, timedelta
 
 from wpwatcher import log
 from wpwatcher.parser import parse_results
-from wpwatcher.wpscan import WPScanWrapper
+from wpwatcher.scan import WPScanWrapper
 from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
 
 # Wait when API limit reached
@@ -73,6 +74,15 @@ class WPWatcher():
         # Init wpscan output folder
         if self.conf['wpscan_output_folder'] : 
             os.makedirs(self.conf['wpscan_output_folder'], exist_ok=True)
+
+        # Executor, will be created when calling run_scans_and_notify
+        self.executor=None
+        self.futures=[]
+        self.scanned_sites=[]
+        self.interrupting=False # Toogle if aborting so other errors doesnt get triggerred if using --ff
+        # register the signals to be caught ^C and kill will trigger interrupt()
+        signal.signal(signal.SIGINT, self.interrupt)
+        signal.signal(signal.SIGTERM, self.interrupt)
 
     def dump_config(self):
         bump_conf=copy.deepcopy(self.conf)
@@ -131,7 +141,7 @@ class WPWatcher():
                     log.info("The database file %s do not exist. It will be created."%(self.conf['wp_reports']))
         return wp_reports
 
-    def update_and_write_wp_reports(self, new_wp_report_list):
+    def update_and_write_wp_reports(self, new_wp_report_list=[]):
         # Update the sites that have been scanned, keep others
         # Keep same report order add append new sites at the bottom
         for newr in new_wp_report_list:
@@ -150,17 +160,9 @@ class WPWatcher():
                 time.sleep(0.01)
                 continue
             wp_report_lock.acquire()
-            try:
-                with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(self.wp_reports, reportsfile, indent=4)
-                    wp_report_lock.release()
-                    # log.info("Write %s wp_report(s) in the database %s"%(len(new_wp_report_list),self.conf['wp_reports']))
-            except KeyboardInterrupt:
-                # Still writing into the databse if ^C then quitting
-                with open(self.conf['wp_reports'],'w') as reportsfile:
-                    json.dump(self.wp_reports, reportsfile, indent=4)
+            with open(self.conf['wp_reports'],'w') as reportsfile:
+                json.dump(self.wp_reports, reportsfile, indent=4)
                 wp_report_lock.release()
-                raise
     
     # Send email report with status and timestamp
     def send_report(self, wp_site, wp_report):
@@ -257,7 +259,7 @@ class WPWatcher():
         if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
         return wp_site
 
-    def scan_site(self, wp_site, scanned_sites=[]):
+    def scan_site(self, wp_site):
         wp_site=self.format_site(wp_site)
         # Init report variables
         wp_report={
@@ -281,7 +283,7 @@ class WPWatcher():
             if ( self.conf['daemon'] and 
                 datetime.strptime(wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') - datetime.strptime(last_wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') < self.conf['daemon_loop_sleep']):
                 log.info("Daemon skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
-                scanned_sites.append(None)
+                self.scanned_sites.append(None)
                 return None
         else: last_wp_report=None
         
@@ -298,10 +300,10 @@ class WPWatcher():
         if wpscan_exit_code not in [0,5]:
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
-                log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(scanned_sites),API_WAIT_SLEEP))
+                log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
                 time.sleep(API_WAIT_SLEEP.total_seconds())
                 self.wpscan.update_wpscan()
-                return self.scan_site(wp_site, scanned_sites)
+                return self.scan_site(wp_site)
             # Following redirection
             if "The URL supplied redirects to" in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
                 url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
@@ -309,26 +311,32 @@ class WPWatcher():
                 if len(url)==1:
                     wp_site['url']=url[0].strip()
                     log.info("Following redirection to %s"%wp_site['url'])
-                    return self.scan_site(wp_site, scanned_sites)
+                    return self.scan_site(wp_site)
                 else:
-                    err_str="Could not parse url to follow redirection or several URLs where found in the WPScan output after words 'The URL supplied redirects to'"
+                    err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
                     log.error(err_str)
                     wp_report['errors'].append(err_str)
-            # Quick return if user cacelled scans
-            if wpscan_exit_code in [2] or "Canceled by User" in str(wp_report["wpscan_output"]):
-                return None
+
+            # Quick return if user cacelled scans ^C or kill
+            if wpscan_exit_code in [2]: return None
             log.error("Could not scan site %s"%wp_site['url'])
+
             # If WPScan error, add the error to the reports
-            if wpscan_exit_code in [3, 4]:  # This types if errors will be written into the Json database file
-                wp_report['errors'].append("WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output'])))
-            # Other errors codes : 1, -2, 127, etc: Just add error string and skip the site 
-            elif not self.conf['fail_fast']: # If not --ff
-                return None 
+            if wpscan_exit_code in [1,3,4]:  # This types if errors will be written into the Json database file
+                err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
+                wp_report['errors'].append(err_str)
+
+            # Other errors codes : -9, -2, 127, etc: Just return None right away
+            elif not self.conf['fail_fast']: return None 
+
             # Fail fast
-            if self.conf['fail_fast']: 
-                log.info("Failure. Scans aborted.")
-                exit(-1)
-        
+            if self.conf['fail_fast']:
+                if not self.interrupting: 
+                    log.error("Failure")
+                    self.interrupt()
+                # Handle the case where the interrupt() method caused WPScan to exit with random codes and not 2
+                else: return None 
+
         # Parse the results if no errors with wpscan -----------------------------
         else:
             # Write wpscan output 
@@ -402,23 +410,52 @@ class WPWatcher():
             except Exception:
                 log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
                 wp_report['errors'].append("Unable to send mail report for site %s"%wp_site['url'])
-                if self.conf['fail_fast']: 
-                    log.info("Failure. Scans aborted.")
-                    exit(-1)
+                if self.conf['fail_fast'] and not self.interrupting: 
+                    log.error("Failure")
+                    self.interrupt()
         else:
             # No report notice
             log.info("No WPWatcher %s email report have been sent for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_site['url']))
         # Save scanned site
-        scanned_sites.append(wp_site['url'])
-        
+        self.scanned_sites.append(wp_site['url'])
         # Discard wpscan_output from report
         del wp_report['wpscan_output']
-        # Save report in global instance database when a site has been scanned
+        # Save report in global instance database and to file when a site has been scanned
         self.update_and_write_wp_reports([wp_report])
         # Print progress
-        print_progress_bar(len(scanned_sites), len(self.conf['wp_sites'])) 
+        print_progress_bar(len(self.scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
     
+    def interrupt(self, sig=None, frame=None):
+        log.error("Interrupting...")
+
+        # Lock for interrupting
+        self.interrupting=True
+        
+        # Cancel all jobs
+        for f in self.futures:
+            if not f.done(): f.cancel()
+        
+        # Send ^C to all WPScan
+        for p in self.wpscan.processes: 
+            p.send_signal(signal.SIGINT)
+
+        # If called inside ThreadPoolExecutor, raise Exeception
+        if type(threading.current_thread()) is concurrent.futures.ThreadPoolExecutor:
+            raise InterruptedError()
+        
+        # Wait all scans finished, print results and quit
+        else:
+            self.executor.shutdown(wait=True)
+            self.print_scanned_sites_results()
+            log.info("Scans interrupted.")
+            exit(-1)
+
+    def print_scanned_sites_results(self):
+        if len(self.scanned_sites)>0:
+            new_reports=[r for r in self.wp_reports if r['site'] in self.scanned_sites]
+            log.info(results_summary(new_reports))
+
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         # Check sites are in the config
@@ -427,29 +464,29 @@ class WPWatcher():
             return((-1, self.wp_reports))
 
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
-        scanned_sites=[]
+        
         new_reports=[]
-        func = functools.partial(self.scan_site, scanned_sites=scanned_sites)
-        try:
-            executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
-            new_reports=list(executor.map(func, self.conf['wp_sites']))
-            log.info(results_summary(new_reports))
-            if not any ([r['status']=='ERROR' for r in new_reports if r]):
-                log.info("Scans finished successfully.")
-                return((0, self.wp_reports))
-            else:
-                log.info("Scans finished with errors.") 
-                return((-1, self.wp_reports))
-        except KeyboardInterrupt:
-            print()
-            log.error("KeyboardInterrupt: closing...")
-            # Mute all errors
-            init_log(verbose=self.conf['verbose'], quiet=self.conf['quiet'],
-                logfile=self.conf['log_file'], nostd=True)
-            executor.shutdown(wait=True)
-            init_log(verbose=self.conf['verbose'], quiet=self.conf['quiet'], logfile=self.conf['log_file'])
-            if len(scanned_sites)>0:
-                log.info(results_summary([r for r in self.wp_reports if r['site'] in scanned_sites]))
-            log.info("Scans cancelled.")
-            exit(-1)
+        
+        self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
+        # Sumbit all scans jobs and start scanning
+        for s in self.conf['wp_sites']:
+            self.futures.append(self.executor.submit(self.scan_site, s))
+        # Loops while scans are running and read results
+        for f in self.futures:
+            try: new_reports.append(f.result())
+            # Handle interruption from inside threads when using --ff
+            except (InterruptedError):
+                self.executor.shutdown(wait=True)
+                self.print_scanned_sites_results()
+                log.info("Scans interrupted.")
+                return ((-1, self.wp_reports))
+        # Print results and finish
+        self.print_scanned_sites_results()
+        if not any ([r['status']=='ERROR' for r in new_reports if r]):
+            log.info("Scans finished successfully.")
+            return((0, self.wp_reports))
+        else:
+            log.info("Scans finished with errors.") 
+            return((-1, self.wp_reports))
+
        
