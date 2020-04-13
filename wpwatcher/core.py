@@ -296,6 +296,9 @@ class WPWatcher():
         log.info("Scanning site %s"%wp_site['url'] )
         # Launch WPScan -------------------------------------------------------
         (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
+        
+        # Quick return if interrupting
+        if self.interrupting: return None
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         # Handle scan errors
@@ -320,24 +323,28 @@ class WPWatcher():
                     wp_report['errors'].append(err_str)
 
             # Quick return if user cacelled scans ^C or kill
-            if wpscan_exit_code in [2]: return None
-            log.error("Could not scan site %s"%wp_site['url'])
+            if wpscan_exit_code in [2]: 
+                return None
 
-            # If WPScan error, add the error to the reports
-            if wpscan_exit_code in [1,3,4]:  # This types if errors will be written into the Json database file
-                err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
-                wp_report['errors'].append(err_str)
+            else:
 
-            # Other errors codes : -9, -2, 127, etc: Just return None right away
-            elif not self.conf['fail_fast']: return None 
+                log.error("Could not scan site %s"%wp_site['url'])
 
-            # Fail fast
-            if self.conf['fail_fast']:
-                if not self.interrupting: 
-                    log.error("Failure")
-                    self.interrupt()
-                # Handle the case where the interrupt() method caused WPScan to exit with random codes and not 2
-                else: return None 
+                # If WPScan error, add the error to the reports
+                if wpscan_exit_code in [1,3,4]:  # This types if errors will be written into the Json database file
+                    err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
+                    wp_report['errors'].append(err_str)
+
+                # Other errors codes : -9, -2, 127, etc: Just return None right away
+                if not self.conf['fail_fast']: return None 
+
+                # Fail fast
+                if self.conf['fail_fast']:
+                    if not self.interrupting: 
+                        log.error("Failure")
+                        self.interrupt()
+                    # Handle the case where the interrupt() method caused WPScan to exit with random codes and not 2
+                    else: return None 
 
         # Parse the results if no errors with wpscan -----------------------------
         else:
