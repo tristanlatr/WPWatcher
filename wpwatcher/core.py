@@ -441,7 +441,7 @@ class WPWatcher():
             p.send_signal(signal.SIGINT)
 
         # If called inside ThreadPoolExecutor, raise Exeception
-        if isinstance(threading.current_thread(), threading.Thread):
+        if not isinstance(threading.current_thread(), threading._MainThread):
             raise InterruptedError()
         
         # Wait all scans finished, print results and quit
@@ -479,7 +479,7 @@ class WPWatcher():
                 self.executor.shutdown(wait=True)
                 self.print_scanned_sites_results()
                 log.info("Scans interrupted.")
-                return ((-1, self.wp_reports))
+                exit(-1)
         # Print results and finish
         self.print_scanned_sites_results()
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
