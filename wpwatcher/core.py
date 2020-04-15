@@ -232,7 +232,7 @@ class WPWatcher():
             wp_report['fixed']=[]
             log.info("Email sent: %s to %s" % (message['Subject'], to_email))
         else:
-            log.info("Not sending WPWatcher %s email report because no email are configured for site %s"%(wp_report['status'], wp_site['url']))
+            log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_site['url']))
     
     def update_report(self, wp_report, last_wp_report):
         # Fill out fixed issues and last_email datetime
@@ -273,7 +273,7 @@ class WPWatcher():
             log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
             time.sleep(API_WAIT_SLEEP.total_seconds())
             self.wpscan.update_wpscan()
-            return self.scan_site(wp_site)
+            return ((self.scan_site(wp_site), True))
 
         # Handle Following redirection
         elif "The URL supplied redirects to" in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
@@ -282,14 +282,14 @@ class WPWatcher():
             if len(url)==1:
                 wp_site['url']=url[0].strip()
                 log.info("Following redirection to %s"%wp_site['url'])
-                return self.scan_site(wp_site)
+                return ((self.scan_site(wp_site), True))
             else:
                 err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
                 log.error(err_str)
                 wp_report['errors'].append(err_str)
-                return None
+                return ((wp_report, False))
 
-        else: return None
+        else: return ((wp_report, False))
 
     def notify(self, wp_site, wp_report, last_wp_report):
         # Sending report
@@ -372,10 +372,6 @@ class WPWatcher():
             # Quick return if interrupting
             if self.interrupting: return None
             
-            # Try to handle error and return
-            result=self.handle_wpscan_err(wp_site, wp_report)
-            if result: return result
-            
             # Quick return if user cacelled scans
             if wpscan_exit_code in [2]: return None
 
@@ -389,10 +385,15 @@ class WPWatcher():
             # If WPScan error, add the error to the reports
             # This types if errors will be written into the Json database file
             if wpscan_exit_code in [1,3,4]:
+
                 err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
                 wp_report['errors'].append(err_str)
                 log.error("Could not scan site %s"%wp_site['url'])
-            
+
+                # Try to handle error and return
+                wp_report, handled = self.handle_wpscan_err(wp_site, wp_report)
+                if handled: return wp_report
+
             # Other errors codes : -9, -2, 127, etc: Just return None right away
             else: return None 
             
