@@ -18,6 +18,7 @@ import smtplib
 import re
 import subprocess
 import signal
+from functools import partial
 from urllib.parse import urljoin, urlparse, urlunparse
 from email import encoders
 from email.mime.base import MIMEBase
@@ -31,7 +32,7 @@ from wpwatcher.scan import WPScanWrapper
 from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
 
 # Will send sigterm after 2s , then kill signal after 2 seconds when cancelling
-INTERRUPT_SLEEP=2
+INTERRUPT_TIMEOUT=4
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
 # Writing into the database file is thread safe
@@ -465,16 +466,14 @@ class WPWatcher():
         # Send ^C to all WPScan
         for p in self.wpscan.processes: 
             p.send_signal(signal.SIGINT)
-        # Send SIGTERM
-        time.sleep(INTERRUPT_SLEEP)
-        if len(self.wpscan.processes)>0:
-            for p in self.wpscan.processes: 
-                p.terminate()
-            time.sleep(INTERRUPT_SLEEP)
-        # Kill after 4 seconds
-        if len(self.wpscan.processes)>0:
+        
+        # Asynchronously wait for all processes to finish , kill after timeout
+        wait_exec=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['workers'])
+        try : wait_exec.map(partial(subprocess.Popen.wait, timeout=INTERRUPT_TIMEOUT), self.wpscan.processes)
+        except subprocess.TimeoutExpired :
             for p in self.wpscan.processes: 
                 p.kill()
+            
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
             raise InterruptedError()
