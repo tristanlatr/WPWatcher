@@ -39,7 +39,7 @@ class WPScanWrapper():
             #   See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
             if process.returncode not in [0,5]:
                 # Handle error
-                err_string="WPScan failed with exit code %s %s" % (str(process.returncode), ". WPScan output: %s"%wpscan_output if wpscan_output else '')
+                err_string="WPScan command '%s' failed with exit code %s %s" % (' '.join(cmd) ,str(process.returncode), ". WPScan output: %s"%wpscan_output if wpscan_output else '')
                 log.error(oneline(err_string))
             else :
                 # WPScan comamnd success
@@ -48,7 +48,8 @@ class WPScanWrapper():
         except (CalledProcessError) as err:
             # Handle error --------------------------------------------------
             wpscan_output=str(err.output)
-            err_string="WPScan failed with exit code %s. WPScan output: \n%s\nError:\n%s" % (str(process.returncode), wpscan_output, traceback.format_exc())
+            err_string="WPScan command '%s' failed with exit code %s %s\nError:\n%s" % (' '.join(cmd) ,str(process.returncode), ". WPScan output: %s"%wpscan_output if wpscan_output else '', traceback.format_exc())
+
             log.error(oneline(err_string))
             (exit_code, output)=(err.returncode, wpscan_output)
         except FileNotFoundError as err:

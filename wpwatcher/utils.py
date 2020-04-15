@@ -57,7 +57,7 @@ def get_valid_filename(s):
     return re.sub(r'(?u)[^-\w.]', '', s)
 
 # Build the email report string
-def build_message(wp_report):
+def build_message(wp_report, warnings=True, infos=False):
     
     message="WordPress security scan report for site: %s\n" % (wp_report['site'])
     message+="Scan datetime: %s\n" % (wp_report['datetime'])
@@ -76,10 +76,10 @@ def build_message(wp_report):
     if wp_report['fixed']:
         message += "\n\n\tFixed\n\t-----\n\n"
         message += "\n\n".join(wp_report['fixed'])
-    if wp_report['warnings']:
+    if wp_report['warnings'] and warnings :
         message += "\n\n\tWarnings\n\t--------\n\n"
         message += "\n\n".join(wp_report['warnings'])
-    if wp_report['infos']:
+    if wp_report['infos'] and infos :
         message += "\n\n\tInformations\n\t------------\n\n"
         message += "\n\n".join(wp_report['infos'])
     

@@ -183,7 +183,10 @@ class WPWatcher():
             message['To'] = to_email
 
             # Email body
-            body=build_message(wp_report)
+            body=build_message(wp_report, 
+                warnings=self.conf['send_warnings'] or self.conf['send_infos'], # switches to include or not warnings and infos
+                infos=self.conf['send_infos'])
+
             message.attach(MIMEText(body))
             
             # Attachment log if attach_wpscan_output
@@ -297,19 +300,20 @@ class WPWatcher():
         # Launch WPScan -------------------------------------------------------
         (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
         
-        # Quick return if interrupting
-        if self.interrupting: return None
-
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         # Handle scan errors
         if wpscan_exit_code not in [0,5]:
+            # Quick return if interrupting
+            if self.interrupting: return None
+
             # Handle API limit
             if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
                 log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
                 time.sleep(API_WAIT_SLEEP.total_seconds())
                 self.wpscan.update_wpscan()
                 return self.scan_site(wp_site)
-            # Following redirection
+
+            # Handle Following redirection
             if "The URL supplied redirects to" in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
                 url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
                     wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
@@ -322,30 +326,26 @@ class WPWatcher():
                     log.error(err_str)
                     wp_report['errors'].append(err_str)
 
-            # Quick return if user cacelled scans ^C or kill
-            if wpscan_exit_code in [2]: 
-                return None
+            # Quick return if user cacelled scans
+            if wpscan_exit_code in [2]: return None
 
-            else:
+            # Fail fast
+            if self.conf['fail_fast']:
+                if not self.interrupting: 
+                    log.error("Failure")
+                    self.interrupt()
+                else: return None # Interrupt will generate other errors
 
+            # If WPScan error, add the error to the reports
+            # This types if errors will be written into the Json database file
+            if wpscan_exit_code in [1,3,4]:
+                err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
+                wp_report['errors'].append(err_str)
                 log.error("Could not scan site %s"%wp_site['url'])
-
-                # If WPScan error, add the error to the reports
-                if wpscan_exit_code in [1,3,4]:  # This types if errors will be written into the Json database file
-                    err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
-                    wp_report['errors'].append(err_str)
-
-                # Other errors codes : -9, -2, 127, etc: Just return None right away
-                if not self.conf['fail_fast']: return None 
-
-                # Fail fast
-                if self.conf['fail_fast']:
-                    if not self.interrupting: 
-                        log.error("Failure")
-                        self.interrupt()
-                    # Handle the case where the interrupt() method caused WPScan to exit with random codes and not 2
-                    else: return None 
-
+            
+            # Other errors codes : -9, -2, 127, etc: Just return None right away
+            else: return None 
+            
         # Parse the results if no errors with wpscan -----------------------------
         else:
             # Write wpscan output 
@@ -357,9 +357,11 @@ class WPWatcher():
                     wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
             
             log.debug("Parsing WPScan output")
-            # Call parse_result from wpscan_parser.py ------------------------
+            # Call parse_result from parser.py ------------------------
             wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
                 self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
+            
+            # Updating report entry with data from last scan if any
             if last_wp_report:
                 self.update_report(wp_report, last_wp_report)
             
@@ -382,12 +384,10 @@ class WPWatcher():
         elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
         else: wp_report['status']='INFO'
 
-        # Deleting unwanted informations in report, alerts and fixed items (if any) are always present util next email
-        wp_report['warnings']=wp_report['warnings'] if self.conf['send_warnings'] or self.conf['send_infos'] else []
-        wp_report['infos']=wp_report['infos'] if self.conf['send_infos'] else []
-
         # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
-        log.debug("\n"+build_message(wp_report)+"\n")
+        log.debug("\n%s\n"%(build_message(wp_report, 
+                warnings=self.conf['send_warnings'] or self.conf['send_infos'], # switches to include or not warnings and infos
+                infos=self.conf['send_infos'])))
 
         # Sending report
         if self.conf['send_email_report']:
@@ -434,8 +434,6 @@ class WPWatcher():
         # Print progress
         print_progress_bar(len(self.scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
-    
-
 
     def interrupt(self, sig=None, frame=None):
         log.error("Interrupting...")
@@ -456,7 +454,7 @@ class WPWatcher():
             for p in self.wpscan.processes: 
                 p.terminate()
             time.sleep(INTERRUPT_SLEEP)
-        # Kill
+        # Kill after 4 seconds
         if len(self.wpscan.processes)>0:
             for p in self.wpscan.processes: 
                 p.kill()
