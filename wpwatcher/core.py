@@ -471,13 +471,14 @@ class WPWatcher():
             if not p.returncode: p.send_signal(signal.SIGINT)
         
         # Wait for all processes to finish , kill after timeout
-        while len(self.wpscan.processes)>0:
+        while len([ p for p in self.wpscan.processes if not p.returncode ])>0:
             time.sleep(0.01)
             killed=False
             if not killed and datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
                 killed=True
                 for p in self.wpscan.processes: 
                     if not p.returncode: p.kill()
+            
             
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
@@ -498,7 +499,7 @@ class WPWatcher():
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
             log.info("Json wp_reports database: %s"%self.conf['wp_reports'])
-        
+
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         # Check sites are in the config

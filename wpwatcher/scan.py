@@ -32,7 +32,7 @@ class WPScanWrapper():
             # Append process to current process list and launch
             self.processes.append(process)
             wpscan_output, _  = process.communicate()
-            self.processes.remove(process)
+
             try: wpscan_output=wpscan_output.decode("utf-8")
             except UnicodeDecodeError: wpscan_output=wpscan_output.decode("latin1")
             # Error when wpscan failed, except exit code 5: means the target has at least one vulnerability.
