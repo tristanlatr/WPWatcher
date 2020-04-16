@@ -474,12 +474,11 @@ class WPWatcher():
         # Wait for all processes to finish , kill after timeout
         while len(self.wpscan.processes)>0:
             time.sleep(0.01)
-            killed=False
-            if not killed and datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
+            if datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
                 # log.info("Interrupt timeout reached, killing WPScan processes")
-                killed=True
                 for p in self.wpscan.processes: 
                     if p.poll() is None: p.kill()
+                break
         
         # Unlock api wait
         self.api_wait.set()
