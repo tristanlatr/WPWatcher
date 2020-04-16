@@ -27,7 +27,7 @@ from datetime import datetime, timedelta
 from wpwatcher import log
 from wpwatcher.parser import parse_results
 from wpwatcher.scan import WPScanWrapper
-from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
+from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary, timeout
 
 # Send kill signal after X seconds when cancelling
 INTERRUPT_TIMEOUT=10
@@ -387,15 +387,14 @@ class WPWatcher():
             # If WPScan error, add the error to the reports
             # This types if errors will be written into the Json database file
             if wpscan_exit_code in [1,3,4]:
-
                 err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
                 wp_report['errors'].append(err_str)
-                log.error("Could not scan site %s"%wp_site['url'])
-
+                
                 # Try to handle error and return
                 wp_report, handled = self.handle_wpscan_err(wp_site, wp_report)
                 if handled: return wp_report
-
+                
+                log.error("Could not scan site %s"%wp_site['url'])
             # Other errors codes : -9, -2, 127, etc: Just return None right away
             else: return None 
             
@@ -453,6 +452,10 @@ class WPWatcher():
         # Print progress
         print_progress_bar(len(self.scanned_sites), len(self.conf['wp_sites'])) 
         return(wp_report)
+    
+    def wait_all_wpscan_process(self):
+        while len(self.wpscan.processes)>0:
+            time.sleep(0.05)
 
     def interrupt(self, sig=None, frame=None):
         log.error("Interrupting...")
@@ -468,18 +471,14 @@ class WPWatcher():
         interrupt_wpscan_start=datetime.now()
 
         # Send ^C to all WPScan not finished
-        for p in self.wpscan.processes: 
-            if p.poll is None: p.send_signal(signal.SIGINT)
+        for p in self.wpscan.processes: p.send_signal(signal.SIGINT)
         
         # Wait for all processes to finish , kill after timeout
-        while len(self.wpscan.processes)>0:
-            time.sleep(0.01)
-            if datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
-                # log.info("Interrupt timeout reached, killing WPScan processes")
-                for p in self.wpscan.processes: 
-                    if p.poll() is None: p.kill()
-                break
-        
+        with timeout(INTERRUPT_TIMEOUT): self.wait_all_wpscan_process()
+        if len(self.wpscan.processes)>0:
+            log.error("Interrupt timeout reached, killing WPScan processes")
+            for p in self.wpscan.processes: p.kill()
+
         # Unlock api wait
         self.api_wait.set()
 
