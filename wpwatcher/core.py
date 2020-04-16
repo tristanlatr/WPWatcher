@@ -31,8 +31,8 @@ from wpwatcher.parser import parse_results
 from wpwatcher.scan import WPScanWrapper
 from wpwatcher.utils import init_log, safe_log_wpscan_args, build_message, get_valid_filename, print_progress_bar, oneline, results_summary
 
-# Will send sigterm after 2s , then kill signal after 2 seconds when cancelling
-INTERRUPT_TIMEOUT=4
+# Send kill signal after X seconds when cancelling
+INTERRUPT_TIMEOUT=10
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
 # Writing into the database file is thread safe
@@ -317,7 +317,7 @@ class WPWatcher():
                             log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_site['url'], self.conf['resend_emails_after']))
                     else:
                         # No report notice
-                        log.info("Not sending WPWatcher %s email report for site %s because there's notthing wrong or send_warnings=No. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_site['url']))
+                        log.info("Not sending WPWatcher %s email report for site %s because there's nothing wrong or send_warnings=No. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_site['url']))
 
             # Handle send mail error
             except smtplib.SMTPException:
@@ -463,16 +463,21 @@ class WPWatcher():
         for f in self.futures:
             if not f.done(): f.cancel()
         
-        # Send ^C to all WPScan
+        # Save date to kill after timeout
+        interrupt_wpscan_start=datetime.now()
+
+        # Send ^C to all WPScan not finished
         for p in self.wpscan.processes: 
-            p.send_signal(signal.SIGINT)
+            if not p.returncode: p.send_signal(signal.SIGINT)
         
-        # Asynchronously wait for all processes to finish , kill after timeout
-        wait_exec=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
-        try : wait_exec.map(partial(subprocess.Popen.wait, timeout=INTERRUPT_TIMEOUT), self.wpscan.processes)
-        except subprocess.TimeoutExpired :
-            for p in self.wpscan.processes: 
-                p.kill()
+        # Wait for all processes to finish , kill after timeout
+        while len(self.wpscan.processes)>0:
+            time.sleep(0.01)
+            killed=False
+            if not killed and datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
+                killed=True
+                for p in self.wpscan.processes: 
+                    if not p.returncode: p.kill()
             
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
@@ -492,7 +497,8 @@ class WPWatcher():
         new_reports=self.get_scanned_sites_reports()
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
-
+            log.info("Json wp_reports database: %s"%self.conf['wp_reports'])
+        
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         # Check sites are in the config
