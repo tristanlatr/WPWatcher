@@ -28,7 +28,7 @@ class WPScanWrapper():
         log.debug("Running WPScan command: %s" % ' '.join(safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
         try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull,'w') )
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             # Append process to current process list and launch
             self.processes.append(process)
             wpscan_output, _  = process.communicate()
