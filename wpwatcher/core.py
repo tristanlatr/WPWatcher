@@ -275,7 +275,7 @@ class WPWatcher():
         if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
             log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
             self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
-            if self.interrupting: return ((wp_report, False))
+            if self.interrupting: return ((None, True))
             self.wpscan.update_wpscan()
             return ((self.scan_site(wp_site), True))
 
