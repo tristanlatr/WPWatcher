@@ -89,6 +89,8 @@ class WPWatcher():
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt() 
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
+        # Storing the Event object to wait and cancel the waiting
+        self.api_wait=threading.Event()
 
     def dump_config(self):
         bump_conf=copy.deepcopy(self.conf)
@@ -272,7 +274,8 @@ class WPWatcher():
         # Handle API limit
         if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
             log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
-            time.sleep(API_WAIT_SLEEP.total_seconds())
+            self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
+            if self.interrupting: return ((wp_report, False))
             self.wpscan.update_wpscan()
             return ((self.scan_site(wp_site), True))
 
@@ -471,27 +474,32 @@ class WPWatcher():
             if p.poll is None: p.send_signal(signal.SIGINT)
         
         # Wait for all processes to finish , kill after timeout
-        while len([ p for p in self.wpscan.processes if p.poll() is not None ])>0:
+        while len(self.wpscan.processes)>0:
             time.sleep(0.01)
             killed=False
             if not killed and datetime.now() - interrupt_wpscan_start > timedelta(seconds=INTERRUPT_TIMEOUT):
-                log.info("Interrupt timeout reached, killing wpscan processes")
+                # log.info("Interrupt timeout reached, killing WPScan processes")
                 killed=True
                 for p in self.wpscan.processes: 
                     if p.poll() is None: p.kill()
-            
-            
+        
+        # Unlock api wait
+        self.api_wait.set()
+
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
             raise InterruptedError()
         
         # Wait all scans finished, print results and quit
         else:
-            self.executor.shutdown(wait=True)
-            self.print_scanned_sites_results()
-            log.info("Scans interrupted.")
-            exit(-1)
+            self.wait_and_finish_interrupt()
     
+    def wait_and_finish_interrupt(self):
+        self.executor.shutdown(wait=True)
+        self.print_scanned_sites_results()
+        log.info("Scans interrupted.")
+        exit(-1)
+
     def get_scanned_sites_reports(self):
         return ([r for r in self.wp_reports if r and r['site'] in self.scanned_sites])
 
@@ -521,10 +529,7 @@ class WPWatcher():
             try: new_reports.append(f.result())
             # Handle interruption from inside threads when using --ff
             except (InterruptedError):
-                self.executor.shutdown(wait=True)
-                self.print_scanned_sites_results()
-                log.info("Scans interrupted.")
-                exit(-1)
+                self.wait_and_finish_interrupt()
         # Print results and finish
         self.print_scanned_sites_results()
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
