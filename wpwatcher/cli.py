@@ -54,10 +54,12 @@ class WPWatcherCLI():
             while True:
                 # Run scans for ever
                 exit_code,results=wpwatcher.run_scans_and_notify()
-                log.info("Daemon sleeping %s and scanning again..."%wpwatcher.conf['daemon_loop_sleep'])
-                time.sleep(wpwatcher.conf['daemon_loop_sleep'].total_seconds())
+                timesleep=wpwatcher.conf['daemon_loop_sleep']
+                log.info("Daemon sleeping %s and scanning again..."%timesleep)
+                time.sleep(timesleep.total_seconds())
                 wpwatcher=WPWatcher(self.build_config_cli(args))
                 wpwatcher.wp_reports=results
+
         # Run scans and quit
         else:
             exit_code,results=wpwatcher.run_scans_and_notify()

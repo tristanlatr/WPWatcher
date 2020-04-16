@@ -9,7 +9,24 @@ Requirements
 # pip install pytest
 # pip install codecov
 # pip install pytest-cov
+
+# Enumerating tests
+# Core
+- Test WPScan:
+    -  Info, warnings and alerts
+- Fixed item logic
+- Errors handler
+    - Follow redirect
+    -  API wait
+- Email notification trigger and sending
+- Interrupt timeout
+# WPScan wrapper
+# Parser
+# Cli
+# config
+# utils
 """
+
 import json
 import re
 import sys
