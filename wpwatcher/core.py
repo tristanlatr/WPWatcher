@@ -468,7 +468,7 @@ class WPWatcher():
             p.send_signal(signal.SIGINT)
         
         # Asynchronously wait for all processes to finish , kill after timeout
-        wait_exec=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['workers'])
+        wait_exec=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
         try : wait_exec.map(partial(subprocess.Popen.wait, timeout=INTERRUPT_TIMEOUT), self.wpscan.processes)
         except subprocess.TimeoutExpired :
             for p in self.wpscan.processes: 
