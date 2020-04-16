@@ -14,7 +14,7 @@ from wpwatcher.utils import parse_timedelta
 class WPWatcherConfig():
 
     def __init__(self, files=None, string=None):
-        self.files=files
+        self.files=files if files else []
         # Init config parser
         self.parser=configparser.ConfigParser()
         # Load default configuration
@@ -27,10 +27,13 @@ class WPWatcherConfig():
             self.files=self.find_config_files()
 
         if self.files:
-            read_files=self.parser.read(self.files)
-            if len(read_files) < len(self.files):
-                log.error("Could not read config " + str(list(set(self.files)-set(read_files))) + ". Make sure the file exists, the format is OK and you have correct access right.")
-                exit(-1)
+            for f in self.files:
+                try :
+                    with open(f,'r') as fp:
+                        self.parser.read_file(fp)
+                except (OSError):
+                    log.error("Could not read config %s. Make sure the file exists and you have correct access right."%(f))
+                    raise
 
         # No config file notice
         else :
@@ -199,36 +202,64 @@ smtp_ssl=Yes
         '''
         Returns the location of existing `wpwatcher.conf` and `wp_reports.json` files at ./wpwatcher.conf and/or ~/wpwatcher.conf or under ~/.wpwatcher/ folder
         '''
-        paths=[]
-        if create:
-            os.makedirs(os.path.join(os.environ['HOME'],'.wpwatcher'), exist_ok=True)
-        if 'APPDATA' in os.environ: 
-            p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-            elif create: 
-                with open(p,'w') as config_file:
-                    config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-                    log.info("Init new config file from template: %s"%(p))
-            p=os.path.join(os.environ['APPDATA'],'wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-        elif 'HOME' in os.environ: 
-            p=os.path.join(os.environ['HOME'],'.wpwatcher/wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-            elif create: 
-                with open(p,'w') as config_file:
-                    config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-                    log.info("Init new config file: %s"%(p))
-            p=os.path.join(os.environ['HOME'],'wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-        elif 'XDG_CONFIG_HOME' in os.environ: 
-            p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-            elif create: 
-                with open(p,'w') as config_file:
-                    config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-                    log.info("Init new config file: %s"%(p))
-            p=os.path.join(os.environ['XDG_CONFIG_HOME'],'wpwatcher.conf')
-            if os.path.isfile(p): paths.append(p)
-        if os.path.isfile('./wpwatcher.conf'): 
-            paths.append('./wpwatcher.conf')
-        return(paths)
+        potential_files=['.wpwatcher/wpwatcher.conf', 'wpwatcher.conf']
+        potential_location=['HOME', 'PWD', 'XDG_CONFIG_HOME', 'APPDATA']
+        potential_paths=[]
+        existent_files=[]
+        
+        # build potential_paths of config file
+        for env_var in potential_location:
+            if env_var in os.environ:
+                for file_path in potential_files:
+                    if create: os.makedirs(os.path.join(os.environ[env_var],'.wpwatcher'), exist_ok=True)
+                    potential_paths.append(os.path.join(os.environ[env_var],file_path))
+        # If file exist, add to list
+        for p in potential_paths:
+            if os.path.isfile(p):
+                existent_files.append(p)
+        # If no file foud and create=True, init new template config
+        if len(existent_files)==0 and create:
+            with open(potential_paths[0],'w') as config_file:
+                config_file.write(WPWatcherConfig.TEMPLATE_FILE)
+            log.info("Init new config file: %s"%(p))
+            existent_files.append(potential_paths[0])
+
+        return(existent_files)
+        # Old code refactored
+        # if create:
+        #     os.makedirs(os.path.join(os.environ['HOME'],'.wpwatcher'), exist_ok=True)
+        # if 'APPDATA' in os.environ: 
+        #     p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        #     elif create: 
+        #         with open(p,'w') as config_file:
+        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
+        #             log.info("Init new config file from template: %s"%(p))
+        #         paths.append(p)
+        #     p=os.path.join(os.environ['APPDATA'],'wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        # elif 'HOME' in os.environ: 
+
+        #     p=os.path.join(os.environ['HOME'],'.wpwatcher/wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        #     elif create: 
+        #         with open(p,'w') as config_file:
+        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
+        #             log.info("Init new config file: %s"%(p))
+        #         paths.append(p)
+
+        #     p=os.path.join(os.environ['HOME'],'wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        # elif 'XDG_CONFIG_HOME' in os.environ: 
+        #     p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        #     elif create: 
+        #         with open(p,'w') as config_file:
+        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
+        #             log.info("Init new config file: %s"%(p))
+        #     p=os.path.join(os.environ['XDG_CONFIG_HOME'],'wpwatcher.conf')
+        #     if os.path.isfile(p): paths.append(p)
+        # if os.path.isfile('./wpwatcher.conf'): 
+        #     paths.append('./wpwatcher.conf')
+
+        
