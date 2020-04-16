@@ -13,13 +13,11 @@ import threading
 import time
 import io
 import concurrent.futures
-import unicodedata
 import smtplib
 import re
 import subprocess
 import signal
-from functools import partial
-from urllib.parse import urljoin, urlparse, urlunparse
+from urllib.parse import urlparse
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
