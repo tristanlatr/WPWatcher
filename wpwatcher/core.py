@@ -65,6 +65,8 @@ class WPWatcher():
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
         # Read DB
+        if not self.conf['wp_reports']:
+            self.conf['wp_reports']=self.find_wp_reports_file(create=True)
         self.wp_reports=self.build_wp_reports()
         # Try if local Json databse is accessible
         try: self.update_and_write_wp_reports(self.wp_reports)
@@ -133,8 +135,6 @@ class WPWatcher():
     def build_wp_reports(self):
         wp_reports=[]
         if self.conf['wp_reports']!='null':
-            if not self.conf['wp_reports']:
-                self.conf['wp_reports']=self.find_wp_reports_file(create=True)
             if self.conf['wp_reports']:
                 if os.path.isfile(self.conf['wp_reports']):
                     try:
