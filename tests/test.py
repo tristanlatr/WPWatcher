@@ -34,6 +34,7 @@ import os
 import argparse
 from datetime import datetime, timedelta
 import unittest
+from wpwatcher.scan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 # Constants
@@ -160,22 +161,74 @@ class WPWatcherTests(unittest.TestCase):
         wpwatcher.update_and_write_wp_reports(reports)
         # Test update 
         for r in reports:
-            self.assertIn(r, wpwatcher.wp_reports)
+            self.assertIn(r, wpwatcher.wp_reports, "The report do not seem to have been saved into WPWatcher.wp_report list")
         # Test write method
         wrote_db=wpwatcher.build_wp_reports()
         with open(wpwatcher.conf['wp_reports'],'r') as db:
             wrote_db_alt=json.load(db)
         for r in reports:
-            self.assertIn(r, wrote_db)
-            self.assertIn(r, wrote_db_alt)
-        self.assertEqual(wpwatcher.wp_reports, wrote_db_alt)
-        self.assertEqual(wpwatcher.wp_reports, wrote_db)
+            self.assertIn(r, wrote_db, "The report do not seem to have been saved into db file")
+            self.assertIn(r, wrote_db_alt, "The report do not seem to have been saved into db file")
+        self.assertEqual(wpwatcher.wp_reports, wrote_db_alt, "The database file wrote differ from in memory database")
+        self.assertEqual(wpwatcher.wp_reports, wrote_db, "The database file wrote differ from in memory database")
 
     def test_init_wpwatcher(self):
         # Init deafult watcher
-        w=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-        
-        # exit_code, results=w.run_scans_and_notify()
-        # self.assertEqual(0, exit_code)
+        wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        self.assertEqual(wpwatcher.conf, WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0], "Config doesn't seem to hae been loaded")
+        self.assertEqual(type(wpwatcher.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
+        self.assertEqual(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path'], wpwatcher.wpscan.path, "WPScan path seems to be wrong")
 
-    
+    def test_wpscan_output_folder(self):
+        pass
+
+    def test_send_report(self):
+        # test from_email
+        pass
+
+    def test_update_report(self):
+        # Fixed issues
+        pass
+
+    def test_handle_wpscan_err(self):
+        # test API wait, test Follow redirect
+        pass
+
+    def test_notify(self):
+        # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
+        pass
+
+    def test_scan_site(self):
+        # test info, warnings and alerts
+        pass
+
+    def test_interrupt(self):
+        # test timeout
+        # test all childs are killed
+        pass
+
+    def test_run_scans_and_notify(self):
+        # test returned results
+        pass
+
+    def test_cli(self):
+        # test argparsing
+        pass
+
+    def test_parser(self):
+        # false positives
+        pass
+
+    def test_utils(self):
+        pass
+
+    def test_asynch_exec(self):
+        # test max number of threads respected
+        pass
+
+    def test_daemon(self):
+        # test daemon_loop_sleep and daemon mode
+        pass
+
+    def test_fail_fast(self):
+        pass
