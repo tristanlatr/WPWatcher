@@ -205,7 +205,7 @@ class WPWatcher():
                 # Encode file in ASCII characters to send by email    
                 encoders.encode_base64(part)
                 # Sanitize WPScan report filename 
-                wpscan_report_filename=get_valid_filename('WPScan_results_%s_%s' % (wp_site['url'], wp_report['datetime']))
+                wpscan_report_filename=get_valid_filename('WPScan_output_%s_%s' % (wp_site['url'], wp_report['datetime']))
                 # Add header as key/value pair to attachment part
                 part.add_header(
                     "Content-Disposition",
@@ -330,6 +330,16 @@ class WPWatcher():
         else: 
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_site['url']))
+    
+    def write_wpscan_output(self, wp_report):
+        # Write wpscan output 
+        wpscan_results_file=None
+        if self.conf['wpscan_output_folder'] :
+            wpscan_results_file=os.path.join(self.conf['wpscan_output_folder'],
+                get_valid_filename('WPScan_output_%s_%s.txt' % (wp_report['site'], wp_report['datetime'])))
+            with open(wpscan_results_file, 'w') as wpout:
+                wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
+        return(wpscan_results_file)
 
     # Orchestrate the scanning of a site
     def scan_site(self, wp_site):
@@ -400,16 +410,11 @@ class WPWatcher():
             
         # No errors with wpscan -----------------------------
         else:
-            # Write wpscan output 
-            wpscan_results_file=None
-            if self.conf['wpscan_output_folder'] :
-                wpscan_results_file=os.path.join(self.conf['wpscan_output_folder'],
-                    get_valid_filename('WPScan_results_%s_%s.txt' % (wp_site['url'], wp_report['datetime'])))
-                with open(wpscan_results_file, 'w') as wpout:
-                    wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
-            
-            log.debug("Parsing WPScan output")
+            # # Write wpscan output 
+            wpscan_results_file=self.write_wpscan_output(wp_report)
+
             # Call parse_result from parser.py ------------------------
+            log.debug("Parsing WPScan output")
             wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
                 self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
             
@@ -427,7 +432,7 @@ class WPWatcher():
             for alert in wp_report['alerts']:
                 log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
 
-            if wpscan_results_file: log.info("WPScan results saved to file %s"%wpscan_results_file)
+            if wpscan_results_file: log.info("WPScan output saved to file %s"%wpscan_results_file)
         
         # Report status ------------------------------------------------
         if len(wp_report['errors'])>0:wp_report['status']="ERROR"

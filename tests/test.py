@@ -31,12 +31,14 @@ import json
 import re
 import sys
 import os
+import shutil
 import argparse
 from datetime import datetime, timedelta
 import unittest
 from wpwatcher.scan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
+from wpwatcher.utils import get_valid_filename
 # Constants
 NUMBER_OF_CONFIG_VALUES=29
 # Change test urls file
@@ -59,13 +61,6 @@ wp_sites=%s
 verbose=Yes
 resend_emails_after=5d
 """%(json.dumps(get_sites()))
-
-ILLEGAL_CONFIG="""
-[wpwatcher]
-wp_sites=%s
-"""%(json.dumps(get_sites()))
-
-SPECIFIC_WP_REPORTS_FILE_CONFIG = DEFAULT_CONFIG+"\nwp_reports=%s"
 
 def parse_args():
     parser = argparse.ArgumentParser(description='WPWatcher test script')
@@ -120,7 +115,10 @@ class WPWatcherTests(unittest.TestCase):
         for f in existent_files:
             os.rename('%s.temp'%f , f)
 
+    
     def test_wp_reports(self):
+        SPECIFIC_WP_REPORTS_FILE_CONFIG = DEFAULT_CONFIG+"\nwp_reports=%s"
+
         # Compare with config and no config
         wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         paths_found=wpwatcher.find_wp_reports_file()
@@ -175,12 +173,44 @@ class WPWatcherTests(unittest.TestCase):
     def test_init_wpwatcher(self):
         # Init deafult watcher
         wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-        self.assertEqual(wpwatcher.conf, WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0], "Config doesn't seem to hae been loaded")
+        flag=WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]
+        for k in WPWatcherConfig.DEFAULT_CONFIG:
+            if k != 'wp_reports':
+                self.assertEqual(str(wpwatcher.conf[k]), str(flag[k]), "Config doesn't seem to hae been loaded")
+
         self.assertEqual(type(wpwatcher.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
         self.assertEqual(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path'], wpwatcher.wpscan.path, "WPScan path seems to be wrong")
 
+    
     def test_wpscan_output_folder(self):
-        pass
+        RESULTS_FOLDER="./results/"
+        WPSCAN_OUTPUT_CONFIG = DEFAULT_CONFIG+"\nwpscan_output_folder=%s"%RESULTS_FOLDER
+        shutil.rmtree(RESULTS_FOLDER)
+        wpwatcher=WPWatcher(WPWatcherConfig(string=WPSCAN_OUTPUT_CONFIG).build_config()[0])
+        self.assertTrue(os.path.isdir(RESULTS_FOLDER),"WPscan results folder doesn't seem to have been init")
+        for s in get_sites():
+            report={
+                "site": s['url'],
+                "status": "WARNING",
+                "datetime": "2020-04-08T16-05-16",
+                "last_email": None,
+                "errors": [],
+                "infos": [
+                    "[+]","blablabla"],
+                "warnings": [
+                    "[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\n| Found By: Emoji Settings (Passive Detection)\n",
+                    "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                ],
+                "alerts": [],
+                "fixed": [],
+                "wpscan_output":"This is real%s"%(s)
+            }
+            f=wpwatcher.write_wpscan_output(report)
+            f1=os.path.join(RESULTS_FOLDER, get_valid_filename('WPScan_output_%s_%s.txt' % (s['url'], "2020-04-08T16-05-16")))
+            self.assertEqual(f, f1, "Inconsistent WPScan output filenames")
+            self.assertTrue(os.path.isfile(f1),"WPscan output file doesn't exist")
+            with open(f1, 'r') as out:
+                self.assertEqual(out.read(), "This is real%s"%(s))
 
     def test_send_report(self):
         # test from_email

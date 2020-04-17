@@ -22,10 +22,9 @@ class WPWatcherConfig():
 
         if string: 
             self.parser.read_string(string)
-
-        if (not self.files or len(self.files)==0) and not string :
+        elif not self.files or len(self.files)==0 :
             self.files=self.find_config_files()
-
+            if not self.files: log.info("Could not find default config: `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
         if self.files:
             for f in self.files:
                 try :
@@ -37,7 +36,7 @@ class WPWatcherConfig():
 
         # No config file notice
         else :
-            log.info("No config file loaded and could not find default config `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
+            log.info("No config file loaded")
     
     def build_config(self):
         config_dict={}
