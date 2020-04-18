@@ -78,8 +78,8 @@ class WPWatcher():
         if self.conf['wpscan_output_folder'] : 
             os.makedirs(self.conf['wpscan_output_folder'], exist_ok=True)
 
-        # Asynchronous executor, will be created when calling run_scans_and_notify
-        self.executor=None
+        # Asynchronous executor
+        self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
         # List of conccurent futures
         self.futures=[] 
         # List of urls scanend
@@ -520,8 +520,7 @@ class WPWatcher():
         log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
         
         new_reports=[]
-        
-        self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
+
         # Sumbit all scans jobs and start scanning
         for s in self.conf['wp_sites']:
             self.futures.append(self.executor.submit(self.scan_site, s))
