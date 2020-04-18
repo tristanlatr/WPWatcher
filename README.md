@@ -322,7 +322,7 @@ wpscan_args=[   "--format", "cli",
 ```
 Overwrite with `--wpargs "WPScan arguments"`. If you run into option parsing error, start the arguments string with a space or use equals sign `--wpargs="[...]"` to avoid [argparse bug](https://stackoverflow.com/questions/16174992/cant-get-argparse-to-read-quoted-string-with-dashes-in-it?noredirect=1&lq=1).
 #### False positive strings
-You can use this to ignore some warnmings or alerts.  
+You can use this to ignore some warnings or alerts.  
 False positives will still be processed as infos: Use with care.   
 Must be a valid Json string
 ```ini
