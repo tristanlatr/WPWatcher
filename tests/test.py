@@ -3,6 +3,8 @@
 # Wordpress Watcher test script
 #
 # DISCLAIMER - USE AT YOUR OWN RISK.
+#
+# MUST READ FILE ./wpwatcher-test-sites.txt.conf
 """
 Requirements
 
@@ -33,44 +35,39 @@ import sys
 import os
 import shutil
 import argparse
+import subprocess
+import shlex
+import time
+import concurrent.futures
 from datetime import datetime, timedelta
 import unittest
+import copy
 from wpwatcher.scan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 # Constants
 NUMBER_OF_CONFIG_VALUES=29
-# Change test urls file
-SITES="./sites.txt.conf"
-def get_sites():
-    s=[]
-    with open(SITES, 'r') as f:
-        [ s.append({'url':url.strip()}) for url in f.readlines() ]
-    return s
-WP_SITES=get_sites()
+
+# Read URLS file
+URLS="./wpwatcher-test-sites.txt.conf"
+WP_SITES=[]
+with open(URLS, 'r') as f: [ WP_SITES.append({'url':url.strip()}) for url in f.readlines() ]
 
 DEFAULT_CONFIG="""
 [wpwatcher]
 wp_sites=%s
-"""%(json.dumps(get_sites()))
+smtp_server=localhost:1025
+from_email=testing-wpwatcher@exemple.com
+email_to=["test@mail.com"]
+"""%json.dumps(WP_SITES)
 
-MORE_OPTIONS_CONFIG="""
-[wpwatcher]
-wp_sites=%s
-verbose=Yes
-resend_emails_after=5d
-"""%(json.dumps(get_sites()))
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='WPWatcher test script')
-    # parser.add_argument('--input', metavar='path', help="WPScan Json or CLI output", required=True)
-    # parser.add_argument('--search', metavar='Keyword', required=True)
-    args = parser.parse_args()
-    return args
-
-if __name__ == '__main__':
-    os.system('python3 -m unittest tests.test')
+# MORE_OPTIONS_CONFIG="""
+# [wpwatcher]
+# wp_sites=%s
+# verbose=Yes
+# resend_emails_after=5d
+# """%(json.dumps(get_sites()))
 
 class WPWatcherTests(unittest.TestCase):
 
@@ -78,21 +75,21 @@ class WPWatcherTests(unittest.TestCase):
 
         # Test minimal config
         config_object=WPWatcherConfig(string=DEFAULT_CONFIG)
-        self.assertEqual(0, len(config_object.files), "Files seems to hve been loaded even if custom string passed to config oject")
+        self.assertEqual(0, len(config_object.files), "Files seems to have been loaded even if custom string passed to config oject")
         config_dict, files=config_object.build_config()
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
         self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
         
         # Test config template file
         config_object=WPWatcherConfig(string=WPWatcherConfig.TEMPLATE_FILE)
-        self.assertEqual(0, len(config_object.files), "Files seems to hve been loaded even if custom string passed to config oject")
+        self.assertEqual(0, len(config_object.files), "Files seems to have been loaded even if custom string passed to config oject")
         config_dict, files=config_object.build_config()
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
         self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
         
         # Test config template file
         config_object=WPWatcherConfig(string=WPWatcherConfig.TEMPLATE_FILE)
-        self.assertEqual(0, len(config_object.files), "Files seems to hve been loaded even if custom string passed to config oject")
+        self.assertEqual(0, len(config_object.files), "Files seems to have been loaded even if custom string passed to config oject")
         config_dict, files=config_object.build_config()
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
         self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
@@ -185,10 +182,9 @@ class WPWatcherTests(unittest.TestCase):
     def test_wpscan_output_folder(self):
         RESULTS_FOLDER="./results/"
         WPSCAN_OUTPUT_CONFIG = DEFAULT_CONFIG+"\nwpscan_output_folder=%s"%RESULTS_FOLDER
-        shutil.rmtree(RESULTS_FOLDER)
         wpwatcher=WPWatcher(WPWatcherConfig(string=WPSCAN_OUTPUT_CONFIG).build_config()[0])
         self.assertTrue(os.path.isdir(RESULTS_FOLDER),"WPscan results folder doesn't seem to have been init")
-        for s in get_sites():
+        for s in WP_SITES:
             report={
                 "site": s['url'],
                 "status": "WARNING",
@@ -211,10 +207,57 @@ class WPWatcherTests(unittest.TestCase):
             self.assertTrue(os.path.isfile(f1),"WPscan output file doesn't exist")
             with open(f1, 'r') as out:
                 self.assertEqual(out.read(), "This is real%s"%(s))
+        shutil.rmtree(RESULTS_FOLDER)
 
     def test_send_report(self):
-        # test from_email
-        pass
+        # Launch SMPT debbug server
+        # process = subprocess.Popen(shlex.split("python -m smtpd -c DebuggingServer -n localhost:1025"), stdout=subprocess.PIPE, shell=True)
+        # executor = concurrent.futures.ThreadPoolExecutor(1)
+        # future = executor.submit(process.communicate)
+        # Init WPWatcher
+        wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        # Send mail
+        for s in WP_SITES:
+            report={
+                "site": s['url'],
+                "status": "WARNING",
+                "datetime": "2020-04-08T16-05-16",
+                "last_email": None,
+                "errors": [],
+                "infos": [
+                    "[+]","blablabla"],
+                "warnings": [
+                    "[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\n| Found By: Emoji Settings (Passive Detection)\n",
+                    "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                ],
+                "alerts": [],
+                "fixed": ["This issue was fixed"],
+                "wpscan_output":"This is real%s"%(s)
+            }
+            wpwatcher.send_report(wpwatcher.format_site(s), report)
+            self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
+            self.assertNotEqual(report['last_email'], None)
+            # time.sleep(1)
+            try: 
+                with open ('./mail-server-log.txt', 'r') as mlog:
+                    lines = mlog.readlines()
+            except: 
+                self.fail("Cannot open mail server log")
+            for line in lines:
+                if 'Subject' in line :
+                    self.assertIn("WPWatcher WARNING report - %s - %s"%(s['url'].strip(), report['datetime']), line)
+                    with open('./mail-server-log.txt','w') as overwrite:
+                        overwrite.write("")
+            # yield line
+        # Test mail
+        # time.sleep(3)
+        # process.terminate()
+        # process.wait()
+        # future.result()
+
+        # # self.assertIn("Issues have been detected by WPScan", out)
+        # for i in range(len(WP_SITES)):
+        #     self.assertIn("Subject: WPWatcher WARNING report - %s - %s"%(WP_SITES[i]['url'].strip(),sent_reports[i]['datetime'].strip()), out.decode('utf-8').splitlines())
 
     def test_update_report(self):
         # Fixed issues
@@ -262,3 +305,6 @@ class WPWatcherTests(unittest.TestCase):
 
     def test_fail_fast(self):
         pass
+
+if __name__ == '__main__':
+    os.system('python3 -m unittest tests.test')
