@@ -37,7 +37,9 @@ import shutil
 import argparse
 import subprocess
 import shlex
+import smtpd
 import time
+import asyncore
 import concurrent.futures
 from datetime import datetime, timedelta
 import unittest
@@ -176,7 +178,7 @@ class WPWatcherTests(unittest.TestCase):
                 self.assertEqual(str(wpwatcher.conf[k]), str(flag[k]), "Config doesn't seem to hae been loaded")
 
         self.assertEqual(type(wpwatcher.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
-        self.assertEqual(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path'], wpwatcher.wpscan.path, "WPScan path seems to be wrong")
+        self.assertEqual(shlex.split(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path']), wpwatcher.wpscan.wpscan_executable, "WPScan path seems to be wrong")
 
     
     def test_wpscan_output_folder(self):
@@ -210,12 +212,11 @@ class WPWatcherTests(unittest.TestCase):
         shutil.rmtree(RESULTS_FOLDER)
 
     def test_send_report(self):
-        # with open ('./mail-server-log.txt','w+') as smpt_server_out:
         # Launch SMPT debbug server
-        process = subprocess.Popen(shlex.split("./tests/mailserver.sh"), shell=True)
+        smtpd.DebuggingServer(('localhost',1025), None )
         executor = concurrent.futures.ThreadPoolExecutor(1)
-        future = executor.submit(process.communicate)
-        # Init WPWatcher
+        executor.submit(asyncore.loop)
+        # # Init WPWatcher
         wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         # Send mail
         for s in WP_SITES:
@@ -238,22 +239,17 @@ class WPWatcherTests(unittest.TestCase):
             wpwatcher.send_report(wpwatcher.format_site(s), report)
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
-            time.sleep(1)
-            shutil.copyfile('./mail-server-log.txt','/tmp/mail-server-log.txt')
-            with open('/tmp/mail-server-log.txt','r') as smpt_server_out_read:
-                mail=smpt_server_out_read.read()
-            self.assertIn("WPWatcher WARNING report - %s - %s"%(s['url'].strip(), report['datetime']), mail)
-            # yield line
-        # Test mail
-        process.terminate()
-        process.wait()
-        print(future.result())
-        
-        # # self.assertIn("Issues have been detected by WPScan", out)
-        # for i in range(len(WP_SITES)):
-        #     self.assertIn("Subject: WPWatcher WARNING report - %s - %s"%(WP_SITES[i]['url'].strip(),sent_reports[i]['datetime'].strip()), out.decode('utf-8').splitlines())
+            
+        # Close mail server
+        asyncore.close_all()
 
     def test_update_report(self):
+        old={}
+
+        new={}
+
+        expected={}
+        
         # Fixed issues
         pass
 
