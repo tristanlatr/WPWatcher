@@ -10,12 +10,15 @@ import traceback
 import subprocess
 import shutil
 import json
+import time
+import threading
 from datetime import datetime
 from subprocess import CalledProcessError
 from wpwatcher import log
 from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
 
 UPDATE_DB_INTERVAL=parse_timedelta('12h')
+init_lock=threading.Lock()
 
 # WPScan helper class -----------
 class WPScanWrapper():
@@ -24,8 +27,11 @@ class WPScanWrapper():
         self.wpscan_executable=shlex.split(wpscan_executable) 
         # List of current WPScan processes
         self.processes=[]
+        self.init_check_done=False
+
+    def _lazy_init(self):
         # Check if WPScan exists
-        exit_code, version_info = self.wpscan("--version", "--format", "json")
+        exit_code, version_info = self._wpscan("--version", "--format", "json")
         if exit_code!=0:
             log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
@@ -33,7 +39,7 @@ class WPScanWrapper():
         if datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
             # Update wpscan database
             log.info("Updating WPScan")
-            exit_code, _ = self.wpscan("--update")
+            exit_code, _ = self._wpscan("--update")
             if exit_code!=0: 
                 log.error("Error updating WPScan")
                 exit(-1)
@@ -44,10 +50,21 @@ class WPScanWrapper():
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
                 log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
+        self.init_check_done=True
     
-    
-    # Helper method: actually wraps wpscan
+    # Wrapper for lazy initiation
     def wpscan(self, *args):
+        if not self.init_check_done :
+            while init_lock.locked(): 
+                time.sleep(0.01)
+                continue
+            with init_lock:
+                if not self.init_check_done : # Re-check in case of concurrent scanning
+                    self._lazy_init()
+        return self._wpscan(*args)
+
+    # Helper method: actually wraps wpscan
+    def _wpscan(self, *args):
         (exit_code, output)=(0,"")
         # WPScan arguments
         cmd= self.wpscan_executable + list(args)

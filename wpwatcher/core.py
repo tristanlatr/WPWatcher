@@ -49,7 +49,7 @@ class WPWatcher():
         # Dump config
         log.info("WordPress sites and configuration:{}".format(self.dump_config()))
         # Create wpscan link
-        self.wpscan=WPScanWrapper(path=self.conf['wpscan_path'])
+        self.wpscan=WPScanWrapper(self.conf['wpscan_path'])
         
         # Read DB
         if not self.conf['wp_reports']:
