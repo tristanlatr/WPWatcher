@@ -210,10 +210,11 @@ class WPWatcherTests(unittest.TestCase):
         shutil.rmtree(RESULTS_FOLDER)
 
     def test_send_report(self):
+        # with open ('./mail-server-log.txt','w+') as smpt_server_out:
         # Launch SMPT debbug server
-        # process = subprocess.Popen(shlex.split("python -m smtpd -c DebuggingServer -n localhost:1025"), stdout=subprocess.PIPE, shell=True)
-        # executor = concurrent.futures.ThreadPoolExecutor(1)
-        # future = executor.submit(process.communicate)
+        process = subprocess.Popen(shlex.split("./tests/mailserver.sh"), shell=True)
+        executor = concurrent.futures.ThreadPoolExecutor(1)
+        future = executor.submit(process.communicate)
         # Init WPWatcher
         wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         # Send mail
@@ -237,24 +238,17 @@ class WPWatcherTests(unittest.TestCase):
             wpwatcher.send_report(wpwatcher.format_site(s), report)
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
-            # time.sleep(1)
-            try: 
-                with open ('./mail-server-log.txt', 'r') as mlog:
-                    lines = mlog.readlines()
-            except: 
-                self.fail("Cannot open mail server log")
-            for line in lines:
-                if 'Subject' in line :
-                    self.assertIn("WPWatcher WARNING report - %s - %s"%(s['url'].strip(), report['datetime']), line)
-                    with open('./mail-server-log.txt','w') as overwrite:
-                        overwrite.write("")
+            time.sleep(1)
+            shutil.copyfile('./mail-server-log.txt','/tmp/mail-server-log.txt')
+            with open('/tmp/mail-server-log.txt','r') as smpt_server_out_read:
+                mail=smpt_server_out_read.read()
+            self.assertIn("WPWatcher WARNING report - %s - %s"%(s['url'].strip(), report['datetime']), mail)
             # yield line
         # Test mail
-        # time.sleep(3)
-        # process.terminate()
-        # process.wait()
-        # future.result()
-
+        process.terminate()
+        process.wait()
+        print(future.result())
+        
         # # self.assertIn("Issues have been detected by WPScan", out)
         # for i in range(len(WP_SITES)):
         #     self.assertIn("Subject: WPWatcher WARNING report - %s - %s"%(WP_SITES[i]['url'].strip(),sent_reports[i]['datetime'].strip()), out.decode('utf-8').splitlines())
