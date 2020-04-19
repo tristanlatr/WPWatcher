@@ -8,7 +8,6 @@ import shlex
 import os 
 import traceback
 import subprocess
-import shutil
 import json
 import time
 import threading
@@ -37,20 +36,17 @@ class WPScanWrapper():
             exit(-1)
         version_info=json.loads(version_info)
         if datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
-            # Update wpscan database
-            log.info("Updating WPScan")
-            exit_code, _ = self._wpscan("--update")
-            if exit_code!=0: 
-                log.error("Error updating WPScan")
-                exit(-1)
-        # Try delete temp files.
-        if os.path.isdir('/tmp/wpscan'):
-            try: 
-                shutil.rmtree('/tmp/wpscan')
-                log.info("Deleted temp WPScan files in /tmp/wpscan/")
-            except (FileNotFoundError, OSError, Exception) : 
-                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
+            self.update_wpscan()
+        
         self.init_check_done=True
+
+    def update_wpscan(self):
+        # Update wpscan database
+        log.info("Updating WPScan")
+        exit_code, _ = self._wpscan("--update")
+        if exit_code!=0: 
+            log.error("Error updating WPScan")
+            exit(-1)
     
     # Wrapper for lazy initiation
     def wpscan(self, *args):

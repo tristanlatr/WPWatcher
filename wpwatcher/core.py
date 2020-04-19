@@ -11,6 +11,7 @@ import json
 import threading
 import time
 import io
+import shutil
 import concurrent.futures
 import smtplib
 import re
@@ -47,8 +48,9 @@ class WPWatcher():
             quiet=self.conf['quiet'],
             logfile=self.conf['log_file'])
         # Dump config
-        log.info("WordPress sites and configuration:{}".format(self.dump_config()))
+        log.info("WPWatcher configuration:{}".format(self.dump_config()))
         # Create wpscan link
+        self.delete_tmp_wpscan_files()
         self.wpscan=WPScanWrapper(self.conf['wpscan_path'])
         
         # Read DB
@@ -78,6 +80,15 @@ class WPWatcher():
         signal.signal(signal.SIGTERM, self.interrupt)
         # Storing the Event object to wait and cancel the waiting
         self.api_wait=threading.Event()
+
+    def delete_tmp_wpscan_files(self):
+        # Try delete temp files.
+        if os.path.isdir('/tmp/wpscan'):
+            try: 
+                shutil.rmtree('/tmp/wpscan')
+                log.info("Deleted temp WPScan files in /tmp/wpscan/")
+            except (FileNotFoundError, OSError, Exception) : 
+                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
 
     def dump_config(self):
         bump_conf=copy.deepcopy(self.conf)
@@ -259,9 +270,9 @@ class WPWatcher():
         # Handle API limit
         if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
             log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
+            self.wpscan.init_check_done=False # will re-trigger wpscan update next time wpscan() is called 
             self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
             if self.interrupting: return ((None, True))
-            self.wpscan.update_wpscan()
             return ((self.scan_site(wp_site), True))
 
         # Handle Following redirection
