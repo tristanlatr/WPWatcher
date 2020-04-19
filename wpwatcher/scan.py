@@ -8,22 +8,49 @@ import shlex
 import os 
 import traceback
 import subprocess
+import shutil
+import json
+from datetime import datetime
 from subprocess import CalledProcessError
 from wpwatcher import log
-from wpwatcher.utils import safe_log_wpscan_args, oneline
+from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
+
+UPDATE_DB_INTERVAL=parse_timedelta('12h')
+
 # WPScan helper class -----------
 class WPScanWrapper():
 
-    def __init__(self, path):
-        self.path=path
+    def __init__(self, wpscan_executable):
+        self.wpscan_executable=shlex.split(wpscan_executable) 
         # List of current WPScan processes
         self.processes=[]
-
+        # Check if WPScan exists
+        exit_code, version_info = self.wpscan("--version", "--format", "json")
+        if exit_code!=0:
+            log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
+            exit(-1)
+        version_info=json.loads(version_info)
+        if datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
+            # Update wpscan database
+            log.info("Updating WPScan")
+            exit_code, _ = self.wpscan("--update")
+            if exit_code!=0: 
+                log.error("Error updating WPScan")
+                exit(-1)
+        # Try delete temp files.
+        if os.path.isdir('/tmp/wpscan'):
+            try: 
+                shutil.rmtree('/tmp/wpscan')
+                log.info("Deleted temp WPScan files in /tmp/wpscan/")
+            except (FileNotFoundError, OSError, Exception) : 
+                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
+    
+    
     # Helper method: actually wraps wpscan
     def wpscan(self, *args):
         (exit_code, output)=(0,"")
         # WPScan arguments
-        cmd=shlex.split(self.path) + list(args)
+        cmd= self.wpscan_executable + list(args)
         # Log wpscan command without api token
         log.debug("Running WPScan command: %s" % ' '.join(safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
@@ -57,17 +84,3 @@ class WPScanWrapper():
             log.error(oneline(err_string))
             (exit_code, output)=(-1, "")
         return((exit_code, output))
-    
-    # Check if WPScan is installed
-    def is_wpscan_installed(self):
-        exit_code, _ = self.wpscan("--version")
-        if exit_code!=0: return False
-        else: return True
-
-    # Update WPScan database
-    def update_wpscan(self):
-        log.info("Updating WPScan")
-        exit_code, _ = self.wpscan("--update")
-        if exit_code!=0: 
-            log.error("Error updating WPScan")
-            exit(-1)

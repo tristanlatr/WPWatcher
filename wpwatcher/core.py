@@ -5,7 +5,6 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import copy
-import shutil
 import traceback
 import os
 import json
@@ -51,19 +50,7 @@ class WPWatcher():
         log.info("WordPress sites and configuration:{}".format(self.dump_config()))
         # Create wpscan link
         self.wpscan=WPScanWrapper(path=self.conf['wpscan_path'])
-        # Check if WPScan exists
-        if not self.wpscan.is_wpscan_installed():
-            log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
-            exit(-1)
-        # Update wpscan database
-        self.wpscan.update_wpscan()
-        # Try delete temp files.
-        if os.path.isdir('/tmp/wpscan'):
-            try: 
-                shutil.rmtree('/tmp/wpscan')
-                log.info("Deleted temp WPScan files in /tmp/wpscan/")
-            except (FileNotFoundError, OSError, Exception) : 
-                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
+        
         # Read DB
         if not self.conf['wp_reports']:
             self.conf['wp_reports']=self.find_wp_reports_file(create=True)
