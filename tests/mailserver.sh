@@ -1,1 +1,0 @@
-python -m smtpd -c DebuggingServer -n localhost:1025 > ./mail-server-log.txt
