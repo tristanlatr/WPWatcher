@@ -4,3 +4,4 @@ build
 dist
 wpwatcher.egg-info
 __pycache__
+.coverage

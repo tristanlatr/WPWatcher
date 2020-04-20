@@ -676,6 +676,8 @@ for r in reports:
 ## Changelog
 See [Releases](https://github.com/tristanlatr/WPWatcher/releases)
 
+
+
 ## Questions ?
 If you have any questions, please create a new issue.
 
@@ -688,6 +690,12 @@ If you like the project and think you could help with making it better, there ar
 - Spread a word about the project to your collegues, friends, blogs or any other channels
 - Any other things you could imagine
 - Any contribution would be of great help
+
+## Running tests
+Requirements: pytest codecov pytest-cov
+```
+pytest --cov=./ --cov-report=xml tests/quick.py
+```
 
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))

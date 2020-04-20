@@ -3,8 +3,6 @@
 # Wordpress Watcher test script
 #
 # DISCLAIMER - USE AT YOUR OWN RISK.
-#
-# MUST READ FILE ./wpwatcher-test-sites.txt.conf
 """
 Requirements
 
@@ -40,6 +38,7 @@ import shlex
 import smtpd
 import time
 import asyncore
+import requests
 import concurrent.futures
 from datetime import datetime, timedelta
 import unittest
@@ -48,13 +47,19 @@ from wpwatcher.scan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
+from wpwatcher.parser import parse_results
+import random
+import linecache
+
+
 # Constants
 NUMBER_OF_CONFIG_VALUES=29
 
 # Read URLS file
-URLS="./wpwatcher-test-sites.txt.conf"
-WP_SITES=[]
-with open(URLS, 'r') as f: [ WP_SITES.append({'url':url.strip()}) for url in f.readlines() ]
+# URLS="./wpwatcher-test-sites.txt.conf"
+WP_SITES=[ {"url":"exemple.com"},
+              {"url":"exemple2.com"}  ]
+# with open(URLS, 'r') as f: [ WP_SITES.append({'url':url.strip()}) for url in f.readlines() ]
 
 DEFAULT_CONFIG="""
 [wpwatcher]
@@ -63,13 +68,6 @@ smtp_server=localhost:1025
 from_email=testing-wpwatcher@exemple.com
 email_to=["test@mail.com"]
 """%json.dumps(WP_SITES)
-
-# MORE_OPTIONS_CONFIG="""
-# [wpwatcher]
-# wp_sites=%s
-# verbose=Yes
-# resend_emails_after=5d
-# """%(json.dumps(get_sites()))
 
 class WPWatcherTests(unittest.TestCase):
 
@@ -96,7 +94,7 @@ class WPWatcherTests(unittest.TestCase):
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
         self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
 
-        # Test find config file
+        # Test find config file, rename default file if already exist and restore after test
         paths_found=WPWatcherConfig.find_config_files()
         existent_files=[]
         if len(paths_found)==0:
@@ -204,7 +202,7 @@ class WPWatcherTests(unittest.TestCase):
                 "wpscan_output":"This is real%s"%(s)
             }
             f=wpwatcher.write_wpscan_output(report)
-            f1=os.path.join(RESULTS_FOLDER, get_valid_filename('WPScan_output_%s_%s.txt' % (s['url'], "2020-04-08T16-05-16")))
+            f1=os.path.join(RESULTS_FOLDER, 'warning/', get_valid_filename('WPScan_output_%s_%s.txt' % (s['url'], "2020-04-08T16-05-16")))
             self.assertEqual(f, f1, "Inconsistent WPScan output filenames")
             self.assertTrue(os.path.isfile(f1),"WPscan output file doesn't exist")
             with open(f1, 'r') as out:
@@ -216,7 +214,7 @@ class WPWatcherTests(unittest.TestCase):
         smtpd.DebuggingServer(('localhost',1025), None )
         executor = concurrent.futures.ThreadPoolExecutor(1)
         executor.submit(asyncore.loop)
-        # # Init WPWatcher
+        # Init WPWatcher
         wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         # Send mail
         for s in WP_SITES:
@@ -244,21 +242,80 @@ class WPWatcherTests(unittest.TestCase):
         asyncore.close_all()
 
     def test_update_report(self):
-        old={}
+        # Init WPWatcher
+        wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        for s in WP_SITES:
+            old={
+                    "site": s['url'],
+                    "status": "WARNING",
+                    "datetime": "2020-04-08T16-05-16",
+                    "last_email": "2020-04-08T16-05-17",
+                    "errors": [],
+                    "infos": [
+                        "[+]","blablabla"],
+                    "warnings": [
+                        "[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\n| Found By: Emoji Settings (Passive Detection)\n",
+                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                    ],
+                    "alerts": [],
+                    "fixed": ["This issue was fixed"],
+                    "wpscan_output":""
+                }
 
-        new={}
+            new={
+                    "site": s['url'],
+                    "status": "",
+                    "datetime": "2020-04-10T16-00-00",
+                    "last_email": None,
+                    "errors": [],
+                    "infos": [
+                        "[+]","blablabla"],
+                    "warnings": [
+                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                    ],
+                    "alerts": [],
+                    "fixed": [],
+                    "wpscan_output":""
+                }
 
-        expected={}
+            expected={
+                    "site": s['url'],
+                    "status": "",
+                    "datetime": "2020-04-10T16-00-00",
+                    "last_email": "2020-04-08T16-05-17",
+                    "errors": [],
+                    "infos": [
+                        "[+]","blablabla"],
+                    "warnings": [
+                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                    ],
+                    "alerts": [],
+                    "fixed": [
+                        "This issue was fixed",
+                        'Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'] ,new['datetime'])    
+                    ],
+                    "wpscan_output":""
+                }
+
+            wpwatcher.update_report(new,old)
+            self.assertEqual(new, expected, "There is an issue with fixed issues feature")
         
-        # Fixed issues
-        pass
-
     def test_handle_wpscan_err(self):
         # test API wait, test Follow redirect
+        # TODO
         pass
 
     def test_notify(self):
         # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
+
+        # # Launch SMPT debbug server
+        # smtpd.DebuggingServer(('localhost',1025), None )
+        # executor = concurrent.futures.ThreadPoolExecutor(1)
+        # executor.submit(asyncore.loop)
+        # # Init WPWatcher
+        # CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
+        # wpwatcher = WPWatcher(WPWatcherConfig(string=CONFIG).build_config()[0])
+
         pass
 
     def test_scan_site(self):
@@ -280,6 +337,15 @@ class WPWatcherTests(unittest.TestCase):
 
     def test_parser(self):
         # false positives
+        out = open("tests/static/wordpress_no_vuln.json").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(0, len(alerts))
+        out = open("tests/static/wordpress_one_vuln.json").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(1, len(alerts))
+        out = open("tests/static/wordpress_many_vuln.json").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(3, len(alerts))
         pass
 
     def test_utils(self):
@@ -297,4 +363,4 @@ class WPWatcherTests(unittest.TestCase):
         pass
 
 if __name__ == '__main__':
-    os.system('python3 -m unittest tests.test')
+    os.system('python3 -m unittest tests.quick')
