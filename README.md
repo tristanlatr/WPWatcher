@@ -9,8 +9,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/tristanlatr/WPWatcher/actions" target="_blank"><img src="https://github.com/tristanlatr/WPWatcher/workflows/test/badge.svg"></a>
+  <a href="https://codecov.io/gh/tristanlatr/WPWatcher" target="_blank"><img src="https://codecov.io/gh/tristanlatr/WPWatcher/branch/master/graph/badge.svg"></a>
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
-
 </p>
 
 ## Features
@@ -322,7 +323,7 @@ wpscan_args=[   "--format", "cli",
 ```
 Overwrite with `--wpargs "WPScan arguments"`. If you run into option parsing error, start the arguments string with a space or use equals sign `--wpargs="[...]"` to avoid [argparse bug](https://stackoverflow.com/questions/16174992/cant-get-argparse-to-read-quoted-string-with-dashes-in-it?noredirect=1&lq=1).
 #### False positive strings
-You can use this to ignore some warnmings or alerts.  
+You can use this to ignore some warnings or alerts.  
 False positives will still be processed as infos: Use with care.   
 Must be a valid Json string
 ```ini
@@ -676,6 +677,8 @@ for r in reports:
 ## Changelog
 See [Releases](https://github.com/tristanlatr/WPWatcher/releases)
 
+
+
 ## Questions ?
 If you have any questions, please create a new issue.
 
@@ -688,6 +691,12 @@ If you like the project and think you could help with making it better, there ar
 - Spread a word about the project to your collegues, friends, blogs or any other channels
 - Any other things you could imagine
 - Any contribution would be of great help
+
+## Running tests
+Requirements: pytest codecov pytest-cov
+```
+pytest --cov=./ --cov-report=xml tests/quick.py
+```
 
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))

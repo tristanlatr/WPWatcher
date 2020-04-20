@@ -8,27 +8,67 @@ import shlex
 import os 
 import traceback
 import subprocess
+import json
+import time
+import threading
+from datetime import datetime
 from subprocess import CalledProcessError
 from wpwatcher import log
-from wpwatcher.utils import safe_log_wpscan_args, oneline
+from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
+
+UPDATE_DB_INTERVAL=parse_timedelta('12h')
+init_lock=threading.Lock()
+
 # WPScan helper class -----------
 class WPScanWrapper():
 
-    def __init__(self, path):
-        self.path=path
+    def __init__(self, wpscan_executable):
+        self.wpscan_executable=shlex.split(wpscan_executable) 
         # List of current WPScan processes
         self.processes=[]
+        self.init_check_done=False
+
+    def _lazy_init(self):
+        # Check if WPScan exists
+        exit_code, version_info = self._wpscan("--version", "--format", "json")
+        if exit_code!=0:
+            log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
+            exit(-1)
+        version_info=json.loads(version_info)
+        if datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
+            self.update_wpscan()
+        
+        self.init_check_done=True
+
+    def update_wpscan(self):
+        # Update wpscan database
+        log.info("Updating WPScan")
+        exit_code, _ = self._wpscan("--update")
+        if exit_code!=0: 
+            log.error("Error updating WPScan")
+            exit(-1)
+    
+    # Wrapper for lazy initiation
+    def wpscan(self, *args):
+        if not self.init_check_done :
+            while init_lock.locked(): 
+                time.sleep(0.01)
+                continue
+            with init_lock:
+                if not self.init_check_done : # Re-check in case of concurrent scanning
+                    self._lazy_init()
+        return self._wpscan(*args)
 
     # Helper method: actually wraps wpscan
-    def wpscan(self, *args):
+    def _wpscan(self, *args):
         (exit_code, output)=(0,"")
         # WPScan arguments
-        cmd=shlex.split(self.path) + list(args)
+        cmd= self.wpscan_executable + list(args)
         # Log wpscan command without api token
         log.debug("Running WPScan command: %s" % ' '.join(safe_log_wpscan_args(cmd)) )
         # Run wpscan -------------------------------------------------------------------
         try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull,'w') )
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             # Append process to current process list and launch
             self.processes.append(process)
             wpscan_output, _  = process.communicate()
@@ -57,17 +97,3 @@ class WPScanWrapper():
             log.error(oneline(err_string))
             (exit_code, output)=(-1, "")
         return((exit_code, output))
-    
-    # Check if WPScan is installed
-    def is_wpscan_installed(self):
-        exit_code, _ = self.wpscan("--version")
-        if exit_code!=0: return False
-        else: return True
-
-    # Update WPScan database
-    def update_wpscan(self):
-        log.info("Updating WPScan")
-        exit_code, _ = self.wpscan("--update")
-        if exit_code!=0: 
-            log.error("Error updating WPScan")
-            exit(-1)
