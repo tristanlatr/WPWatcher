@@ -66,6 +66,10 @@ class WPWatcher():
         # Init wpscan output folder
         if self.conf['wpscan_output_folder'] : 
             os.makedirs(self.conf['wpscan_output_folder'], exist_ok=True)
+            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'error/'), exist_ok=True)
+            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'alert/'), exist_ok=True)
+            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'warning/'), exist_ok=True)
+            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'info/'), exist_ok=True)
 
         # Asynchronous executor
         self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
@@ -234,22 +238,23 @@ class WPWatcher():
             log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_site['url']))
     
     def update_report(self, wp_report, last_wp_report):
-        # Fill out fixed issues and last_email datetime
-        # Save already fixed issues but not reported yet
-        wp_report['fixed']=last_wp_report['fixed']
-        # Figure out fixed issues : compare firt line of alerts and warnings and see if they are still present
-        for last_alert in last_wp_report['alerts']:
-            if last_alert.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['alerts']]:
-                wp_report['fixed'].append('Alert regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_alert.splitlines()[0], 
-                    last_wp_report['last_email'], wp_report['datetime']))
-        if self.conf['send_warnings']:
-            for last_warn in last_wp_report['warnings']:
-                if last_warn.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['warnings']]:
-                    wp_report['fixed'].append('Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_warn.splitlines()[0], 
+        if last_wp_report:
+            # Fill out fixed issues and last_email datetime
+            # Save already fixed issues but not reported yet
+            wp_report['fixed']=last_wp_report['fixed']
+            # Figure out fixed issues : compare firt line of alerts and warnings and see if they are still present
+            for last_alert in last_wp_report['alerts']:
+                if last_alert.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['alerts']]:
+                    wp_report['fixed'].append('Alert regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_alert.splitlines()[0], 
                         last_wp_report['last_email'], wp_report['datetime']))
-        # Save last email datetime if any
-        if last_wp_report['last_email']:
-            wp_report['last_email']=last_wp_report['last_email']
+            if self.conf['send_warnings']:
+                for last_warn in last_wp_report['warnings']:
+                    if last_warn.splitlines()[0] not in [a.splitlines()[0] for a in wp_report['warnings']]:
+                        wp_report['fixed'].append('Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%(last_warn.splitlines()[0], 
+                            last_wp_report['last_email'], wp_report['datetime']))
+            # Save last email datetime if any
+            if last_wp_report['last_email']:
+                wp_report['last_email']=last_wp_report['last_email']
     
     def format_site(self, wp_site):
         if 'url' not in wp_site :
@@ -299,8 +304,10 @@ class WPWatcher():
                 if wp_report['status']=="ERROR":
                     if self.conf['send_errors']:
                         self.send_report(wp_site, wp_report)
+                        return True
                     else:
                         log.info("Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_site['url']))
+                        return False
                 # Or email regular report if conditions ------------------------------------------
                 else:
                     if ( self.conf['send_infos'] or 
@@ -312,12 +319,14 @@ class WPWatcher():
                             or last_wp_report['status']!=wp_report['status'] ) ) ):
                             # Send the report
                             self.send_report(wp_site, wp_report)
+                            return True
                         else:
                             log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_site['url'], self.conf['resend_emails_after']))
+                            return False
                     else:
                         # No report notice
                         log.info("Not sending WPWatcher %s email report for site %s because there's nothing wrong or send_warnings=No. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_site['url']))
-
+                        return False
             # Handle send mail error
             except smtplib.SMTPException:
                 log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
@@ -325,19 +334,31 @@ class WPWatcher():
                 if self.conf['fail_fast'] and not self.interrupting: 
                     log.error("Failure")
                     self.interrupt()
+                return False
         else: 
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_site['url']))
+            return False
     
     def write_wpscan_output(self, wp_report):
+        # Subfolder
+        folder="%s/"%wp_report['status'].lower() if wp_report['status']!='FIXED' else 'info/'
         # Write wpscan output 
         wpscan_results_file=None
         if self.conf['wpscan_output_folder'] :
-            wpscan_results_file=os.path.join(self.conf['wpscan_output_folder'],
+            wpscan_results_file=os.path.join(self.conf['wpscan_output_folder'], folder , 
                 get_valid_filename('WPScan_output_%s_%s.txt' % (wp_report['site'], wp_report['datetime'])))
             with open(wpscan_results_file, 'w') as wpout:
                 wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
         return(wpscan_results_file)
+
+    def find_last_wp_report(self, wp_report):
+        # Find last site result if any
+        last_wp_report=[r for r in self.wp_reports if r['site']==wp_report['site']]
+        if len(last_wp_report)>0: 
+            last_wp_report=last_wp_report[0]
+        else: last_wp_report=None
+        return last_wp_report
 
     # Orchestrate the scanning of a site
     def scan_site(self, wp_site):
@@ -357,16 +378,14 @@ class WPWatcher():
         }
 
         # Find last site result if any
-        last_wp_report=[r for r in self.wp_reports if r['site']==wp_site['url']]
-        if len(last_wp_report)>0: 
-            last_wp_report=last_wp_report[0]
+        last_wp_report=self.find_last_wp_report(wp_report)
+        if last_wp_report: 
             # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
             if ( self.conf['daemon'] and 
                 datetime.strptime(wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') - datetime.strptime(last_wp_report['datetime'],'%Y-%m-%dT%H-%M-%S') < self.conf['daemon_loop_sleep']):
                 log.info("Daemon skipping site %s because already scanned in the last %s"%(wp_site['url'] , self.conf['daemon_loop_sleep']))
                 self.scanned_sites.append(None)
                 return None
-        else: last_wp_report=None
         
         # WPScan arguments
         wpscan_arguments=self.conf['wpscan_args']+wp_site['wpscan_args']+['--url', wp_site['url']]
@@ -408,36 +427,35 @@ class WPWatcher():
             
         # No errors with wpscan -----------------------------
         else:
-            # # Write wpscan output 
-            wpscan_results_file=self.write_wpscan_output(wp_report)
 
             # Call parse_result from parser.py ------------------------
             log.debug("Parsing WPScan output")
             wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , 
                 self.conf['false_positive_strings']+wp_site['false_positive_strings'] )
             
-            # Updating report entry with data from last scan if any
-            if last_wp_report:
-                self.update_report(wp_report, last_wp_report)
-            
-            # Print WPScan findings ------------------------------------------------------
-            for info in wp_report['infos']:
-                log.info(oneline("** WPScan INFO %s ** %s" % (wp_site['url'], info )))
-            for fix in wp_report['fixed']:
-                log.info(oneline("** FIXED %s ** %s" % (wp_site['url'], fix )))
-            for warning in wp_report['warnings']:
-                log.warning(oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
-            for alert in wp_report['alerts']:
-                log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
+        # Print WPScan findings ------------------------------------------------------
+        for info in wp_report['infos']:
+            log.info(oneline("** WPScan INFO %s ** %s" % (wp_site['url'], info )))
+        for fix in wp_report['fixed']:
+            log.info(oneline("** FIXED %s ** %s" % (wp_site['url'], fix )))
+        for warning in wp_report['warnings']:
+            log.warning(oneline("** WPScan WARNING %s ** %s" % (wp_site['url'], warning )))
+        for alert in wp_report['alerts']:
+            log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_site['url'], alert )))
 
-            if wpscan_results_file: log.info("WPScan output saved to file %s"%wpscan_results_file)
-        
         # Report status ------------------------------------------------
         if len(wp_report['errors'])>0:wp_report['status']="ERROR"
         elif len(wp_report['warnings'])>0 and len(wp_report['alerts']) == 0: wp_report['status']='WARNING'
         elif len(wp_report['alerts'])>0: wp_report['status']='ALERT'
         elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
         else: wp_report['status']='INFO'
+
+        # Write wpscan output 
+        wpscan_results_file=self.write_wpscan_output(wp_report)
+        if wpscan_results_file: log.info("WPScan output saved to file %s"%wpscan_results_file)
+        
+        # Updating report entry with data from last scan 
+        self.update_report(wp_report, last_wp_report)
 
         # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
         log.debug("\n%s\n"%(build_message(wp_report, 
@@ -536,5 +554,3 @@ class WPWatcher():
         else:
             log.info("Scans finished with errors.") 
             return((-1, self.wp_reports))
-
-       
