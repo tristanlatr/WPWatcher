@@ -187,7 +187,7 @@ def parse_other_infos(data):
     alerts=[]
     messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
         data['target_url'],
-        data["target_ip"],
+        data["target_ip"] if 'target_ip' in data else '?',
         data["effective_url"]))
     
     if "banner" in data:
