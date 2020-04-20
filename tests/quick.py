@@ -6,9 +6,9 @@
 """
 Requirements
 
-# pip install pytest
-# pip install codecov
-# pip install pytest-cov
+pip install pytest
+pip install codecov
+pip install pytest-cov
 
 # Enumerating tests
 # Core
