@@ -254,7 +254,7 @@ class WPWatcherTests(unittest.TestCase):
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
-                        "[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\n| Found By: Emoji Settings (Passive Detection)\n",
+                        "[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\nblablabla\n",
                         "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
                     ],
                     "alerts": [],
@@ -292,13 +292,15 @@ class WPWatcherTests(unittest.TestCase):
                     "alerts": [],
                     "fixed": [
                         "This issue was fixed",
-                        'Warning regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'] ,new['datetime'])    
+                        'Issue regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s\nIssue details:\n[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\nblablabla\n'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'] ,new['datetime'])    
                     ],
                     "wpscan_output":""
                 }
-
+            
             wpwatcher.update_report(new,old)
-            self.assertEqual(new, expected, "There is an issue with fixed issues feature")
+            print(new)
+            print(expected)
+            self.assertEqual(new, expected, "There is an issue with fixed issues feature: the expected report do not match the report returned by update_report()")
         
     def test_handle_wpscan_err(self):
         # test API wait, test Follow redirect

@@ -196,21 +196,15 @@ smtp_ssl=Yes
         except Exception as err:
             log.error("Could not read boolean value in config for: '{}' and string '{}'. Must be Yes/No. Error: {}".format(key, conf.get('wpwatcher',key), str(err)))
             raise
+
     @staticmethod
-    def find_config_files(create=False):
-        '''
-        Returns the location of existing `wpwatcher.conf` and `wp_reports.json` files at ./wpwatcher.conf and/or ~/wpwatcher.conf or under ~/.wpwatcher/ folder
-        '''
-        potential_files=['.wpwatcher/wpwatcher.conf', 'wpwatcher.conf']
-        potential_location=['HOME', 'PWD', 'XDG_CONFIG_HOME', 'APPDATA']
+    def find_files(env_location, potential_files, default_content="", create=False):
         potential_paths=[]
         existent_files=[]
-        
         # build potential_paths of config file
-        for env_var in potential_location:
+        for env_var in env_location:
             if env_var in os.environ:
                 for file_path in potential_files:
-                    if create: os.makedirs(os.path.join(os.environ[env_var],'.wpwatcher'), exist_ok=True)
                     potential_paths.append(os.path.join(os.environ[env_var],file_path))
         # If file exist, add to list
         for p in potential_paths:
@@ -218,12 +212,23 @@ smtp_ssl=Yes
                 existent_files.append(p)
         # If no file foud and create=True, init new template config
         if len(existent_files)==0 and create:
+            os.makedirs(os.path.dirname(potential_paths[0]), exist_ok=True)
             with open(potential_paths[0],'w') as config_file:
-                config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-            log.info("Init new config file: %s"%(p))
+                config_file.write(default_content)
+            log.info("Init new file: %s"%(p))
             existent_files.append(potential_paths[0])
-
         return(existent_files)
+
+    @staticmethod
+    def find_config_files(create=False):
+        '''
+        Returns the location of existing `wpwatcher.conf` and `wp_reports.json` files at ./wpwatcher.conf and/or ~/wpwatcher.conf or under ~/.wpwatcher/ folder
+        '''
+        files=['.wpwatcher/wpwatcher.conf', 'wpwatcher.conf']
+        env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
+        
+        return(WPWatcherConfig.find_files(env, files, WPWatcherConfig.TEMPLATE_FILE))
+
         # Old code refactored
         # if create:
         #     os.makedirs(os.path.join(os.environ['HOME'],'.wpwatcher'), exist_ok=True)

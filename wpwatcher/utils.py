@@ -25,7 +25,7 @@ def timeout(time):
     # Schedule the signal to be sent after ``time``.
     signal.alarm(time)
     try: yield
-    except TimeoutError: pass
+    except TimeoutError: raise
     finally:
         # Unregister the signal so it won't be triggered
         # if the timeout is not reached.

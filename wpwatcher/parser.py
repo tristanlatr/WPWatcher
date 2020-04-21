@@ -72,119 +72,140 @@ def parse_results(wpscan_output, false_positives=[]):
             warnings.remove(warn)
             messages.append("[False positive]\n"+warn)
     
-    return (( messages, warnings, alerts ))
+    return (( messages, warnings, alerts ))   
+
+def parse_cli_toogle(line):
+    warning_on, alert_on = False, False
+    # Color parsing
+    if "33m[!]" in line: warning_on=True
+    elif "31m[!]" in line: alert_on = True
+    # No color parsing Warnings string are hard coded here
+    elif "[!]" in line and any([m in line for m in [   
+        "The version is out of date",
+        "No WPVulnDB API Token given",
+        "You can get a free API token"]]) :
+        warning_on = True
+    elif "[!]" in line :
+        alert_on = True
+    # Both method with color and no color apply supplementary proccessing 
+    # Warning for insecure Wordpress
+    if 'Insecure' in line: 
+        warning_on = True
+    # Lower voice of Vulnerabilities found but not plugin version
+    if 'The version could not be determined' in line and alert_on:
+            alert_on = False  
+            warning_on = True 
+    return ((warning_on, alert_on))
 
 def parse_cli(wpscan_output):
-    if "[+]" in wpscan_output:
-        # Init scan messages
-        ( messages, warnings, alerts ) = ([],[],[])
-        # Init messages toogles
-        warning_on = False
-        alert_on = False
-        # Test if cli_with_colors
-        cli_with_colors= ( "32m[+]" in wpscan_output )
-        message="" 
-        # Every blank ("") line will be considered as a message separator
-        for line in wpscan_output.splitlines():
+    if "[+]" not in wpscan_output: raise Exception("The file does not seem to be a WPScan CLI log.")
+    # Init scan messages
+    ( messages, warnings, alerts ) = ([],[],[])
+    # Init messages toogles
+    warning_on, alert_on = False, False
+    message_lines=[] 
+    # Every blank ("") line will be considered as a message separator
+    for line in wpscan_output.splitlines()+[""]:
 
-            # Parse all output lines and build infos, warnings and alerts
-            line=line.strip()
+        # Parse all output lines and build infos, warnings and alerts
+        line=line.strip()
+        current_message='\n'.join(message_lines).strip()
+        # Empty content lines are ignored
+        # Parse the line and Toogle Warning/Alert
+        if line not in ["","|"] :   
+            # Toogle Warning/Alert if specific match in any line of the message
+             # Both method with color and no color apply supplementary proccessing 
+            warning_on_alt,alert_on_alt=parse_cli_toogle(line)
+            warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
+            # When line message has been read and parsed
+            # Remove colorization anyway after parsing
+            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+            # Append line to message. Handle the begin of the message case
+            message_lines.append(line) #+= line if message=="" else '\n'+line 
 
-            # Empty content lines are ignored
-            # Parse the line and Toogle Warning/Alert
-            if line!="" and line!="|":   
+        # Message separator just a white line.
+        # Only if the message if not empty. 
+        # End of the message
+        
+        elif line=="" and current_message != "":
+            # Append messages to list of infos, warns and alerts
+            if alert_on: alerts.append(current_message)
+            elif warning_on: warnings.append(current_message)
+            else: messages.append(current_message)
+            message_lines=[]
+            # Reset Toogle Warning/Alert
+            alert_on = False  
+            warning_on = False
 
-                # Toogle Warning/Alert if specific match in any line of the message
-                if cli_with_colors==False:
+    return (( messages, warnings, alerts ))
 
-                    # Method 1 : No color. Warnings string are hard coded here -------------
-                    # Remove colorization
-                    # line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
-                    if "[!]" in line and any([m in line for m in [   
-                        "The version is out of date",
-                        "No WPVulnDB API Token given",
-                        "You can get a free API token"]]) :
-                        warning_on = True
-                    elif "[!]" in line :
-                        alert_on = True
-
-                    # Method 2 : Cli with colors parsing ------------------------------------
-                else: 
-                    if "33m[!]" in line: warning_on=True
-                    if "31m[!]" in line: alert_on = True
-                    # Remove colorization anyway after parsing
-                    line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
-
-                # Both method with color and no color apply supplementary proccessing 
-                # Warning for insecure Wordpress
-                if 'Insecure' in line: 
-                    warning_on = True
-                # Lower voice of Vulnerabilities found but not plugin version
-                if 'The version could not be determined' in line and alert_on:
-                        alert_on = False  
-                        warning_on = True 
-
-                # When line message has been read and parsed
-                # Append line to message. Handle the begin of the message case
-                message+= line if message=="" else '\n'+line 
-
-            # Message separator just a white line.
-            elif line=="":
-                # Only if the message if not empty. 
-                # End of the message
-                if message.strip() != "":
-                    # Append messages to list of infos, warns and alerts
-                    if alert_on: alerts.append(message)
-                    elif warning_on: warnings.append(message)
-                    else: messages.append(message)
-                    message=""
-                    # Reset Toogle Warning/Alert
-                    alert_on = False  
-                    warning_on = False
-
-        # Catching last message after loop
-        if alert_on: alerts.append(message)
-        elif warning_on: warnings.append(message)
-        else: messages.append(message)
-        return (( messages, warnings, alerts ))
-    else: 
-        raise Exception("The file does not seem to be a WPScan CLI log.")
-
-def parse_vulnerabilities_and_warnings_only(data):
-    alerts=[]
-    warnings=[]
-    for section in data:
-        node=data[section]
-        if section=='version':
-            warnings.extend(parse_warning_wordpress(node))
-        if section=='main_theme':
-            warnings.extend(parse_warning_theme_or_plugin(node))
-        if any ([section==c for c in ['main_theme','version']]):
-            try: alerts.extend(parse_findings(node['vulnerabilities']))
+def parse_section_alerts(section, node):
+    warnings, alerts=[],[]
+    if section=='version':
+        warnings.extend(parse_warning_wordpress(node))
+    if section=='main_theme':
+        warnings.extend(parse_warning_theme_or_plugin(node))
+    if any ([section==c for c in ['main_theme','version']]):
+        try: alerts.extend(parse_findings(node['vulnerabilities']))
+        except: pass
+    if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
+        for slug in node:
+            try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
             except: pass
-        if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
-            for slug in node:
-                try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
-                except: pass
-                try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
-                except: pass
+            try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
+            except: pass
+    return ((warnings, alerts))
+
+def parse_vulnerabilities_and_outdated(data):
+    warnings, alerts=[],[]
+    for section in data:
+        warnings_sec, alerts_sec = parse_section_alerts(section, data[section])
+        alerts.extend(alerts_sec)
+        warnings.extend(warnings_sec)
     return ((warnings, alerts))
 
 def parse_json(data):
+    infos, warnings, alerts=[],[],[]
     # Do a sanity check to confirm the data is ok
     if data and 'target_url' in data and data['target_url']:
-        warnings, alerts=parse_vulnerabilities_and_warnings_only(data)
-        infos, w1, a1=parse_other_infos(data)
-        warnings.extend(w1)
-        alerts.extend(a1)
+        warnings, alerts=parse_vulnerabilities_and_outdated(data)
+        infos.extend(parse_misc_infos(data))
+        warnings.extend(parse_misc_warnings(data))
+        alerts.extend(parse_misc_alerts(data))
         return (( infos, warnings, alerts ))
     else: 
         raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
-    
-def parse_other_infos(data):
-    messages=[]
-    warnings=[]
+
+def parse_misc_alerts(data):
+
     alerts=[]
+    if "config_backups" in data and ( data["config_backups"] is not None or len(data["config_backups"])>0 ) :
+        for url in data['config_backups']:
+            alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
+
+    if "db_exports" in data and ( data['db_exports'] is not None and len(data['db_exports'])>0 ) :
+        alerts.extend(parse_vulnerability_or_finding(data['db_exports'] ))
+
+    if "password_attack" in data and ( data['password_attack'] is not None and len(data['password_attack'])>0 ):
+        for passwd in data['password_attack']:
+            alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
+
+    if "not_fully_configured" in data and data['not_fully_configured']!=None :
+        alerts.append(data['not_fully_configured'])
+    return alerts
+
+def parse_misc_warnings(data):
+
+    warnings=[]
+    if "medias" in data and ( data['medias'] is not None and len(data['medias'])>0 ):
+            warnings.extend(parse_vulnerability_or_finding(data['medias']))
+
+    if "vuln_api" in data and ( "error" in data['vuln_api'] ) :
+            warnings.append(data['vuln_api']["error"])
+    return warnings
+
+def parse_misc_infos(data):
+    messages=[]
     messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
         data['target_url'],
         data["target_ip"] if 'target_ip' in data else '?',
@@ -205,41 +226,15 @@ def parse_other_infos(data):
             # Parse informations
             messages.extend(parse_findings(data["interesting_findings"]) )
 
-    if "users" in data:
-        if data["users"] is not None and len(data["users"])>0:
-            users = data["users"]
-            for name in users:
-                # Parse users
-                messages.append( 'WordPress user found: %s'%name )
+    if "users" in data and ( data["users"] is not None and len(data["users"])>0 ) :
+        users = data["users"]
+        for name in users:
+            # Parse users
+            messages.append( 'WordPress user found: %s'%name )
     
-    if "config_backups" in data:
-        if data["config_backups"] is not None or len(data["config_backups"])>0:
-            for url in data['config_backups']:
-                alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
+    return (messages)
 
-    if "db_exports" in data :
-        if data['db_exports'] is not None and len(data['db_exports'])>0:
-            alerts.extend(parse_vulnerability_or_finding(data['db_exports'] ))
-
-    if "password_attack" in data :
-        if data['password_attack'] is not None and len(data['password_attack'])>0:
-            for passwd in data['password_attack']:
-                alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
-
-    if "medias" in data :
-        if data['medias'] is not None and len(data['medias'])>0:
-            warnings.extend(parse_vulnerability_or_finding(data['medias']))
-
-    if "vuln_api" in data :
-        if "error" in data['vuln_api']:
-            warnings.append(data['vuln_api']["error"])
-
-    if "not_fully_configured" in data and data['not_fully_configured']!=None :
-        alerts.append(data['not_fully_configured'])
-
-    return (( messages, warnings, alerts ))
-
-    # Older code not ised anymore
+    # Older code not used anymore: refactored into parse_vulnerabilities_and_outdated()
 
     # if "main_theme" in data:
     #     if data["main_theme"]==None or len(data["main_theme"])==0:
@@ -319,27 +314,42 @@ def parse_vulnerability_or_finding(finding):
         if "confidence" in finding:
             findingData += "\nConfidence: %s" % finding["confidence"]
 
-        if "interesting_entries" in finding:
-            if len(finding["interesting_entries"]) > 0:
-                findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+        if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
+            findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+
+        refData=parse_reference(finding)
 
         # if "comfirmed_by" in finding:
         #     if len(finding["confirmed_by"]) > 0:
         #         findingData += "\nConfirmed By:\n"
         #         findingData+="\n- ".join(finding["confirmed_by"])
 
-        if "references" in finding and len(finding["references"]) > 0:
-            refData += "\nReferences:"
-            for ref in finding["references"]:
-                if ref =='cve':
-                    for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-                elif ref == 'wpvulndb': 
-                    for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-                else:
-                    refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+        # if "references" in finding and len(finding["references"]) > 0:
+        #     refData += "\nReferences:"
+        #     for ref in finding["references"]:
+        #         if ref =='cve':
+        #             for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
+        #         elif ref == 'wpvulndb': 
+        #             for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+        #         else:
+        #             refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
 
     else: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
     return ("%s %s" % (findingData, refData) )
+
+def parse_reference(finding):
+    refData = ""
+    if "references" in finding and len(finding["references"]) > 0:
+        refData += "\nReferences:"
+        for ref in finding["references"]:
+            if ref =='cve':
+                for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
+            elif ref == 'wpvulndb': 
+                for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+            else:
+                refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+    return refData
+
 
 # Wrapper to parse findings can take list or dict type
 def parse_findings(findings):
@@ -418,9 +428,8 @@ def parse_warning_theme_or_plugin(finding):
     if "confidence" in finding:
         findingData += "\nConfidence: %s" % finding["confidence"]
 
-    if "interesting_entries" in finding:
-        if len(finding["interesting_entries"]) > 0:
-            findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
+        findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
 
     if warn: summary.append(findingData)
     return(summary)
