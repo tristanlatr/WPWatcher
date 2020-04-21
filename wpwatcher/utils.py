@@ -8,14 +8,11 @@ import logging
 import re
 import os
 import sys
-import socket
 import copy
 import signal
 from contextlib import contextmanager
 from datetime import timedelta
-
-from wpwatcher import VERSION, log
-
+from . import log
 # Few static helper methods -------------------
 @contextmanager
 def timeout(time):
@@ -34,30 +31,6 @@ def timeout(time):
 def raise_timeout(signum, frame):
     raise TimeoutError
 
-# Setup stdout logger
-def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
-    format_string='%(asctime)s - %(levelname)s - %(message)s'
-    format_string_cli='%(levelname)s - %(message)s'
-    if verbose : verb_level=logging.DEBUG
-    elif quiet : verb_level=logging.ERROR
-    else : verb_level=logging.INFO
-    # Add stdout: configurable
-    log.setLevel(verb_level)
-    std = logging.StreamHandler(sys.stdout)
-    std.setLevel(verb_level)
-    std.setFormatter(logging.Formatter(format_string_cli))
-    log.handlers=[]
-    if not nostd: log.addHandler(std)
-    else: log.addHandler(logging.StreamHandler(open(os.devnull,'w')))
-    if logfile :
-        fh = logging.FileHandler(logfile)
-        fh.setLevel(verb_level)
-        fh.setFormatter(logging.Formatter(format_string))
-        log.addHandler(fh)
-    if verbose and quiet :
-        log.info("Verbose and quiet values are both set to True. By default, verbose value has priority.")
-    return (log)
-
 # Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
     logged_cmd=copy.deepcopy(wpscan_args)
@@ -73,38 +46,6 @@ def oneline(string):
 def get_valid_filename(s):
     s = str(s).strip().replace(' ', '_')
     return re.sub(r'(?u)[^-\w.]', '', s)
-
-# Build the email report string
-def build_message(wp_report, warnings=True, infos=False):
-    
-    message="WordPress security scan report for site: %s\n" % (wp_report['site'])
-    message+="Scan datetime: %s\n" % (wp_report['datetime'])
-    
-    if wp_report['errors'] : message += "\nAn error occurred."
-    elif wp_report['alerts'] : message += "\nVulnerabilities have been detected by WPScan."
-    elif wp_report['warnings']: message += "\nIssues have been detected by WPScan."
-    if wp_report['fixed']: message += "\nSome issues have been fixed since last scan."
-    
-    if wp_report['errors']:
-        message += "\n\n\tErrors\n\t------\n\n"
-        message += "\n\n".join(wp_report['errors'])
-    if wp_report['alerts']:
-        message += "\n\n\tAlerts\n\t------\n\n"
-        message += "\n\n".join(wp_report['alerts'])
-    if wp_report['fixed']:
-        message += "\n\n\tFixed\n\t-----\n\n"
-        message += "\n\n".join(wp_report['fixed'])
-    if wp_report['warnings'] and warnings :
-        message += "\n\n\tWarnings\n\t--------\n\n"
-        message += "\n\n".join(wp_report['warnings'])
-    if wp_report['infos'] and infos :
-        message += "\n\n\tInformations\n\t------------\n\n"
-        message += "\n\n".join(wp_report['infos'])
-    
-    message += "\n\n--"
-    message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
-    message += "\nServer: %s - Version: %s\n"%(socket.gethostname(),VERSION)
-    return message
 
 def print_progress_bar(count,total):
     size=0.3 #size of progress bar

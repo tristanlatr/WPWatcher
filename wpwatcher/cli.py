@@ -12,8 +12,8 @@ import shlex
 import json
 import sys
 
-from wpwatcher import VERSION, AUTHORS, GIT_URL, log
-from wpwatcher.utils import init_log, parse_timedelta, results_summary
+from wpwatcher import VERSION, AUTHORS, GIT_URL, log, init_log
+from wpwatcher.utils import parse_timedelta, results_summary
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
 
