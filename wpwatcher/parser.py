@@ -164,6 +164,7 @@ def parse_slugs_vulnerabilities(node):
 
 def parse_section_alerts(section, node):
     warnings, alerts=[],[]
+    warnings_alt,alerts_alt=[],[]
     if section=='version':
         warnings.extend(parse_warning_wordpress(node))
     if section=='main_theme':
