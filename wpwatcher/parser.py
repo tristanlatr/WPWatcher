@@ -5,19 +5,14 @@
 # Authors: Florian Roth, Tristan Landès
 #
 # DISCLAIMER - USE AT YOUR OWN RISK.
-# 
-# Some infos are intentionally ignored when parsing Json to have shorter output.
-# You can use --format cli to show all informations with Infos, Warnings and Alerts
-# 
-# Exemple stdin usage:
-#   $ wpscan --url https://exemple.com --format json | python3 ./parser.py
 #
-# With param --input :
-#   $ python3 ./parser.py --input wpscan.log
-#
-# Or you can import this package into your application and call `parse_results` method.
+# You can import this package into your application and call `parse_results` method.
 #   from wpwatcher.parser import parse_results
 #   (messages, warnings, alerts) = parse_results(wpscan_output_string)
+
+# Parse know vulnerabilities
+    # Parse vulnerability data and make more human readable.
+    # NOTE: You need an API token for the WPVulnDB vulnerability data.
 
 """
 All the WPScan fields for the JSON output in the views/json folders at:
@@ -183,72 +178,62 @@ def parse_vulnerabilities_and_outdated(data):
         warnings.extend(warnings_sec)
     return ((warnings, alerts))
 
+def wrap_parse_finding(data, section):
+    alerts=[]
+    if check_valid_section(data, section) :
+        alerts.extend(parse_vulnerability_or_finding(data[section]))
+    return alerts
 
-def parse_config_backups(data):
+def wrap_parse_simple_values(data, section, title):
     alerts=[]
-    if check_valid_section(data, 'config_backups') :
-        for url in data['config_backups']:
-            alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
+    if check_valid_section(data, section) :
+        for val in data[section]:
+            alerts.append("%s%s"%(title, str(val)))
     return alerts
-def parse_db_exports(data):
-    alerts=[]
-    if check_valid_section(data, 'db_exports') :
-        alerts.extend(parse_vulnerability_or_finding(data['db_exports'] ))
-    return alerts
-def parse_password_attack(data):
-    alerts=[]
-    if check_valid_section(data, 'password_attack') :
-        for passwd in data['password_attack']:
-            alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
-    return alerts
-def parse_not_fully_configured(data):
-    alerts=[]
-    if check_valid_section(data, 'not_fully_configured') :
-        alerts.append(data['not_fully_configured'])
-    return alerts
+
+# def parse_config_backups(data):
+#     return wrap_parse_simple_values(data, 'config_backups', 'WordPress Configuration Backup Found: ')
+
+# def parse_db_exports(data):
+#     return wrap_parse_finding(data, 'db_exports')
+
+# def parse_password_attack(data):
+#     return wrap_parse_simple_values(data, 'password_attack', 'WordPres Weak User Password Found: ')
+
+# def parse_not_fully_configured(data):
+#     return wrap_parse_finding(data, 'not_fully_configured')
+
 def parse_misc_alerts(data):
-    return parse_config_backups(data)+parse_db_exports(data)+parse_password_attack(data)+parse_not_fully_configured(data)
+    return ( wrap_parse_simple_values(data, 'config_backups', 'WordPress Configuration Backup Found: ') + 
+        wrap_parse_finding(data, 'db_exports')+ 
+        wrap_parse_simple_values(data, 'password_attack', 'WordPres Weak User Password Found: ')+
+        wrap_parse_finding(data, 'not_fully_configured') )
 
-def parse_medias(data):
-    warnings=[]
-    if check_valid_section(data, 'medias') :
-            warnings.extend(parse_vulnerability_or_finding(data['medias']))
-    return warnings
-def parse_vuln_api(data):
-    warnings=[]
-    if check_valid_section(data, 'vuln_api') and "error" in data['vuln_api'] :
-            warnings.append(data['vuln_api']["error"])
-    return warnings
 def parse_misc_warnings(data):
-    return parse_medias(data)+parse_vuln_api(data)
+    warnings=wrap_parse_finding(data, 'medias')
+    if check_valid_section(data, 'vuln_api') :
+            warnings.extend(wrap_parse_finding(data['vuln_api'], 'error'))
+    return warnings
 
-def parse_misc_infos(data):
+def parse_banner(data):
+    if not check_valid_section(data, 'banner') : return []
+    return wrap_parse_simple_values(data['banner'], 'version', 'Scanned with WPScan version: ')
+
+def parse_target(data):
     messages=[]
     messages.append("Target URL: {}\nIP: {}\nEffective URL: {}".format(
         data['target_url'],
         data["target_ip"] if 'target_ip' in data else '?',
         data["effective_url"]))
-    
-    if "banner" in data:
-        messages.append("Scanned with WPScan version {}".format(data['banner']['version']))
+    return messages
 
-    if "last_db_update" in data:
-        messages.append("Last WPScan database update: {}".format(data['last_db_update']))
-
-    # Parse know vulnerabilities
-    # Parse vulnerability data and make more human readable.
-    # NOTE: You need an API token for the WPVulnDB vulnerability data.
-
+def parse_misc_infos(data):
+    messages=parse_target(data)
+    messages.extend(parse_banner(data))
     if check_valid_section(data, 'interesting_findings') :
         # Parse informations
         messages.extend(parse_findings(data["interesting_findings"]) )
-
-    if check_valid_section(data, 'users') :
-        users = data["users"]
-        for name in users:
-            # Parse users
-            messages.append( 'WordPress user found: %s'%name )
-    
+    messages.extend(wrap_parse_simple_values(data, 'users', 'WordPress user found: '))
     return (messages)
 
 def parse_interesting_entries(finding):
@@ -297,7 +282,7 @@ def parse_vulnerability_or_finding(finding):
 
     findingData+=parse_interesting_entries(finding)
 
-    refData=parse_reference(finding)
+    refData=parse_references(finding)
 
     # if "comfirmed_by" in finding:
     #     if len(finding["confirmed_by"]) > 0:
@@ -306,18 +291,23 @@ def parse_vulnerability_or_finding(finding):
 
     return ("%s %s" % (findingData, refData) )
 
-def parse_reference(finding):
+def parse_references(finding):
     refData = ""
     if not check_valid_section(finding, 'references'):
         return refData
     refData += "\nReferences:"
     for ref in finding["references"]:
-        if ref =='cve':
-            for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-        elif ref == 'wpvulndb': 
-            for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-        else:
-            refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+        refData+=parse_ref(finding, ref)
+    return refData
+
+def parse_ref(finding, ref):
+    refData=""
+    if ref =='cve':
+        for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
+    elif ref == 'wpvulndb': 
+        for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+    else:
+        refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
     return refData
 
 # Wrapper to parse findings can take list or dict type
