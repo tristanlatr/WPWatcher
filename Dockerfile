@@ -19,8 +19,8 @@ RUN deluser --remove-home wpwatcher >/dev/null 2>&1 || true
 # Init folder tree
 RUN mkdir /wpwatcher && mkdir /wpwatcher/.wpwatcher
 # Add only required scripts 
-ADD setup.py /wpwatcher
-ADD README.md /wpwatcher
+COPY setup.py /wpwatcher/
+COPY README.md /wpwatcher/
 COPY ./wpwatcher/* /wpwatcher/wpwatcher/
 WORKDIR /wpwatcher
 # Install WPWatcher

@@ -160,9 +160,9 @@ def parse_slugs_vulnerabilities(node):
     warnings, alerts=[],[]
     for slug in node:
         try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
-        except: pass
+        except KeyError: pass
         try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
-        except: pass
+        except KeyError: pass
     return ((warnings, alerts))
 
 def parse_section_alerts(section, node):
@@ -174,7 +174,7 @@ def parse_section_alerts(section, node):
         warnings.extend(parse_warning_theme_or_plugin(node))
     if any ([section==c for c in ['main_theme','version']]):
         try: alerts.extend(parse_findings(node['vulnerabilities']))
-        except: pass
+        except KeyError: pass
     if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
         warnings_alt, alerts_alt=parse_slugs_vulnerabilities(node)
         warnings.extend(warnings_alt)
