@@ -8,6 +8,7 @@ import io
 import re
 import smtplib
 import socket
+import traceback
 from datetime import datetime
 from email import encoders
 from email.mime.base import MIMEBase
@@ -23,7 +24,7 @@ DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
 class WPWatcherNotification():
     
     def __init__(self, conf):
-
+        # store specific mailser values
         self.from_email=conf['from_email']
         self.smtp_server=conf['smtp_server']
         self.smtp_ssl=conf['smtp_ssl']
@@ -31,9 +32,19 @@ class WPWatcherNotification():
         self.smtp_user=conf['smtp_user']
         self.smtp_pass=conf['smtp_pass']
 
-        # SMTP Connection
-        self.server = smtplib.SMTP(self.smtp_server)
-        self.server.ehlo()
+        # and copy config as is
+        self.conf=conf
+        # mail server, will be created when sending mails
+        self.server=None
+
+    def notify(self, wp_site, wp_report, last_wp_report):
+        # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
+        log.debug("\n%s\n"%(WPWatcherNotification.build_message(wp_report, 
+                warnings=self.conf['send_warnings'] or self.conf['send_infos'], # switches to include or not warnings and infos
+                infos=self.conf['send_infos'])))
+        if self.should_notify(wp_report, last_wp_report):
+            self._notify(wp_site, wp_report, last_wp_report)
+        else: return False
 
     @staticmethod
     def build_message(wp_report, warnings=True, infos=False):
@@ -51,23 +62,13 @@ class WPWatcherNotification():
         message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
         message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
         message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
-        
-        # if wp_report['errors']:
-        #     message += "\n\n\tErrors\n\t------\n\n"+"\n\n".join(wp_report['errors'])
-        # if wp_report['alerts']:
-        #     message += "\n\n\tAlerts\n\t------\n\n"+"\n\n".join(wp_report['alerts'])
-        # if wp_report['fixed']:
-        #     message += "\n\n\tFixed\n\t-----\n\n"+"\n\n".join(wp_report['fixed'])
-        # if wp_report['warnings'] and warnings :
-        #     message += "\n\n\tWarnings\n\t--------\n\n"+"\n\n".join(wp_report['warnings'])
-        # if wp_report['infos'] and infos :
-        #     message += "\n\n\tInformations\n\t------------\n\n"+"\n\n".join(wp_report['infos'])
-        
+                
         message += "\n\n--"
         message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
         message += "\nServer: %s - Version: %s\n"%(socket.gethostname(),VERSION)
         return message
-        
+
+    
     @staticmethod
     def format_issues(title, issues):
         message=""
@@ -115,6 +116,7 @@ class WPWatcherNotification():
             message.attach(part)
 
         # Connecting and sending
+        self.server = smtplib.SMTP(self.smtp_server)
         # SSL
         if self.smtp_ssl: self.server.starttls()
         # SMTP Auth
@@ -127,3 +129,57 @@ class WPWatcherNotification():
         # Discard fixed items because infos have been sent
         wp_report['fixed']=[]
         log.info("Email sent: %s to %s" % (message['Subject'], email_to))
+
+    def should_notify(self, wp_report, last_wp_report):
+        should=True
+        # Return if email seding is disable
+        if not self.conf['send_email_report']:
+            # No report notice
+            log.info("Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_report['site']))
+            should=False
+        
+        # Return if error email and disabled
+        if wp_report['status']=="ERROR" and not self.conf['send_errors']:
+            log.info("Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_report['site']))
+            should=False
+        
+        # Regular mail filter with --warnings or --infos
+        if not ( ( self.conf['send_infos'] ) or 
+            ( wp_report['status']=="WARNING" and self.conf['send_warnings'] ) or 
+            ( wp_report['status']=='ALERT' or wp_report['status']=='FIXED' ) ) :
+            # No report notice
+            log.info("Not sending WPWatcher %s email report for site %s because there's nothing wrong or send_warnings=No. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_report['site']))
+            should=False
+
+        # resend_emails_after config implementation
+        if not ( not wp_report['last_email'] or ( wp_report['last_email'] and ( 
+            datetime.strptime(wp_report['datetime'],DATE_FORMAT) - datetime.strptime(wp_report['last_email'],DATE_FORMAT) > self.conf['resend_emails_after'] 
+            or last_wp_report['status']!=wp_report['status'] ) ) ):
+            # No report notice
+            log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_report['site'], self.conf['resend_emails_after']))
+            should=False
+        
+        return should
+
+    def _notify(self, wp_site, wp_report, last_wp_report):
+
+        # Send the report to
+        if len(self.conf['email_errors_to'])>0 and wp_report['status']=='ERROR':
+            to = ','.join( self.conf['email_errors_to'] )
+        else: 
+            to = ','.join( wp_site['email_to'] + self.conf['email_to'] )
+
+        try:
+            self.send_report(wp_report, to, send_infos=self.conf['send_infos'], 
+                send_warnings=self.conf['send_warnings'], 
+                send_errors=self.conf['send_errors'], 
+                attach_wpscan_output=self.conf['attach_wpscan_output'])
+            return True
+                
+        # Handle send mail error
+        except smtplib.SMTPException:
+            log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
+            wp_report['errors'].append("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
+            raise RuntimeError("Unable to send mail report")
+            # Fail fast
+            #  if not self.check_fail_fast(): return False 

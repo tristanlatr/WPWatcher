@@ -121,17 +121,17 @@ def parse_cli(wpscan_output):
 
         # Message separator just a white line.
         # Only if the message if not empty. 
+        if not ( line=="" and current_message != "" ) : break
+
         # End of the message
-        
-        elif line=="" and current_message != "":
-            # Append messages to list of infos, warns and alerts
-            if alert_on: alerts.append(current_message)
-            elif warning_on: warnings.append(current_message)
-            else: messages.append(current_message)
-            message_lines=[]
-            # Reset Toogle Warning/Alert
-            alert_on = False  
-            warning_on = False
+        # Append messages to list of infos, warns and alerts
+        if alert_on: alerts.append(current_message)
+        elif warning_on: warnings.append(current_message)
+        else: messages.append(current_message)
+        message_lines=[]
+        # Reset Toogle Warning/Alert
+        alert_on = False  
+        warning_on = False
 
     return (( messages, warnings, alerts ))
 
@@ -153,6 +153,15 @@ def check_valid_section(data, section):
     if section in data and ( data[section] is not None or len(data[section])>0 ) : return True
     else: return False
 
+def parse_slugs_vulnerabilities(node):
+    warnings, alerts=[],[]
+    for slug in node:
+            try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
+            except: pass
+            try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
+            except: pass
+    return ((warnings, alerts))
+
 def parse_section_alerts(section, node):
     warnings, alerts=[],[]
     if section=='version':
@@ -163,12 +172,8 @@ def parse_section_alerts(section, node):
         try: alerts.extend(parse_findings(node['vulnerabilities']))
         except: pass
     if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
-        for slug in node:
-            try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
-            except: pass
-            try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
-            except: pass
-    return ((warnings, alerts))
+        warnings_alt, alerts_alt=parse_slugs_vulnerabilities(node)
+    return ((warnings.extend(warnings_alt), alerts.extend(alerts_alt)))
 
 def parse_vulnerabilities_and_outdated(data):
     warnings, alerts=[],[]
@@ -397,38 +402,3 @@ def is_false_positive(string, false_positives):
         if fp_string in string:
             return True
     return False
-
-# def parse_args():
-#     parser = argparse.ArgumentParser(description='WPscan output parser')
-#     parser.add_argument('--input', '-i', metavar='path', help="WPScan Json or CLI output")
-#     args = parser.parse_args()
-#     return args
-
-# if __name__ == '__main__':
-#     # Init scan messages
-#     ( messages, warnings, alerts ) = ([],[],[])
-#     args=parse_args()
-#     if args.input:
-#         # Parse file
-#         with open(args.input) as wpout:
-#             (infos, warnings, alerts)=parse_results( wpout.read() , [] )
-#     else:
-#         # Parse stdin
-#         lines = sys.stdin.readlines()
-#         for i in range(len(lines)):
-#             lines[i] = lines[i].replace('\n','')
-#         (infos, warnings, alerts)=parse_results( '\n'.join(lines) , [] )
-        
-#     # Building message
-#     if (warnings or alerts) :message = "Issues have been detected by WPScan.\n"
-#     else: message = "WPScan report\n"
-#     if alerts:
-#         message += "\n\n\tAlerts\n\n"
-#         message += "\n\n".join(alerts)
-#     if warnings:
-#         message += "\n\n\tWarnings\n\n"
-#         message += "\n\n".join(warnings)
-#     if infos:
-#         message += "\n\n\tInformations\n\n"
-#         message += "\n\n".join(infos)
-#     print(message)
