@@ -265,34 +265,22 @@ def parse_vulnerability_or_finding(finding):
     # For interesting findings
     # if "type" in finding:
     #     title += "[%s]" % finding["type"]
-    if "to_s" in finding:
-        title += "%s" % finding["to_s"]
-
+    if "to_s" in finding: title += "%s" % finding["to_s"]
     # For vulnerabilities
-    if "title" in finding:
-        title += "%s" % finding["title"]
-
+    if "title" in finding: title += "%s" % finding["title"]
     findingData += "%s" % title
-
-    if "fixed_in" in finding:
-        findingData += "\nFixed In: %s" % finding["fixed_in"]
-
-    if "url" in finding:
-        findingData += "\nURL: %s" % finding["url"]
-
-    # if "found_by" in finding:
-    #     findingData += "\nFound by: %s" % finding["found_by"]
-
+    if "fixed_in" in finding: findingData += "\nFixed In: %s" % finding["fixed_in"]
+    if "url" in finding: findingData += "\nURL: %s" % finding["url"]
     findingData+=parse_confidence(finding)
-
     findingData+=parse_interesting_entries(finding)
-
     refData=parse_references(finding)
 
     # if "comfirmed_by" in finding:
     #     if len(finding["confirmed_by"]) > 0:
     #         findingData += "\nConfirmed By:\n"
-    #         findingData+="\n- ".join(finding["confirmed_by"])c
+    #         findingData+="\n- ".join(finding["confirmed_by"])
+    # if "found_by" in finding:
+    #     findingData += "\nFound by: %s" % finding["found_by"]
 
     return ("%s %s" % (findingData, refData) )
 
@@ -324,8 +312,7 @@ def parse_findings(findings):
     elif type(findings) is dict:
         for finding in findings:
             summary.append(parse_vulnerability_or_finding(findings[finding]))
-    else:
-        raise TypeError("Must be a list or dict, method parse_findings() for data: {}".format(findings)) 
+    else: raise TypeError("Must be a list or dict, method parse_findings() for data: {}".format(findings)) 
     return(summary)
 
 # def parse_version_info(version):
@@ -345,22 +332,18 @@ def parse_warning_wordpress(finding):
     if not finding: return summary
     warn=False
     findingData=""
-
     if 'status' in finding and finding['status']=="insecure":
         findingData+="Insecure WordPress version %s identified (released on %s)"%(finding['number'], finding['release_date'])
         warn=True
-
-    # if "found_by" in finding:
-    #         findingData += "\nFound by: %s" % finding["found_by"]
-
     findingData+=parse_confidence(finding)
+    if warn: summary.append(findingData)
+    return(summary)
 
     # if "interesting_entries" in finding:
     #         if len(finding["interesting_entries"]) > 0:
     #             findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
-
-    if warn: summary.append(findingData)
-    return(summary)
+    # if "found_by" in finding:
+    #         findingData += "\nFound by: %s" % finding["found_by"]
 
 def parse_warning_theme_or_plugin(finding):
     summary=[]
@@ -368,8 +351,7 @@ def parse_warning_theme_or_plugin(finding):
     warn=False
     findingData=""
 
-    if 'slug' in finding:
-        findingData+="%s" % finding['slug']
+    if 'slug' in finding: findingData+="%s" % finding['slug']
 
     if 'outdated' in finding and finding['outdated']==True:
         findingData+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
@@ -383,8 +365,7 @@ def parse_warning_theme_or_plugin(finding):
         findingData+="\nAn error log file has been found: %s" % (finding["error_log_url"])
         warn=True
 
-    if "location" in finding:
-        findingData += "\nLocation: %s" % finding["location"]
+    if "location" in finding: findingData += "\nLocation: %s" % finding["location"]
 
     # if "found_by" in finding:
     #     findingData += "\nFound by: %s" % finding["found_by"]
