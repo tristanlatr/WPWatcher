@@ -16,7 +16,7 @@ import random
 import linecache
 import concurrent.futures
 
-from wpwatcher.scan import WPScanWrapper
+from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 
@@ -24,7 +24,7 @@ from wpwatcher.config import WPWatcherConfig
 SOURCE="https://gist.githubusercontent.com/ahmadawais/e6cd20acdc4f7ad304a3e90ad44a663c/raw/ca95a83bc6e45f018189f8f73bc0b73d310a31f7/wordpress-sites.csv"
 
 # How many radom potential WordPress site to scan 
-HOW_MANY=5
+HOW_MANY=15
 
 class WPWatcherScanTests(unittest.TestCase):
 

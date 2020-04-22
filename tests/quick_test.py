@@ -43,7 +43,7 @@ import concurrent.futures
 from datetime import datetime, timedelta
 import unittest
 import copy
-from wpwatcher.scan import WPScanWrapper
+from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
@@ -202,7 +202,7 @@ class WPWatcherTests(unittest.TestCase):
                 "fixed": [],
                 "wpscan_output":"This is real%s"%(s)
             }
-            f=wpwatcher.write_wpscan_output(report)
+            f=wpwatcher.scanner.write_wpscan_output(report)
             f1=os.path.join(RESULTS_FOLDER, 'warning/', get_valid_filename('WPScan_output_%s_%s.txt' % (s['url'], "2020-04-08T16-05-16")))
             self.assertEqual(f, f1, "Inconsistent WPScan output filenames")
             self.assertTrue(os.path.isfile(f1),"WPscan output file doesn't exist")
@@ -299,7 +299,7 @@ class WPWatcherTests(unittest.TestCase):
                     "wpscan_output":""
                 }
             
-            wpwatcher.update_report(new,old)
+            wpwatcher.scanner.update_report(new,old)
             print(new)
             print(expected)
             self.assertEqual(new, expected, "There is an issue with fixed issues feature: the expected report do not match the report returned by update_report()")

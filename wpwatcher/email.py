@@ -17,6 +17,9 @@ from email.mime.text import MIMEText
 from wpwatcher import log, VERSION
 from wpwatcher.utils import get_valid_filename
 
+# Date format used everywhere
+DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
+
 class WPWatcherNotification():
     
     def __init__(self, smtp_server, from_email, smtp_ssl=False, smtp_auth=False, smtp_user=None, smtp_pass=None):
@@ -118,7 +121,7 @@ class WPWatcherNotification():
             s.sendmail(self.from_email, email_to, message.as_string())
             s.quit()
             # Store report time
-            wp_report['last_email']=datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
+            wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
             # Discard fixed items because infos have been sent
             wp_report['fixed']=[]
             log.info("Email sent: %s to %s" % (message['Subject'], email_to))
