@@ -140,6 +140,24 @@ def parse_cli(wpscan_output):
 
     return (( messages, warnings, alerts ))
 
+######### JSON PARSING FROM HERE #########
+
+def parse_json(data):
+    infos, warnings, alerts=[],[],[]
+    # Do a sanity check to confirm the data is ok
+    if data and 'target_url' in data and data['target_url']:
+        warnings, alerts=parse_vulnerabilities_and_outdated(data)
+        infos.extend(parse_misc_infos(data))
+        warnings.extend(parse_misc_warnings(data))
+        alerts.extend(parse_misc_alerts(data))
+        return (( infos, warnings, alerts ))
+    else: 
+        raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
+
+def check_valid_section(data, section):
+    if section in data and ( data[section] is not None or len(data[section])>0 ) : return True
+    else: return False
+
 def parse_section_alerts(section, node):
     warnings, alerts=[],[]
     if section=='version':
@@ -165,45 +183,44 @@ def parse_vulnerabilities_and_outdated(data):
         warnings.extend(warnings_sec)
     return ((warnings, alerts))
 
-def parse_json(data):
-    infos, warnings, alerts=[],[],[]
-    # Do a sanity check to confirm the data is ok
-    if data and 'target_url' in data and data['target_url']:
-        warnings, alerts=parse_vulnerabilities_and_outdated(data)
-        infos.extend(parse_misc_infos(data))
-        warnings.extend(parse_misc_warnings(data))
-        alerts.extend(parse_misc_alerts(data))
-        return (( infos, warnings, alerts ))
-    else: 
-        raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
 
-def parse_misc_alerts(data):
-
+def parse_config_backups(data):
     alerts=[]
-    if "config_backups" in data and ( data["config_backups"] is not None or len(data["config_backups"])>0 ) :
+    if check_valid_section(data, 'config_backups') :
         for url in data['config_backups']:
             alerts.append("WordPress Configuration Backup Found\nURL: %s"%str(url) )
-
-    if "db_exports" in data and ( data['db_exports'] is not None and len(data['db_exports'])>0 ) :
+    return alerts
+def parse_db_exports(data):
+    alerts=[]
+    if check_valid_section(data, 'db_exports') :
         alerts.extend(parse_vulnerability_or_finding(data['db_exports'] ))
-
-    if "password_attack" in data and ( data['password_attack'] is not None and len(data['password_attack'])>0 ):
+    return alerts
+def parse_password_attack(data):
+    alerts=[]
+    if check_valid_section(data, 'password_attack') :
         for passwd in data['password_attack']:
             alerts.append("WordPres Weak User Password Found:\n%s"%str(passwd) )
-
-    if "not_fully_configured" in data and data['not_fully_configured']!=None :
+    return alerts
+def parse_not_fully_configured(data):
+    alerts=[]
+    if check_valid_section(data, 'not_fully_configured') :
         alerts.append(data['not_fully_configured'])
     return alerts
+def parse_misc_alerts(data):
+    return parse_config_backups(data)+parse_db_exports(data)+parse_password_attack(data)+parse_not_fully_configured(data)
 
-def parse_misc_warnings(data):
-
+def parse_medias(data):
     warnings=[]
-    if "medias" in data and ( data['medias'] is not None and len(data['medias'])>0 ):
+    if check_valid_section(data, 'medias') :
             warnings.extend(parse_vulnerability_or_finding(data['medias']))
-
-    if "vuln_api" in data and ( "error" in data['vuln_api'] ) :
+    return warnings
+def parse_vuln_api(data):
+    warnings=[]
+    if check_valid_section(data, 'vuln_api') and "error" in data['vuln_api'] :
             warnings.append(data['vuln_api']["error"])
     return warnings
+def parse_misc_warnings(data):
+    return parse_medias(data)+parse_vuln_api(data)
 
 def parse_misc_infos(data):
     messages=[]
@@ -222,11 +239,11 @@ def parse_misc_infos(data):
     # Parse vulnerability data and make more human readable.
     # NOTE: You need an API token for the WPVulnDB vulnerability data.
 
-    if "interesting_findings" in data and data["interesting_findings"] is not None and len(data["interesting_findings"])>0:
+    if check_valid_section(data, 'interesting_findings') :
         # Parse informations
         messages.extend(parse_findings(data["interesting_findings"]) )
 
-    if "users" in data and ( data["users"] is not None and len(data["users"])>0 ) :
+    if check_valid_section(data, 'users') :
         users = data["users"]
         for name in users:
             # Parse users
@@ -236,7 +253,7 @@ def parse_misc_infos(data):
 
 def parse_interesting_entries(finding):
     fdata=""
-    if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
+    if check_valid_section(finding, 'interesting_entries') :
         fdata += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
     return fdata
 
@@ -291,7 +308,7 @@ def parse_vulnerability_or_finding(finding):
 
 def parse_reference(finding):
     refData = ""
-    if not ( "references" in finding and len(finding["references"]) > 0 ):
+    if not check_valid_section(finding, 'references'):
         return refData
     refData += "\nReferences:"
     for ref in finding["references"]:
@@ -391,37 +408,37 @@ def is_false_positive(string, false_positives):
             return True
     return False
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='WPscan output parser')
-    parser.add_argument('--input', '-i', metavar='path', help="WPScan Json or CLI output")
-    args = parser.parse_args()
-    return args
+# def parse_args():
+#     parser = argparse.ArgumentParser(description='WPscan output parser')
+#     parser.add_argument('--input', '-i', metavar='path', help="WPScan Json or CLI output")
+#     args = parser.parse_args()
+#     return args
 
-if __name__ == '__main__':
-    # Init scan messages
-    ( messages, warnings, alerts ) = ([],[],[])
-    args=parse_args()
-    if args.input:
-        # Parse file
-        with open(args.input) as wpout:
-            (infos, warnings, alerts)=parse_results( wpout.read() , [] )
-    else:
-        # Parse stdin
-        lines = sys.stdin.readlines()
-        for i in range(len(lines)):
-            lines[i] = lines[i].replace('\n','')
-        (infos, warnings, alerts)=parse_results( '\n'.join(lines) , [] )
+# if __name__ == '__main__':
+#     # Init scan messages
+#     ( messages, warnings, alerts ) = ([],[],[])
+#     args=parse_args()
+#     if args.input:
+#         # Parse file
+#         with open(args.input) as wpout:
+#             (infos, warnings, alerts)=parse_results( wpout.read() , [] )
+#     else:
+#         # Parse stdin
+#         lines = sys.stdin.readlines()
+#         for i in range(len(lines)):
+#             lines[i] = lines[i].replace('\n','')
+#         (infos, warnings, alerts)=parse_results( '\n'.join(lines) , [] )
         
-    # Building message
-    if (warnings or alerts) :message = "Issues have been detected by WPScan.\n"
-    else: message = "WPScan report\n"
-    if alerts:
-        message += "\n\n\tAlerts\n\n"
-        message += "\n\n".join(alerts)
-    if warnings:
-        message += "\n\n\tWarnings\n\n"
-        message += "\n\n".join(warnings)
-    if infos:
-        message += "\n\n\tInformations\n\n"
-        message += "\n\n".join(infos)
-    print(message)
+#     # Building message
+#     if (warnings or alerts) :message = "Issues have been detected by WPScan.\n"
+#     else: message = "WPScan report\n"
+#     if alerts:
+#         message += "\n\n\tAlerts\n\n"
+#         message += "\n\n".join(alerts)
+#     if warnings:
+#         message += "\n\n\tWarnings\n\n"
+#         message += "\n\n".join(warnings)
+#     if infos:
+#         message += "\n\n\tInformations\n\n"
+#         message += "\n\n".join(infos)
+#     print(message)
