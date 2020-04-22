@@ -24,6 +24,7 @@ API_WAIT_SLEEP=timedelta(hours=24)
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
 
 class WPWatcherScanner():
+    
     def __init__(self, conf, wpscan):
         self.conf=conf
         self.wpscan=wpscan
@@ -66,9 +67,10 @@ class WPWatcherScanner():
             if p_url[0]=="": 
                 wp_site['url']='http://'+wp_site['url']
         # Read the wp_site dict and assing default values if needed
-        if 'email_to' not in wp_site or wp_site['email_to'] is None: wp_site['email_to']=[]
-        if 'false_positive_strings' not in wp_site or wp_site['false_positive_strings'] is None: wp_site['false_positive_strings']=[]
-        if 'wpscan_args' not in wp_site or wp_site['wpscan_args'] is None: wp_site['wpscan_args']=[]
+        optionals=['email_to','false_positive_strings','wpscan_args']
+        for op in optionals:
+            if op not in wp_site or wp_site[op] is None: wp_site[op]=[]
+       
         return wp_site
 
     def handle_wpscan_err(self, wp_site, wp_report):
@@ -97,25 +99,25 @@ class WPWatcherScanner():
         else: return ((wp_report, False))
 
     def should_notify(self, wp_report, last_wp_report):
-
+        should=True
         # Return if email seding is disable
         if not self.conf['send_email_report']:
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_report['site']))
-            return False
+            should=False
         
         # Return if error email and disabled
         if wp_report['status']=="ERROR" and not self.conf['send_errors']:
             log.info("Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_report['site']))
-            return False
+            should=False
         
-        # Regular meail filter with --warnings or --infos
+        # Regular mail filter with --warnings or --infos
         if not ( ( self.conf['send_infos'] ) or 
             ( wp_report['status']=="WARNING" and self.conf['send_warnings'] ) or 
             ( wp_report['status']=='ALERT' or wp_report['status']=='FIXED' ) ) :
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s because there's nothing wrong or send_warnings=No. If you want to receive more emails, send_warnings=Yes or set send_infos=Yes in the config or use --infos."%(wp_report['status'],wp_report['site']))
-            return False
+            should=False
 
         # resend_emails_after config implementation
         if not ( not wp_report['last_email'] or ( wp_report['last_email'] and ( 
@@ -123,9 +125,9 @@ class WPWatcherScanner():
             or last_wp_report['status']!=wp_report['status'] ) ) ):
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_report['site'], self.conf['resend_emails_after']))
-            return False
+            should=False
         
-        return True
+        return should
 
     def notify(self, wp_site, wp_report, last_wp_report):
 
@@ -153,10 +155,8 @@ class WPWatcherScanner():
         except smtplib.SMTPException:
             log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
             wp_report['errors'].append("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
-            if self.conf['fail_fast'] and not self.interrupting: 
-                log.error("Failure")
-                raise InterruptedError
-            return False
+            # Fail fast
+            if not self.check_fail_fast(): return False 
     
     def write_wpscan_output(self, wp_report):
         # Subfolder
@@ -169,6 +169,13 @@ class WPWatcherScanner():
             with open(wpscan_results_file, 'w') as wpout:
                 wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output'])))
         return(wpscan_results_file)
+
+    def check_fail_fast(self):
+        # Fail fast
+        if self.conf['fail_fast'] and not self.interrupting: 
+            log.error("Failure")
+            raise InterruptedError
+        return None # Interrupt will generate other errors
 
     def wpscan_site(self, wp_site, wp_report):
         # WPScan arguments
@@ -186,29 +193,14 @@ class WPWatcherScanner():
             return wp_report
 
         # Handle scan errors
-
-        # Quick return if interrupting
-        if self.interrupting: return None
-        
-        # Quick return if user cacelled scans
-        if wpscan_exit_code in [2]: return None
-
-        # Fail fast
-        if self.conf['fail_fast']:
-            if not self.interrupting: 
-                log.error("Failure")
-                raise InterruptedError
-            else: return None # Interrupt will generate other errors
+        # Quick return if interrupting and Quick return if user cacelled scans and Other errors codes : -9, -2, 127, etc: Just return None
+        if self.interrupting or wpscan_exit_code in [2] or wpscan_exit_code not in [1,3,4] : return None
 
         # If WPScan error, add the error to the reports
-        # This types if errors will be written into the Json database file
-        if wpscan_exit_code in [1,3,4]:
-            err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
-            wp_report['errors'].append(err_str)
-            raise RuntimeError
-
-        # Other errors codes : -9, -2, 127, etc: Just return None
-        else: return None 
+        # This types if errors will be written into the Json database file exit codes 1,3,4
+        err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
+        wp_report['errors'].append(err_str)
+        raise RuntimeError
 
     def skip_this_site(self, wp_report, last_wp_report):
         # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
@@ -221,14 +213,10 @@ class WPWatcherScanner():
 
     def log_report_results(self, wp_report):
          # Print WPScan findings ------------------------------------------------------
-        for info in wp_report['infos']:
-            log.info(oneline("** WPScan INFO %s ** %s" % (wp_report['site'], info )))
-        for fix in wp_report['fixed']:
-            log.info(oneline("** FIXED %s ** %s" % (wp_report['site'], fix )))
-        for warning in wp_report['warnings']:
-            log.warning(oneline("** WPScan WARNING %s ** %s" % (wp_report['site'], warning )))
-        for alert in wp_report['alerts']:
-            log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_report['site'], alert )))
+        for info in wp_report['infos']: log.info(oneline("** WPScan INFO %s ** %s" % (wp_report['site'], info )))
+        for fix in wp_report['fixed']: log.info(oneline("** FIXED %s ** %s" % (wp_report['site'], fix )))
+        for warning in wp_report['warnings']: log.warning(oneline("** WPScan WARNING %s ** %s" % (wp_report['site'], warning )))
+        for alert in wp_report['alerts']: log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_report['site'], alert )))
 
     def fill_report_status(self, wp_report):
         # Report status ------------------------------------------------
@@ -265,7 +253,10 @@ class WPWatcherScanner():
              # Try to handle error and return
             wp_report, handled = self.handle_wpscan_err(wp_site, wp_report)
             if handled: return wp_report
-            else: log.error("Could not scan site %s"%wp_site['url'])
+            else: 
+                log.error("Could not scan site %s"%wp_site['url'])
+                # Fail fast
+                self.check_fail_fast()
 
         # Abnormal failure exit codes not in 0-5 and not while tearing down program
         if not wp_report: return None

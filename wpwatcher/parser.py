@@ -62,15 +62,16 @@ def parse_results(wpscan_output, false_positives=[]):
     else: 
         (messages, warnings, alerts)=parse_cli(wpscan_output)
     #Process false positives
-    for alert in alerts:
+    for alert in alerts+warnings:
         if is_false_positive(alert, false_positives):
-            alerts.remove(alert)
+            try: alerts.remove(alert)
+            except ValueError: warnings.remove(alert)
             messages.append("[False positive]\n"+alert)
 
-    for warn in warnings:
-        if is_false_positive(warn, false_positives):
-            warnings.remove(warn)
-            messages.append("[False positive]\n"+warn)
+    # for warn in warnings:
+    #     if is_false_positive(warn, false_positives):
+    #         warnings.remove(warn)
+    #         messages.append("[False positive]\n"+warn)
     
     return (( messages, warnings, alerts ))   
 
@@ -221,10 +222,9 @@ def parse_misc_infos(data):
     # Parse vulnerability data and make more human readable.
     # NOTE: You need an API token for the WPVulnDB vulnerability data.
 
-    if "interesting_findings" in data:
-        if data["interesting_findings"] is not None and len(data["interesting_findings"])>0:
-            # Parse informations
-            messages.extend(parse_findings(data["interesting_findings"]) )
+    if "interesting_findings" in data and data["interesting_findings"] is not None and len(data["interesting_findings"])>0:
+        # Parse informations
+        messages.extend(parse_findings(data["interesting_findings"]) )
 
     if "users" in data and ( data["users"] is not None and len(data["users"])>0 ) :
         users = data["users"]
@@ -234,54 +234,17 @@ def parse_misc_infos(data):
     
     return (messages)
 
-    # Older code not used anymore: refactored into parse_vulnerabilities_and_outdated()
+def parse_interesting_entries(finding):
+    fdata=""
+    if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
+        fdata += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    return fdata
 
-    # if "main_theme" in data:
-    #     if data["main_theme"]==None or len(data["main_theme"])==0:
-    #         messages.append("WPScan did not find any main theme information")
-    #     else:
-    #         # Parse theme warnings
-    #         warnings.extend(parse_warning_theme_or_plugin('main theme',data['main_theme']) )
-
-    #         if "vulnerabilities" in data["main_theme"]:
-    #             # Parse Vulnerable themes
-    #             alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["vulnerabilities"]) )
-
-    #         if "version" in data["main_theme"] and data["main_theme"]["version"] != None and "vulnerabilities" in data["main_theme"]["version"] :
-    #             # Parse vulnerable theme version
-    #             alerts.extend(parse_findings('Vulnerable theme',data["main_theme"]["version"]["vulnerabilities"]) )
-    
-    # if "version" in data:
-    #     if data["version"]==None or len(data["version"])==0:
-    #         messages.append("WPScan did not find any WordPress version")
-    #     else:
-    #         # Parse WordPress version
-    #         messages.append(parse_version_info(data['version']))
-    #         # Parse outdated WordPress version
-    #         warnings.extend(parse_warning_wordpress(data['version']) )
-    #         # Parse vulnerable WordPress version
-    #         alerts.extend(parse_findings('Vulnerable wordpress',data["version"]["vulnerabilities"]) )
-    
-    # if "themes" in data:
-    #     if data["themes"]==None or len(data["themes"])==0:
-    #         messages.append("WPScan did not find any theme information")
-    #     else:
-    #         for theme in data["themes"]:
-    #             # Parse secondary theme warnings
-    #             warnings.extend(parse_warning_theme_or_plugin('theme',theme) )
-    #             # Parse secondary Vulnerable themes
-    #             alerts.extend(parse_findings('Vulnerable theme', data["themes"][theme]["vulnerabilities"]) )
-    
-    # if "plugins" in data:
-    #     if data["plugins"]==None or len(data["plugins"])==0:
-    #         messages.append("WPScan did not find any WordPress plugins")
-    #     else:
-    #         plugins = data["plugins"]
-    #         for plugin in plugins:
-    #             # Parse vulnerable plugins
-    #             alerts.extend(parse_findings('Vulnerable pulgin',plugins[plugin]["vulnerabilities"]) )
-    #             # Parse outdated plugins
-    #             warnings.extend(parse_warning_theme_or_plugin('plugin',plugins[plugin]) )
+def parse_confidence(finding):
+    fdata=""
+    if "confidence" in finding:
+            fdata += "\nConfidence: %s" % finding["confidence"]
+    return fdata
 
 def parse_vulnerability_or_finding(finding):
     # Finding can be a vulnerability or other
@@ -290,66 +253,55 @@ def parse_vulnerability_or_finding(finding):
     title=""
     # title = "%s:"%(finding_type) if finding_type else ""
 
-    if type(finding) is dict:
-        # For interesting findings
-        # if "type" in finding:
-        #     title += "[%s]" % finding["type"]
-        if "to_s" in finding:
-            title += "%s" % finding["to_s"]
-        # For vulnerabilities
-        if "title" in finding:
-            title += "%s" % finding["title"]
+    if type(finding) is not dict: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
 
-        findingData += "%s" % title
+    # For interesting findings
+    # if "type" in finding:
+    #     title += "[%s]" % finding["type"]
+    if "to_s" in finding:
+        title += "%s" % finding["to_s"]
 
-        if "fixed_in" in finding:
-            findingData += "\nFixed In: %s" % finding["fixed_in"]
+    # For vulnerabilities
+    if "title" in finding:
+        title += "%s" % finding["title"]
 
-        if "url" in finding:
-            findingData += "\nURL: %s" % finding["url"]
+    findingData += "%s" % title
 
-        # if "found_by" in finding:
-        #     findingData += "\nFound by: %s" % finding["found_by"]
+    if "fixed_in" in finding:
+        findingData += "\nFixed In: %s" % finding["fixed_in"]
 
-        if "confidence" in finding:
-            findingData += "\nConfidence: %s" % finding["confidence"]
+    if "url" in finding:
+        findingData += "\nURL: %s" % finding["url"]
 
-        if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
-            findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    # if "found_by" in finding:
+    #     findingData += "\nFound by: %s" % finding["found_by"]
 
-        refData=parse_reference(finding)
+    findingData+=parse_confidence(finding)
 
-        # if "comfirmed_by" in finding:
-        #     if len(finding["confirmed_by"]) > 0:
-        #         findingData += "\nConfirmed By:\n"
-        #         findingData+="\n- ".join(finding["confirmed_by"])
+    findingData+=parse_interesting_entries(finding)
 
-        # if "references" in finding and len(finding["references"]) > 0:
-        #     refData += "\nReferences:"
-        #     for ref in finding["references"]:
-        #         if ref =='cve':
-        #             for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-        #         elif ref == 'wpvulndb': 
-        #             for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-        #         else:
-        #             refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+    refData=parse_reference(finding)
 
-    else: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
+    # if "comfirmed_by" in finding:
+    #     if len(finding["confirmed_by"]) > 0:
+    #         findingData += "\nConfirmed By:\n"
+    #         findingData+="\n- ".join(finding["confirmed_by"])c
+
     return ("%s %s" % (findingData, refData) )
 
 def parse_reference(finding):
     refData = ""
-    if "references" in finding and len(finding["references"]) > 0:
-        refData += "\nReferences:"
-        for ref in finding["references"]:
-            if ref =='cve':
-                for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-            elif ref == 'wpvulndb': 
-                for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-            else:
-                refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
+    if not ( "references" in finding and len(finding["references"]) > 0 ):
+        return refData
+    refData += "\nReferences:"
+    for ref in finding["references"]:
+        if ref =='cve':
+            for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
+        elif ref == 'wpvulndb': 
+            for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+        else:
+            refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
     return refData
-
 
 # Wrapper to parse findings can take list or dict type
 def parse_findings(findings):
@@ -381,6 +333,7 @@ def parse_warning_wordpress(finding):
     if not finding: return summary
     warn=False
     findingData=""
+
     if 'status' in finding and finding['status']=="insecure":
         findingData+="Insecure WordPress version %s identified (released on %s)"%(finding['number'], finding['release_date'])
         warn=True
@@ -388,8 +341,7 @@ def parse_warning_wordpress(finding):
     # if "found_by" in finding:
     #         findingData += "\nFound by: %s" % finding["found_by"]
 
-    if "confidence" in finding:
-        findingData += "\nConfidence: %s" % finding["confidence"]
+    findingData+=parse_confidence(finding)
 
     # if "interesting_entries" in finding:
     #         if len(finding["interesting_entries"]) > 0:
@@ -425,11 +377,9 @@ def parse_warning_theme_or_plugin(finding):
     # if "found_by" in finding:
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
-    if "confidence" in finding:
-        findingData += "\nConfidence: %s" % finding["confidence"]
+    findingData+=parse_confidence(finding)
 
-    if "interesting_entries" in finding and len(finding["interesting_entries"]) > 0:
-        findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    findingData+=parse_interesting_entries(finding)
 
     if warn: summary.append(findingData)
     return(summary)

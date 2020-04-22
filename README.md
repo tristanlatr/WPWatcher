@@ -695,7 +695,7 @@ If you like the project and think you could help with making it better, there ar
 ## Running tests
 Requirements: pytest codecov pytest-cov
 ```
-pytest --cov=./ --cov-report=xml tests/quick.py
+pytest --cov=./ --cov-report=xml tests/quick_test.py
 ```
 
 ## Authors
