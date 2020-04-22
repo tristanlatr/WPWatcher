@@ -52,23 +52,18 @@ def parse_results(wpscan_output, false_positives=[]):
         data=json.loads(wpscan_output)
         is_json=True
     except: pass
-    if is_json:
-        (messages, warnings, alerts)=parse_json(data)
-    else: 
-        (messages, warnings, alerts)=parse_cli(wpscan_output)
+    if is_json: (messages, warnings, alerts)=parse_json(data)
+    else:  (messages, warnings, alerts)=parse_cli(wpscan_output)
+    return (ignore_false_positives( messages, warnings, alerts, false_positives))   
+
+def ignore_false_positives(messages, warnings, alerts, false_positives):
     #Process false positives
     for alert in alerts+warnings:
         if is_false_positive(alert, false_positives):
             try: alerts.remove(alert)
             except ValueError: warnings.remove(alert)
             messages.append("[False positive]\n"+alert)
-
-    # for warn in warnings:
-    #     if is_false_positive(warn, false_positives):
-    #         warnings.remove(warn)
-    #         messages.append("[False positive]\n"+warn)
-    
-    return (( messages, warnings, alerts ))   
+    return messages, warnings, alerts
 
 def parse_cli_toogle(line):
     warning_on, alert_on = False, False
@@ -93,6 +88,22 @@ def parse_cli_toogle(line):
             warning_on = True 
     return ((warning_on, alert_on))
 
+def parse_cli_line(line, message_lines):
+    warning_on, alert_on = False, False
+    # Empty content lines are ignored
+    # Parse the line and Toogle Warning/Alert
+    if line not in ["","|"] :   
+        # Toogle Warning/Alert if specific match in any line of the message
+            # Both method with color and no color apply supplementary proccessing 
+        warning_on_alt,alert_on_alt=parse_cli_toogle(line)
+        warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
+        # When line message has been read and parsed
+        # Remove colorization anyway after parsing
+        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+        # Append line to message. Handle the begin of the message case
+        message_lines.append(line) #+= line if message=="" else '\n'+line 
+    return ((warning_on, alert_on))
+
 def parse_cli(wpscan_output):
     if "[+]" not in wpscan_output: raise Exception("The file does not seem to be a WPScan CLI log.")
     # Init scan messages
@@ -106,18 +117,10 @@ def parse_cli(wpscan_output):
         # Parse all output lines and build infos, warnings and alerts
         line=line.strip()
         current_message='\n'.join(message_lines).strip()
-        # Empty content lines are ignored
-        # Parse the line and Toogle Warning/Alert
-        if line not in ["","|"] :   
-            # Toogle Warning/Alert if specific match in any line of the message
-             # Both method with color and no color apply supplementary proccessing 
-            warning_on_alt,alert_on_alt=parse_cli_toogle(line)
-            warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
-            # When line message has been read and parsed
-            # Remove colorization anyway after parsing
-            line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
-            # Append line to message. Handle the begin of the message case
-            message_lines.append(line) #+= line if message=="" else '\n'+line 
+        
+        # Parse line
+        warning_on_alt, alert_on_alt = parse_cli_line(line, message_lines)
+        warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
 
         # Message separator just a white line.
         # Only if the message if not empty. 
@@ -156,10 +159,10 @@ def check_valid_section(data, section):
 def parse_slugs_vulnerabilities(node):
     warnings, alerts=[],[]
     for slug in node:
-            try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
-            except: pass
-            try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
-            except: pass
+        try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
+        except: pass
+        try: warnings.extend(parse_warning_theme_or_plugin(node[slug]))
+        except: pass
     return ((warnings, alerts))
 
 def parse_section_alerts(section, node):
@@ -174,7 +177,9 @@ def parse_section_alerts(section, node):
         except: pass
     if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
         warnings_alt, alerts_alt=parse_slugs_vulnerabilities(node)
-    return ((warnings.extend(warnings_alt), alerts.extend(alerts_alt)))
+        warnings.extend(warnings_alt)
+        alerts.extend(alerts_alt)
+    return ((warnings, alerts))
 
 def parse_vulnerabilities_and_outdated(data):
     warnings, alerts=[],[]
@@ -345,38 +350,30 @@ def parse_warning_wordpress(finding):
     #             findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
     # if "found_by" in finding:
     #         findingData += "\nFound by: %s" % finding["found_by"]
+def parse_warning_theme_or_plugin_alerts(finding):
+    findingData=""
+    if 'outdated' in finding and finding['outdated']==True: findingData+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
+    if "directory_listing" in finding and finding['directory_listing']: findingData+="\nDirectory listing is enabled"
+    if "error_log_url" in finding and finding['error_log_url']: findingData+="\nAn error log file has been found: %s" % (finding["error_log_url"])
+    return findingData
 
 def parse_warning_theme_or_plugin(finding):
     summary=[]
     if not finding: return summary
-    warn=False
     findingData=""
-
     if 'slug' in finding: findingData+="%s" % finding['slug']
-
-    if 'outdated' in finding and finding['outdated']==True:
-        findingData+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
-        warn=True
-
-    if "directory_listing" in finding and finding['directory_listing']:
-        findingData+="\nDirectory listing is enabled"
-        warn=True
-
-    if "error_log_url" in finding and finding['error_log_url']:
-        findingData+="\nAn error log file has been found: %s" % (finding["error_log_url"])
-        warn=True
-
+    # Test if there is an issue
+    alerts=parse_warning_theme_or_plugin_alerts(finding)
+    if not alerts: return [] # Return if no issues
+    else: findingData+=alerts
     if "location" in finding: findingData += "\nLocation: %s" % finding["location"]
 
     # if "found_by" in finding:
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
     findingData+=parse_confidence(finding)
-
     findingData+=parse_interesting_entries(finding)
-
-    if warn: summary.append(findingData)
-    return(summary)
+    return([findingData])
 
 # False Positive Detection
 def is_false_positive(string, false_positives):

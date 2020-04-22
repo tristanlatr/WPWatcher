@@ -20,6 +20,7 @@ wp_report_lock = threading.Lock()
 class WPWatcherDataBase():
 
     def __init__(self, wp_reports="", daemon=False):
+        
         self.no_local_storage=wp_reports=='null'
         if not wp_reports : 
             wp_reports=self.find_wp_reports_file(create=True,daemon=daemon)

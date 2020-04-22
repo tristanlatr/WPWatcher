@@ -75,28 +75,34 @@ class WPWatcherScanner():
        
         return wp_site
 
+    def handle_wpscan_err_api_wait(self,wp_site, wp_report):
+        log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
+        self.wpscan.init_check_done=False # will re-trigger wpscan update next time wpscan() is called 
+        self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
+        if self.interrupting: return ((None, True))
+        return ((self.scan_site(wp_site), True))
+
+    def handle_wpscan_err_follow_redirect(self,wp_site, wp_report):
+        url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+            wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
+        if len(url)==1:
+            wp_site['url']=url[0].strip()
+            log.info("Following redirection to %s"%wp_site['url'])
+            return ((self.scan_site(wp_site), True))
+        else:
+            err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
+            log.error(err_str)
+            wp_report['errors'].append(err_str)
+            return ((wp_report, False))
+
     def handle_wpscan_err(self, wp_site, wp_report):
         # Handle API limit
         if "API limit has been reached" in str(wp_report["wpscan_output"]) and self.conf['api_limit_wait']: 
-            log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
-            self.wpscan.init_check_done=False # will re-trigger wpscan update next time wpscan() is called 
-            self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
-            if self.interrupting: return ((None, True))
-            return ((self.scan_site(wp_site), True))
+            return self.handle_wpscan_err_api_wait(wp_site, wp_report)
 
         # Handle Following redirection
         elif "The URL supplied redirects to" in str(wp_report["wpscan_output"]) and self.conf['follow_redirect']: 
-            url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
-                wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
-            if len(url)==1:
-                wp_site['url']=url[0].strip()
-                log.info("Following redirection to %s"%wp_site['url'])
-                return ((self.scan_site(wp_site), True))
-            else:
-                err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
-                log.error(err_str)
-                wp_report['errors'].append(err_str)
-                return ((wp_report, False))
+            return self.handle_wpscan_err_follow_redirect(wp_site, wp_report)
 
         else: return ((wp_report, False))
 
@@ -274,7 +280,7 @@ class WPWatcherScanner():
         except RuntimeError: 
             # Fail fast
             self.check_fail_fast()
-            
+
         # Save scanned site
         self.scanned_sites.append(wp_site['url'])
         # Discard wpscan_output from report
