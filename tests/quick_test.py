@@ -48,6 +48,7 @@ from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 from wpwatcher.parser import parse_results
+from wpwatcher.email import WPWatcherNotification
 import random
 import linecache
 
@@ -118,9 +119,9 @@ class WPWatcherTests(unittest.TestCase):
 
         # Compare with config and no config
         wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-        paths_found=wpwatcher.find_wp_reports_file()
+        paths_found=wpwatcher.wp_reports.find_wp_reports_file()
         wpwatcher2=WPWatcher(WPWatcherConfig(string=SPECIFIC_WP_REPORTS_FILE_CONFIG%(paths_found)).build_config()[0])
-        self.assertEqual(wpwatcher.wp_reports, wpwatcher2.wp_reports, "WP reports database are different even if files are the same")
+        self.assertEqual(wpwatcher.wp_reports._data, wpwatcher2.wp_reports._data, "WP reports database are different even if files are the same")
         
         # Test Reports database 
         reports = [
@@ -153,19 +154,19 @@ class WPWatcherTests(unittest.TestCase):
             }
         ]
         wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-        wpwatcher.update_and_write_wp_reports(reports)
+        wpwatcher.wp_reports.update_and_write_wp_reports(reports)
         # Test update 
         for r in reports:
-            self.assertIn(r, wpwatcher.wp_reports, "The report do not seem to have been saved into WPWatcher.wp_report list")
+            self.assertIn(r, wpwatcher.wp_reports._data, "The report do not seem to have been saved into WPWatcher.wp_report list")
         # Test write method
-        wrote_db=wpwatcher.build_wp_reports()
+        wrote_db=wpwatcher.wp_reports.build_wp_reports(wpwatcher.wp_reports.filepath)
         with open(wpwatcher.conf['wp_reports'],'r') as db:
             wrote_db_alt=json.load(db)
         for r in reports:
             self.assertIn(r, wrote_db, "The report do not seem to have been saved into db file")
             self.assertIn(r, wrote_db_alt, "The report do not seem to have been saved into db file")
-        self.assertEqual(wpwatcher.wp_reports, wrote_db_alt, "The database file wrote differ from in memory database")
-        self.assertEqual(wpwatcher.wp_reports, wrote_db, "The database file wrote differ from in memory database")
+        self.assertEqual(wpwatcher.wp_reports._data, wrote_db_alt, "The database file wrote differ from in memory database")
+        self.assertEqual(wpwatcher.wp_reports._data, wrote_db, "The database file wrote differ from in memory database")
 
     def test_init_wpwatcher(self):
         # Init deafult watcher
@@ -234,7 +235,8 @@ class WPWatcherTests(unittest.TestCase):
                 "fixed": ["This issue was fixed"],
                 "wpscan_output":"This is real%s"%(s)
             }
-            wpwatcher.send_report(wpwatcher.format_site(s), report)
+            notif=WPWatcherNotification(smtp_server='localhost:1025', from_email='test@mail.com')
+            notif.send_report(report, email_to='test')
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
             

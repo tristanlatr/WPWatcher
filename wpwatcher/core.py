@@ -106,8 +106,6 @@ class WPWatcher():
             string+=("\n{:<25}\t=\t{}".format(k,v))
         return(string)
     
-
-    
     @staticmethod
     def get_fixed_issues(wp_report, last_wp_report, issue_type='alerts'):
         issues=[]
