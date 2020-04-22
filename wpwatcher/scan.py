@@ -137,12 +137,7 @@ class WPWatcherScanner():
         else: 
             to = ','.join( wp_site['email_to'] + self.conf['email_to'] )
 
-        mail=WPWatcherNotification(smtp_server=self.conf['smtp_server'], 
-            from_email=self.conf['from_email'], 
-            smtp_ssl=self.conf['smtp_ssl'], 
-            smtp_auth=self.conf['smtp_auth'], 
-            smtp_user=self.conf['smtp_user'], 
-            smtp_pass=self.conf['smtp_pass'])
+        mail=WPWatcherNotification(self.conf)
 
         try:
             mail.send_report(wp_report, to, send_infos=self.conf['send_infos'], 

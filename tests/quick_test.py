@@ -235,7 +235,7 @@ class WPWatcherTests(unittest.TestCase):
                 "fixed": ["This issue was fixed"],
                 "wpscan_output":"This is real%s"%(s)
             }
-            notif=WPWatcherNotification(smtp_server='localhost:1025', from_email='test@mail.com')
+            notif=WPWatcherNotification(dict(smtp_server='localhost:1025', from_email='test@mail.com', smtp_ssl=False, smtp_auth=False, smtp_user=None, smtp_pass=None))
             notif.send_report(report, email_to='test')
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)

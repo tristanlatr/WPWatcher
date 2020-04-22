@@ -211,8 +211,8 @@ def parse_misc_alerts(data):
 
 def parse_misc_warnings(data):
     warnings=wrap_parse_finding(data, 'medias')
-    if check_valid_section(data, 'vuln_api') :
-            warnings.extend(wrap_parse_finding(data['vuln_api'], 'error'))
+    if check_valid_section(data, 'vuln_api') and 'error' in data['vuln_api']:
+            warnings.append(data['vuln_api']['error'])
     return warnings
 
 def parse_banner(data):
