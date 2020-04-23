@@ -1,9 +1,9 @@
 #! /usr/bin/env python3
 from setuptools import setup
-import pathlib
 import re
 import sys
 import subprocess
+if sys.version_info[0] < 3: raise Exception("Sorry, you must use Python 3, please install Python on your system")
 # Helper method that will parse wpwatcher.py to extract config setup values
 def parse_setup(key):
     part={}
@@ -12,12 +12,10 @@ def parse_setup(key):
             exec(line, part)
             break
     return(part[key])
-# The directory containing this file
-HERE = pathlib.Path(__file__).parent
 # Read and store wpwatcher.py file
-WPWATCHER = (HERE / "wpwatcher" / "__init__.py").read_text()
+WPWATCHER = open("./wpwatcher/__init__.py",'r').read()
 # The text of the README file
-README = (HERE / "README.md").read_text()
+README = open("./README.md",'r').read()
 
 setup(
     name                =   'wpwatcher',
