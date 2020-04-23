@@ -71,7 +71,19 @@ from_email=testing-wpwatcher@exemple.com
 email_to=["test@mail.com"]
 """%json.dumps(WP_SITES)
 
+
+
 class WPWatcherTests(unittest.TestCase):
+
+    def setUp(self):
+         # Launch SMPT debbug server
+        smtpd.DebuggingServer(('localhost',1025), None )
+        self.executor = concurrent.futures.ThreadPoolExecutor(1)
+        self.executor.submit(asyncore.loop)
+
+    def tearDown(self):
+        # Close mail server
+        asyncore.close_all()
 
     def test_config(self):
 
@@ -214,10 +226,7 @@ class WPWatcherTests(unittest.TestCase):
         shutil.rmtree(RESULTS_FOLDER)
 
     def test_send_report(self):
-        # Launch SMPT debbug server
-        smtpd.DebuggingServer(('localhost',1025), None )
-        executor = concurrent.futures.ThreadPoolExecutor(1)
-        executor.submit(asyncore.loop)
+       
         # Init WPWatcher
         wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         # Send mail
@@ -242,9 +251,6 @@ class WPWatcherTests(unittest.TestCase):
             notif.send_report(report, email_to='test')
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
-            
-        # Close mail server
-        asyncore.close_all()
 
     def test_update_report(self):
         # Init WPWatcher
@@ -314,18 +320,10 @@ class WPWatcherTests(unittest.TestCase):
 
     def test_notify(self):
         # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
-
-        # Launch SMPT debbug server
-        smtpd.DebuggingServer(('localhost',1025), None )
-        executor = concurrent.futures.ThreadPoolExecutor(1)
-        executor.submit(asyncore.loop)
         # Init WPWatcher
         CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
         wpwatcher = WPWatcher(WPWatcherConfig(string=CONFIG).build_config()[0])
         # wpwatcher.scanner.mail
-
-        # Close mail server
-        asyncore.close_all()
 
     def test_wpscan(self):
         # lazy_init
