@@ -16,7 +16,7 @@ from subprocess import CalledProcessError
 from wpwatcher import log
 from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
 
-UPDATE_DB_INTERVAL=parse_timedelta('12h')
+UPDATE_DB_INTERVAL=parse_timedelta('4h')
 init_lock=threading.Lock()
 
 # WPScan helper class -----------
@@ -35,7 +35,7 @@ class WPScanWrapper():
             log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
         version_info=json.loads(version_info)
-        if datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
+        if not version_info['last_db_update'] or datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
             self.update_wpscan()
         
         self.init_check_done=True
