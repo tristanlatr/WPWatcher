@@ -75,13 +75,15 @@ email_to=["test@mail.com"]
 
 class WPWatcherTests(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
          # Launch SMPT debbug server
         smtpd.DebuggingServer(('localhost',1025), None )
-        self.executor = concurrent.futures.ThreadPoolExecutor(1)
-        self.executor.submit(asyncore.loop)
+        executor = concurrent.futures.ThreadPoolExecutor(1)
+        executor.submit(asyncore.loop)
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         # Close mail server
         asyncore.close_all()
 
