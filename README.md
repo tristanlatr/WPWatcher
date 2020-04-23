@@ -50,7 +50,7 @@ Tested with WPScan 3.7.11 on :
 pip3 install wpwatcher --upgrade
 ```
 
-#### Manually
+#### Manually (devel)
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher && python3 setup.py install
@@ -655,7 +655,7 @@ Load specific file
 - Init config dict from file with `WPWatcherConfig().build_config()` method  
 - Customize the config if you want, you can overwrite any config values  
 - Create a `WPWatcher` object with your desired configuration  
-- Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)` The prorgam will automatically load and use a local reports databse and return complete updated database. Set `wp_reports` to `null` to only return scanned site reports.
+- Call `run_scans_and_notify()` method. Return a `tuple (exit code, reports)`. 
 
 
 ```python
@@ -665,8 +665,7 @@ config, files = WPWatcherConfig(files=['./demo.conf']).build_config() # leave No
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
-                'wpscam_args': ['--stealthy'],
-                'wp_reports': 'null'
+                'wpscam_args': ['--stealthy']
             })
 w=WPWatcher(config)
 exit_code, reports = w.run_scans_and_notify()
@@ -678,8 +677,6 @@ for r in reports:
 
 ## Changelog
 See [Releases](https://github.com/tristanlatr/WPWatcher/releases)
-
-
 
 ## Questions ?
 If you have any questions, please create a new issue.

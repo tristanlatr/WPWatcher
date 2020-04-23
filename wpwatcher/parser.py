@@ -117,9 +117,6 @@ def parse_cli(wpscan_output):
         if ( line!="" or current_message == "" ) : continue
 
         # End of the message
-        print()
-        print(current_message)
-        print()
         # Append messages to list of infos, warns and alerts
         if alert_on: alerts.append(current_message)
         elif warning_on: warnings.append(current_message)

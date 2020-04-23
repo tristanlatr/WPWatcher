@@ -142,12 +142,12 @@ class WPWatcherNotification():
             should=False
         
         # Return if error email and disabled
-        if wp_report['status']=="ERROR" and not self.conf['send_errors']:
+        elif wp_report['status']=="ERROR" and not self.conf['send_errors']:
             log.info("Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_report['site']))
             should=False
         
         # Regular mail filter with --warnings or --infos
-        if not ( ( self.conf['send_infos'] ) or 
+        elif not ( ( self.conf['send_infos'] ) or 
             ( wp_report['status']=="WARNING" and self.conf['send_warnings'] ) or 
             ( wp_report['status']=='ALERT' or wp_report['status']=='FIXED' ) ) :
             # No report notice
@@ -155,7 +155,7 @@ class WPWatcherNotification():
             should=False
 
         # resend_emails_after config implementation
-        if not ( not wp_report['last_email'] or ( wp_report['last_email'] and ( 
+        elif not ( not wp_report['last_email'] or ( wp_report['last_email'] and ( 
             datetime.strptime(wp_report['datetime'],DATE_FORMAT) - datetime.strptime(wp_report['last_email'],DATE_FORMAT) > self.conf['resend_emails_after'] 
             or last_wp_report['status']!=wp_report['status'] ) ) ):
             # No report notice
