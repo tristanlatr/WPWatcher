@@ -54,12 +54,12 @@ def print_progress_bar(count,total):
 
 def results_summary(results):
     string='Results summary\n'
-    header = ("Site", "Status", "Last email", "Issues", "Problematic component(s)")
+    header = ("Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)")
     sites_w=20
     # Determine the longest width for site column
     for r in results:
         sites_w=len(r['site'])+4 if r and len(r['site'])>sites_w else sites_w
-    frow="{:<%d} {:<8} {:<20} {:<8} {}"%sites_w
+    frow="{:<%d} {:<8} {:<20} {:<20} {:<8} {}"%sites_w
     string+=frow.format(*header)
     for row in results:
         pb_components=[]
@@ -68,6 +68,7 @@ def results_summary(results):
         string+='\n'
         string+=frow.format(row['site'], 
             row['status'],
+            str(row['datetime']),
             str(row['last_email']),
             len(row['alerts']+row['warnings']+row['errors']),
             ', '.join(pb_components) )
@@ -78,7 +79,29 @@ def parse_timedelta(time_str):
     Parse a time string e.g. (2h13m) into a timedelta object.
     """
     regex = re.compile(r'^((?P<days>[\.\d]+?)d)?((?P<hours>[\.\d]+?)h)?((?P<minutes>[\.\d]+?)m)?((?P<seconds>[\.\d]+?)s)?$')
+    time_str=replace(time_str,{
+        'sec':'s',
+        'second': 's',
+        'seconds': 's',
+        'minute':'m',
+        'minutes':'m',
+        'min':'m',
+        'mn':'m',
+        'days':'d',
+        'day':'d',
+        'hours':'h',
+        'hour':'h'})
     parts = regex.match(time_str)
     if parts is None: raise ValueError("Could not parse any time information from '{}'.  Examples of valid strings: '8h', '2d8h5m20s', '2m4s'".format(time_str))
     time_params = {name: float(param) for name, param in parts.groupdict().items() if param}
     return timedelta(**time_params)
+
+def replace(text, conditions):
+    # rep = {"condition1": "", "condition2": "text"} # define desired replacements here
+    rep=conditions
+    # use these three lines to do the replacement
+    rep = dict((re.escape(k), rep[k]) for k in rep ) 
+    #Python 3 renamed dict.iteritems to dict.items so use rep.items() for latest versions
+    pattern = re.compile("|".join(rep.keys()))
+    text = pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
+    return text

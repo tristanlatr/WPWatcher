@@ -17,6 +17,7 @@ from wpwatcher.utils import parse_timedelta, results_summary
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
+from .daemon import WPWatcherDaemon
 
 class WPWatcherCLI():
     def __init__(self):
@@ -31,28 +32,22 @@ class WPWatcherCLI():
         if args.wprs!=False: self.wprs(args.wprs, args.daemon)
         # Read config
         configuration=self.build_config_cli(args)
-        # Create main object
-        wpwatcher=WPWatcher(configuration)
+        
         # If daemon lopping
-        if wpwatcher.conf['daemon']: 
-            log.info("Daemon mode selected, looping for ever...")
-            results=None # Keep databse in memory
-            while True:
-                # Run scans for ever
-                exit_code,results=wpwatcher.run_scans_and_notify()
-                timesleep=wpwatcher.conf['daemon_loop_sleep']
-                log.info("Daemon sleeping %s and scanning again..."%timesleep)
-                time.sleep(timesleep.total_seconds())
-                wpwatcher=WPWatcher(self.build_config_cli(args))
-                wpwatcher.wp_reports=results
-        # Run scans and quit
+        if configuration['daemon']: 
+            # Run 4 ever
+            WPWatcherDaemon(configuration)
+           
         else:
+            # Run scans and quit
+            # Create main object
+            wpwatcher=WPWatcher(configuration)
             exit_code,results=wpwatcher.run_scans_and_notify()
             exit(exit_code)
             
     @staticmethod
     def wprs(filepath=None, daemon=False):
-        db=WPWatcherDataBase(wp_reports=filepath, daemon=daemon)
+        db=WPWatcherDataBase(filepath, daemon=daemon)
         print(results_summary(db._data))
         exit(0)
     @staticmethod
@@ -72,17 +67,16 @@ class WPWatcherCLI():
     Some config arguments can be passed to the command.
     It will overwrite previous values from config file(s).
     Check %s for more informations."""%(GIT_URL), formatter_class=argparse.RawTextHelpFormatter)
-        parser.add_argument('--conf', '-c', metavar='File path', help="""The script * must read a configuration file to set mail server settings, WPScan path and arguments *.     
-    If no config file is found, mail server settings, WPScan path and arguments and other config values will have default values.  
+        parser.add_argument('--conf', '-c', metavar='File path', help="""The script * must read a configuration file to set mail server settings, WPScan path and other options *.     
+    If no config file is found, mail server settings will have default values.  
     Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
     You can specify multiple files `--conf File path [File path ...]`. Will overwrites the keys with each successive file.
-    All options keys can be missing from config file.
     If not specified with `--conf` parameter, will try to load config from file `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` and `./wpwatcher.conf`.
     All options can be missing from config file.\n\n""", nargs='+', default=None)
         parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.
-    Use `wpwatcher --template_conf > ~/wpwatcher.conf && vim ~/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
+    Use `wpwatcher --template_conf > ~/.wpwatcher/wpwatcher.conf && vim ~/.wpwatcher/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
-        parser.add_argument('--wprs', metavar="Path to json file", help="wp_reports database summary generator", nargs='?', default=False)
+        parser.add_argument('--wprs', metavar="Path to json file", help="Print database (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
 
         # Declare arguments that will overwrite config options
         parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)

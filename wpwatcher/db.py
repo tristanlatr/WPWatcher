@@ -19,12 +19,12 @@ wp_report_lock = threading.Lock()
 
 class WPWatcherDataBase():
 
-    def __init__(self, wp_reports="", daemon=False):
+    def __init__(self, wp_reports_filepath="", daemon=False):
         
-        self.no_local_storage=wp_reports=='null'
-        if not wp_reports : 
-            wp_reports=self.find_wp_reports_file(create=True,daemon=daemon)
-        self.filepath=wp_reports
+        self.no_local_storage=wp_reports_filepath=='null'
+        if not wp_reports_filepath : 
+            wp_reports_filepath=self.find_wp_reports_file(create=True,daemon=daemon)
+        self.filepath=wp_reports_filepath
         self._data=self.build_wp_reports(self.filepath)
 
         try: self.update_and_write_wp_reports(self._data)
@@ -71,10 +71,10 @@ class WPWatcherDataBase():
             # Write method should be thread safe
             while wp_report_lock.locked():
                 time.sleep(0.01)
-                continue
             wp_report_lock.acquire()
             with open(self.filepath,'w') as reportsfile:
                 json.dump(self._data, reportsfile, indent=4)
+                log.info("Database %s wrote"%(reportsfile))
                 wp_report_lock.release()
 
     def find_last_wp_report(self, wp_report):

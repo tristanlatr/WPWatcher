@@ -29,7 +29,7 @@ mail_lock = threading.Lock()
 class WPWatcherNotification():
     
     def __init__(self, conf):
-        # store specific mailser values
+        # store specific mailserver values
         self.from_email=conf['from_email']
         self.smtp_server=conf['smtp_server']
         self.smtp_ssl=conf['smtp_ssl']
@@ -37,16 +37,26 @@ class WPWatcherNotification():
         self.smtp_user=conf['smtp_user']
         self.smtp_pass=conf['smtp_pass']
 
+        #store specific notification values
+        self.send_email_report=conf['send_email_report']
+        self.email_to=conf['email_to']
+        self.email_errors_to=conf['email_errors_to']
+        self.send_warnings=conf['send_warnings']
+        self.send_infos=conf['send_infos']
+        self.send_errors=conf['send_errors']
+        self.attach_wpscan_output=conf['attach_wpscan_output']
+        self.resend_emails_after=conf['resend_emails_after']
+
         # and copy config as is
-        self.conf=conf
+        # self.conf=conf
         # mail server, will be created when sending mails
         self.server=None
 
     def notify(self, wp_site, wp_report, last_wp_report):
         # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
         log.debug("\n%s\n"%(WPWatcherNotification.build_message(wp_report, 
-                warnings=self.conf['send_warnings'] or self.conf['send_infos'], # switches to include or not warnings and infos
-                infos=self.conf['send_infos'])))
+                warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
+                infos=self.send_infos)))
         if self.should_notify(wp_report, last_wp_report):
             self._notify(wp_site, wp_report, last_wp_report)
         else: return False
@@ -111,35 +121,41 @@ class WPWatcherNotification():
     def should_notify(self, wp_report, last_wp_report):
         should=True
         # Return if email seding is disable
-        if not self.conf['send_email_report']:
+        if not self.send_email_report:
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."%(wp_report['status'], wp_report['site']))
             should=False
         
         # Return if error email and disabled
-        elif wp_report['status']=="ERROR" and not self.conf['send_errors']:
+        elif wp_report['status']=="ERROR" and not self.send_errors:
             log.info("Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."%(wp_report['site']))
             should=False
         
         # Regular mail filter with --warnings or --infos
-        elif wp_report['status']=="WARNING" and not self.conf['send_warnings'] and not self.conf['send_infos'] :
+        elif wp_report['status']=="WARNING" and not self.send_warnings and not self.send_infos :
             log.info("Not sending WPWatcher WARNING email report for site %s because send_warnings=No. If you want to receive warning emails, set send_warnings=Yes in the config or use --infos."%(wp_report['site']))
             should=False
 
-        elif wp_report['status']=="INFO" and not self.conf['send_infos']:
+        elif wp_report['status']=="INFO" and not self.send_infos:
             # No report notice
             log.info("Not sending WPWatcher INFO email report for site %s because send_infos=No. If you want to receive infos emails, set send_infos=Yes in the config or use --infos."%(wp_report['site']))
             should=False
+
+        if wp_report['last_email'] and datetime.strptime(wp_report['datetime'],DATE_FORMAT) - datetime.strptime(wp_report['last_email'],DATE_FORMAT) < self.resend_emails_after and last_wp_report['status']!=wp_report['status'] :
+            # No report notice
+            log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_report['site'], self.resend_emails_after))
+            should=False
+
         
         return should
 
     def _notify(self, wp_site, wp_report, last_wp_report):
 
         # Send the report to
-        if len(self.conf['email_errors_to'])>0 and wp_report['status']=='ERROR':
-            to = ','.join( self.conf['email_errors_to'] )
+        if len(self.email_errors_to)>0 and wp_report['status']=='ERROR':
+            to = ','.join( self.email_errors_to )
         else: 
-            to = ','.join( wp_site['email_to'] + self.conf['email_to'] )
+            to = ','.join( wp_site['email_to'] + self.email_to )
 
         if not to :
             log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_report['site']))
@@ -150,10 +166,10 @@ class WPWatcherNotification():
 
         try:
             with mail_lock:
-                self.send_report(wp_report, to, send_infos=self.conf['send_infos'], 
-                    send_warnings=self.conf['send_warnings'], 
-                    send_errors=self.conf['send_errors'], 
-                    attach_wpscan_output=self.conf['attach_wpscan_output'])
+                self.send_report(wp_report, to, send_infos=self.send_infos, 
+                    send_warnings=self.send_warnings, 
+                    send_errors=self.send_errors, 
+                    attach_wpscan_output=self.attach_wpscan_output)
                 return True
                 
         # Handle send mail error

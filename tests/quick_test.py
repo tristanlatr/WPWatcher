@@ -49,6 +49,7 @@ from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 from wpwatcher.parser import parse_results
 from wpwatcher.email import WPWatcherNotification
+from wpwatcher.scan import WPWatcherScanner
 import random
 import linecache
 
@@ -160,7 +161,7 @@ class WPWatcherTests(unittest.TestCase):
             self.assertIn(r, wpwatcher.wp_reports._data, "The report do not seem to have been saved into WPWatcher.wp_report list")
         # Test write method
         wrote_db=wpwatcher.wp_reports.build_wp_reports(wpwatcher.wp_reports.filepath)
-        with open(wpwatcher.conf['wp_reports'],'r') as db:
+        with open(wpwatcher.wp_reports.filepath,'r') as db:
             wrote_db_alt=json.load(db)
         for r in reports:
             self.assertIn(r, wrote_db, "The report do not seem to have been saved into db file")
@@ -172,12 +173,14 @@ class WPWatcherTests(unittest.TestCase):
         # Init deafult watcher
         wpwatcher=WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         flag=WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]
-        for k in WPWatcherConfig.DEFAULT_CONFIG:
-            if k != 'wp_reports':
-                self.assertEqual(str(wpwatcher.conf[k]), str(flag[k]), "Config doesn't seem to hae been loaded")
 
-        self.assertEqual(type(wpwatcher.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
-        self.assertEqual(shlex.split(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path']), wpwatcher.wpscan.wpscan_executable, "WPScan path seems to be wrong")
+        # for k in WPWatcherConfig.DEFAULT_CONFIG:
+        #     if k != 'wp_reports':
+        #         self.assertEqual(str(wpwatcher.conf[k]), str(flag[k]), "Config doesn't seem to hae been loaded")
+        self.assertEqual(type(wpwatcher.scanner), WPWatcherScanner, "WPWatcherScanner doesn't seem to have been initialized")
+        self.assertEqual(type(wpwatcher.scanner.mail), WPWatcherNotification, "WPWatcherNotification doesn't seem to have been initialized")
+        self.assertEqual(type(wpwatcher.scanner.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
+        self.assertEqual(shlex.split(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0]['wpscan_path']), wpwatcher.scanner.wpscan.wpscan_executable, "WPScan path seems to be wrong")
 
     
     def test_wpscan_output_folder(self):
@@ -235,7 +238,7 @@ class WPWatcherTests(unittest.TestCase):
                 "fixed": ["This issue was fixed"],
                 "wpscan_output":"This is real%s"%(s)
             }
-            notif=WPWatcherNotification(dict(smtp_server='localhost:1025', from_email='test@mail.com', smtp_ssl=False, smtp_auth=False, smtp_user=None, smtp_pass=None))
+            notif=WPWatcherNotification(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
             notif.send_report(report, email_to='test')
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
@@ -312,15 +315,25 @@ class WPWatcherTests(unittest.TestCase):
     def test_notify(self):
         # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
 
-        # # Launch SMPT debbug server
-        # smtpd.DebuggingServer(('localhost',1025), None )
-        # executor = concurrent.futures.ThreadPoolExecutor(1)
-        # executor.submit(asyncore.loop)
-        # # Init WPWatcher
-        # CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
-        # wpwatcher = WPWatcher(WPWatcherConfig(string=CONFIG).build_config()[0])
+        # Launch SMPT debbug server
+        smtpd.DebuggingServer(('localhost',1025), None )
+        executor = concurrent.futures.ThreadPoolExecutor(1)
+        executor.submit(asyncore.loop)
+        # Init WPWatcher
+        CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
+        wpwatcher = WPWatcher(WPWatcherConfig(string=CONFIG).build_config()[0])
+        # wpwatcher.scanner.mail
 
-        pass
+        # Close mail server
+        asyncore.close_all()
+
+    def test_wpscan(self):
+        # lazy_init
+        wpscan=WPScanWrapper('wpscan')
+        ex,_=wpscan.wpscan("--url","wp.exemple.com")
+        self.assertEqual(ex,4,"Scanning wp.exemple.com successful, that's weird !")
+        ex,_=wpscan.wpscan("--version")
+        self.assertEqual(ex,0,"WPScan failed when printing version")
 
     def test_scan_site(self):
         # test info, warnings and alerts

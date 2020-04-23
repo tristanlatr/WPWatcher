@@ -22,7 +22,6 @@ from datetime import datetime, timedelta
 
 from wpwatcher import log, init_log
 from wpwatcher.config import WPWatcherConfig
-from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, get_valid_filename, print_progress_bar, oneline, results_summary, timeout
@@ -38,39 +37,28 @@ class WPWatcher():
 
     # WPWatcher must use a configuration dict
     def __init__(self, conf):
-        # Copy config dict as is. Copy not to edit initial dict
-        self.conf=copy.deepcopy(conf)
         # (Re)init logger with config
-        init_log(verbose=self.conf['verbose'],
-            quiet=self.conf['quiet'],
-            logfile=self.conf['log_file'])
-        
+        init_log(verbose=conf['verbose'],
+            quiet=conf['quiet'],
+            logfile=conf['log_file'])
         
         self.delete_tmp_wpscan_files()
         
-        # Create (lazy) wpscan link
-        self.wpscan=WPScanWrapper(self.conf['wpscan_path'])
-        
         # Init DB interface
-        self.wp_reports=WPWatcherDataBase(self.conf['wp_reports'])
+        self.wp_reports=WPWatcherDataBase(conf['wp_reports'])
 
         # Init scanner
-        self.scanner=WPWatcherScanner(self.conf, self.wpscan)
+        self.scanner=WPWatcherScanner(conf)
+        
+        # Save sites
+        self.wp_sites=conf['wp_sites']
 
         # Dump config
-        self.conf.update({'wp_reports':self.wp_reports.filepath})
-        log.info("WPWatcher configuration:{}".format(self.dump_config()))
-
-        # Init wpscan output folder
-        if self.conf['wpscan_output_folder'] : 
-            os.makedirs(self.conf['wpscan_output_folder'], exist_ok=True)
-            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'error/'), exist_ok=True)
-            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'alert/'), exist_ok=True)
-            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'warning/'), exist_ok=True)
-            os.makedirs(os.path.join(self.conf['wpscan_output_folder'],'info/'), exist_ok=True)
+        conf.update({'wp_reports':self.wp_reports.filepath})
+        log.info("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Asynchronous executor
-        self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=self.conf['asynch_workers'])
+        self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=conf['asynch_workers'])
         # List of conccurent futures
         self.futures=[] 
         
@@ -86,10 +74,11 @@ class WPWatcher():
                 shutil.rmtree('/tmp/wpscan')
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception) : 
-                log.info("Could not delete temp WPScan files in /tmp/wpscan/. Error:\n%s"%(traceback.format_exc()))
-
-    def dump_config(self):
-        bump_conf=copy.deepcopy(self.conf)
+                log.info("Could not delete temp WPScan files in /tmp/wpscan/\n%s"%(traceback.format_exc()))
+    
+    @staticmethod
+    def dump_config(conf):
+        bump_conf=copy.deepcopy(conf)
         string=''
         for k in bump_conf:
             v=bump_conf[k]
@@ -104,7 +93,7 @@ class WPWatcher():
         return(string)
     
     def wait_all_wpscan_process(self):
-        while len(self.wpscan.processes)>0:
+        while len(self.scanner.wpscan.processes)>0:
             time.sleep(0.05)
 
     def interrupt(self, sig=None, frame=None):
@@ -119,13 +108,13 @@ class WPWatcher():
         for f in self.futures:
             if not f.done(): f.cancel()
         # Send ^C to all WPScan not finished
-        for p in self.wpscan.processes: p.send_signal(signal.SIGINT)
+        for p in self.scanner.wpscan.processes: p.send_signal(signal.SIGINT)
         # Wait for all processes to finish , kill after timeout
         try: 
             with timeout(INTERRUPT_TIMEOUT): self.wait_all_wpscan_process()
         except TimeoutError:
             log.error("Interrupt timeout reached, killing WPScan processes")
-            for p in self.wpscan.processes: p.kill()
+            for p in self.scanner.wpscan.processes: p.kill()
 
         # Unlock api wait
         self.scanner.api_wait.set()
@@ -141,36 +130,53 @@ class WPWatcher():
         exit(-1)
 
     def get_scanned_sites_reports(self):
-        return ( [ self.wp_reports.find_last_wp_report({'site':s}) for s in self.scanner.scanned_sites if self.wp_reports.find_last_wp_report({'site':s}) ]
-)
+        return [ e for e in [ self.wp_reports.find_last_wp_report({'site':s}) for s in self.scanner.scanned_sites ] if e ]
+
     def print_scanned_sites_results(self):
         new_reports=self.get_scanned_sites_reports()
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
-            log.info("Updated %s reports in database: %s"%(len(new_reports),self.conf['wp_reports']))
+            log.info("Updated %s reports in database: %s"%(len(new_reports),self.wp_reports.filepath))
+    
+    @staticmethod
+    def format_site(wp_site):
+        if 'url' not in wp_site :
+            log.error("Invalid site %s"%wp_site)
+            wp_site={'url':''}
+        else:
+            # Format sites with scheme indication
+            p_url=list(urlparse(wp_site['url']))
+            if p_url[0]=="": 
+                wp_site['url']='http://'+wp_site['url']
+        # Read the wp_site dict and assing default values if needed
+        optionals=['email_to','false_positive_strings','wpscan_args']
+        for op in optionals:
+            if op not in wp_site or wp_site[op] is None: wp_site[op]=[]
+       
+        return wp_site
 
     # Orchestrate the scanning of a site
     def scan_site(self, wp_site):
-        wp_report=self.scanner.scan_site(wp_site, self.wp_reports.find_last_wp_report({'site':wp_site['url']}))
+        wp_site=self.format_site(wp_site)
+        last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
+        wp_report=self.scanner.scan_site(wp_site,  last_wp_report)
         # Save report in global instance database and to file when a site has been scanned
-        self.wp_reports.update_and_write_wp_reports([wp_report])
+        if wp_report: self.wp_reports.update_and_write_wp_reports([wp_report])
         # Print progress
-        print_progress_bar(len(self.scanner.scanned_sites), len(self.conf['wp_sites'])) 
+        print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites)) 
         return(wp_report)
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
         # Check sites are in the config
-        if len(self.conf['wp_sites'])==0:
+        if len(self.wp_sites)==0:
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
             return((-1, []))
 
-        log.info("Starting scans on %s configured sites"%(len(self.conf['wp_sites'])))
-        
+        log.info("Starting scans on %s configured sites"%(len(self.wp_sites)))
         new_reports=[]
-
         # Sumbit all scans jobs and start scanning
-        for s in self.conf['wp_sites']:
+        for s in self.wp_sites:
             # Find last site result if any
             self.futures.append(self.executor.submit(self.scan_site, s))
         # Loops while scans are running and read results
@@ -179,7 +185,6 @@ class WPWatcher():
             # Handle interruption from inside threads when using --ff
             except (InterruptedError):
                 self.interrupt()
-
         # Print results and finish
         self.print_scanned_sites_results()
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
