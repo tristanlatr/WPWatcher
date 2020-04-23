@@ -65,8 +65,7 @@ def ignore_false_positives(messages, warnings, alerts, false_positives):
             messages.append("[False positive]\n"+alert)
     return messages, warnings, alerts
 
-def parse_cli_toogle(line):
-    warning_on, alert_on = False, False
+def parse_cli_toogle(line, warning_on, alert_on):
     # Color parsing
     if "33m[!]" in line: warning_on=True
     elif "31m[!]" in line: alert_on = True
@@ -84,24 +83,8 @@ def parse_cli_toogle(line):
         warning_on = True
     # Lower voice of Vulnerabilities found but not plugin version
     if 'The version could not be determined' in line and alert_on:
-            alert_on = False  
-            warning_on = True 
-    return ((warning_on, alert_on))
-
-def parse_cli_line(line, message_lines):
-    warning_on, alert_on = False, False
-    # Empty content lines are ignored
-    # Parse the line and Toogle Warning/Alert
-    if line not in ["","|"] :   
-        # Toogle Warning/Alert if specific match in any line of the message
-            # Both method with color and no color apply supplementary proccessing 
-        warning_on_alt,alert_on_alt=parse_cli_toogle(line)
-        warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
-        # When line message has been read and parsed
-        # Remove colorization anyway after parsing
-        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
-        # Append line to message. Handle the begin of the message case
-        message_lines.append(line) #+= line if message=="" else '\n'+line 
+        alert_on = False  
+        warning_on = True 
     return ((warning_on, alert_on))
 
 def parse_cli(wpscan_output):
@@ -111,30 +94,40 @@ def parse_cli(wpscan_output):
     # Init messages toogles
     warning_on, alert_on = False, False
     message_lines=[] 
+    current_message=""
     # Every blank ("") line will be considered as a message separator
     for line in wpscan_output.splitlines()+[""]:
 
         # Parse all output lines and build infos, warnings and alerts
         line=line.strip()
-        current_message='\n'.join(message_lines).strip()
         
         # Parse line
-        warning_on_alt, alert_on_alt = parse_cli_line(line, message_lines)
-        warning_on, alert_on = warning_on or warning_on_alt, alert_on or alert_on_alt
+        warning_on, alert_on = parse_cli_toogle(line, warning_on, alert_on)
+
+        # Remove colorization anyway after parsing
+        line = re.sub(r'(\x1b|\[[0-9][0-9]?m)','',line)
+        # Append line to message. Handle the begin of the message case
+        message_lines.append(line)
+
+        # Build message
+        current_message='\n'.join([m for m in message_lines if m not in ["","|"]]).strip()
 
         # Message separator just a white line.
         # Only if the message if not empty. 
-        if not ( line=="" and current_message != "" ) : break
+        if ( line!="" or current_message == "" ) : continue
 
         # End of the message
+        print()
+        print(current_message)
+        print()
         # Append messages to list of infos, warns and alerts
         if alert_on: alerts.append(current_message)
         elif warning_on: warnings.append(current_message)
         else: messages.append(current_message)
         message_lines=[]
+        current_message=""
         # Reset Toogle Warning/Alert
-        alert_on = False  
-        warning_on = False
+        warning_on, alert_on = False, False
 
     return (( messages, warnings, alerts ))
 
@@ -269,8 +262,7 @@ def parse_vulnerability_or_finding(finding):
     if type(finding) is not dict: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
 
     # For interesting findings
-    # if "type" in finding:
-    #     title += "[%s]" % finding["type"]
+    if "type" in finding: title += "%s\n" % finding["type"]
     if "to_s" in finding: title += "%s" % finding["to_s"]
     # For vulnerabilities
     if "title" in finding: title += "%s" % finding["title"]

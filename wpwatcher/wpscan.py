@@ -53,7 +53,6 @@ class WPScanWrapper():
         if not self.init_check_done :
             while init_lock.locked(): 
                 time.sleep(0.01)
-                continue
             with init_lock:
                 if not self.init_check_done : # Re-check in case of concurrent scanning
                     self._lazy_init()

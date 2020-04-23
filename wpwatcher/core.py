@@ -133,7 +133,9 @@ class WPWatcher():
         self.wait_and_finish_interrupt()
     
     def wait_and_finish_interrupt(self):
-        self.executor.shutdown(wait=True)
+        try: 
+            with timeout(INTERRUPT_TIMEOUT): self.executor.shutdown(wait=True)
+        except TimeoutError: pass
         self.print_scanned_sites_results()
         log.info("Scans interrupted.")
         exit(-1)

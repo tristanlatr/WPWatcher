@@ -350,7 +350,19 @@ class WPWatcherTests(unittest.TestCase):
         out = open("tests/static/wordpress_many_vuln.json").read()
         messages, warnings, alerts=parse_results(out)
         self.assertEqual(3, len(alerts))
-        pass
+
+        out = open("tests/static/wordpress_no_vuln.txt").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(0, len(alerts))
+        out = open("tests/static/wordpress_one_warning.txt").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(2, len(warnings))
+        out = open("tests/static/wordpress_many_vuln.txt").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(3, len(alerts))
+        out = open("tests/static/wordpress_one_vuln.txt").read()
+        messages, warnings, alerts=parse_results(out)
+        self.assertEqual(1, len(alerts))
 
     def test_utils(self):
         pass

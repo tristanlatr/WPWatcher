@@ -49,22 +49,19 @@ class WPWatcherCLI():
         else:
             exit_code,results=wpwatcher.run_scans_and_notify()
             exit(exit_code)
-    
-    def wprs(self, filepath=None, daemon=False):
-        results=[]
+            
+    @staticmethod
+    def wprs(filepath=None, daemon=False):
         db=WPWatcherDataBase(wp_reports=filepath, daemon=daemon)
-        f=db.filepath
-        results=db.build_wp_reports(f)
-        log.info("Reports: %s"%(f))
-        print(results_summary(results))
+        print(results_summary(db._data))
         exit(0)
-
-    def verion(self):
+    @staticmethod
+    def verion():
         log.info("Version:\t\t%s"%VERSION)
         log.info("Authors:\t\t%s"""%AUTHORS)
         exit(0)
-
-    def template_conf(self):
+    @staticmethod
+    def template_conf():
         print(WPWatcherConfig.TEMPLATE_FILE)
         exit(0)
 

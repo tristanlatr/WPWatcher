@@ -9,6 +9,8 @@ import re
 import smtplib
 import socket
 import traceback
+import threading
+import time
 from datetime import datetime
 from email import encoders
 from email.mime.base import MIMEBase
@@ -20,6 +22,9 @@ from wpwatcher.utils import get_valid_filename
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
+
+# Sendmail call will be done one at a time not over load server and create connection errors
+mail_lock = threading.Lock()
 
 class WPWatcherNotification():
     
@@ -78,9 +83,6 @@ class WPWatcherNotification():
 
     # Send email report with status and timestamp
     def send_report(self, wp_report, email_to, send_infos=False, send_warnings=True, send_errors=False, attach_wpscan_output=False):
-        if not email_to :
-            log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_report['site']))
-            return
 
         # Building message
         message = MIMEMultipart("html")
@@ -117,6 +119,7 @@ class WPWatcherNotification():
 
         # Connecting and sending
         self.server = smtplib.SMTP(self.smtp_server)
+        self.server.ehlo_or_helo_if_needed()
         # SSL
         if self.smtp_ssl: self.server.starttls()
         # SMTP Auth
@@ -169,17 +172,26 @@ class WPWatcherNotification():
         else: 
             to = ','.join( wp_site['email_to'] + self.conf['email_to'] )
 
+        if not to :
+            log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_report['site']))
+            return
+
+        while mail_lock.locked(): 
+            time.sleep(0.01)
+
         try:
-            self.send_report(wp_report, to, send_infos=self.conf['send_infos'], 
-                send_warnings=self.conf['send_warnings'], 
-                send_errors=self.conf['send_errors'], 
-                attach_wpscan_output=self.conf['attach_wpscan_output'])
-            return True
+            with mail_lock:
+                self.send_report(wp_report, to, send_infos=self.conf['send_infos'], 
+                    send_warnings=self.conf['send_warnings'], 
+                    send_errors=self.conf['send_errors'], 
+                    attach_wpscan_output=self.conf['attach_wpscan_output'])
+                return True
                 
         # Handle send mail error
         except smtplib.SMTPException:
             log.error("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
             wp_report['errors'].append("Unable to send mail report for site " + wp_site['url'] + ". Error: \n"+traceback.format_exc())
             raise RuntimeError("Unable to send mail report")
+        finally: mail_lock.release()
             # Fail fast
             #  if not self.check_fail_fast(): return False 
