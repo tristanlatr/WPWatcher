@@ -46,6 +46,9 @@ jobs:
         
     - name: Test with pytest
       run: pytest --cov=./ --cov-report=xml tests/quick_test.py
+      ports:
+          # Opens tcp port 1025 on the host and service container for SMTP debbug server
+          - 1025:1025
     
     - name: Upload code coverage
       uses: codecov/codecov-action@v1
