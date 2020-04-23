@@ -388,6 +388,3 @@ class WPWatcherTests(unittest.TestCase):
 
     def test_fail_fast(self):
         pass
-
-if __name__ == '__main__':
-    os.system('python3 -m unittest tests.quick')
