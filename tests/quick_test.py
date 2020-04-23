@@ -66,7 +66,7 @@ WP_SITES=[ {"url":"exemple.com"},
 DEFAULT_CONFIG="""
 [wpwatcher]
 wp_sites=%s
-smtp_server=localhost:1025
+smtp_server=localhost:9025
 from_email=testing-wpwatcher@exemple.com
 email_to=["test@mail.com"]
 """%json.dumps(WP_SITES)
@@ -77,7 +77,7 @@ class WPWatcherTests(unittest.TestCase):
 
     def setUp(self):
          # Launch SMPT debbug server
-        smtpd.DebuggingServer(('localhost',1025), None )
+        smtpd.DebuggingServer(('localhost',9025), None )
         self.executor = concurrent.futures.ThreadPoolExecutor(1)
         self.executor.submit(asyncore.loop)
 
