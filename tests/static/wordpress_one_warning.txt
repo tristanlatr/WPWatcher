@@ -1,0 +1,85 @@
+[+] URL: http://wp.exemple.com/ [50.87.253.23]
+[+] Started: Wed Apr 22 14:53:53 2020
+
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entries:
+ |  - Server: Apache
+ |  - Upgrade: h2,h2c
+ |  - host-header: c2hhcmVkLmJsdWVob3N0LmNvbQ==
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: http://wp.exemple.com/xmlrpc.php
+ | Found By: Headers (Passive Detection)
+ | Confidence: 60%
+ | Confirmed By: Link Tag (Passive Detection), 30% confidence
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access
+
+[+] WordPress version 4.3.22 identified (Latest, released on 2019-12-12).
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://wp.exemple.com/feed/, <generator>https://wordpress.org/?v=4.3.22</generator>
+ |  - http://wp.exemple.com/comments/feed/, <generator>https://wordpress.org/?v=4.3.22</generator>
+
+[+] WordPress theme in use: foodie-pro
+ | Location: http://wp.exemple.com/wp-content/themes/foodie-pro/
+ | Style URL: http://wp.exemple.com/wp-content/themes/foodie-pro/style.css?ver=2.0.3
+ | Style Name: Foodie Pro Theme
+ | Description: This is the Foodie Pro child theme created for the Genesis Framework....
+ | Author: Shay Bocks
+ | Author URI: http://shaybocks.com/
+ |
+ | Found By: Css Style In Homepage (Passive Detection)
+ | Confirmed By: Css Style In 404 Page (Passive Detection)
+ |
+ | Version: 2.0.3 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://wp.exemple.com/wp-content/themes/foodie-pro/style.css?ver=2.0.3, Match: 'Version: 2.0.3'
+
+[+] Enumerating All Plugins (via Passive Methods)
+[+] Checking Plugin Versions (via Passive Methods)
+
+[i] Plugin(s) Identified:
+
+[+] contextual-related-posts
+ | Location: http://wp.exemple.com/wp-content/plugins/contextual-related-posts/
+ | Latest Version: 2.9.0
+ | Last Updated: 2020-04-18T11:37:00.000Z
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | The version could not be determined.
+
+[+] simple-social-icons
+ | Location: http://wp.exemple.com/wp-content/plugins/simple-social-icons/
+ | Last Updated: 2020-04-15T19:57:00.000Z
+ | [!] The version is out of date, the latest version is 3.0.2
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | Version: 1.0.5 (10% confidence)
+ | Found By: Query Parameter (Passive Detection)
+ |  - http://wp.exemple.com/wp-content/plugins/simple-social-icons/css/style.css?ver=1.0.5
+
+[+] Enumerating Config Backups (via Passive Methods)
+
+[i] No Config Backups Found.
+
+[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.
+[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+
+[+] Finished: Wed Apr 22 14:54:28 2020
+[+] Requests Done: 7
+[+] Cached Requests: 4
+[+] Data Sent: 1.808 KB
+[+] Data Received: 303.63 KB
+[+] Memory used: 198.02 MB
+[+] Elapsed time: 00:00:35

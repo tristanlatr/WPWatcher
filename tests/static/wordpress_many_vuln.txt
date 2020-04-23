@@ -1,0 +1,202 @@
+[+] URL: http://wp.exemple.com/ [166.62.111.84]
+[+] Started: Wed Apr 22 21:16:06 2020
+
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entries:
+ |  - X-Cacheable: YES:Forced
+ |  - X-Cache-Hit: MISS
+ |  - X-Backend: all_requests
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] http://wp.exemple.com/robots.txt
+ | Found By: Robots Txt (Aggressive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: http://wp.exemple.com/xmlrpc.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access
+
+[+] http://wp.exemple.com/readme.html
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] This site has 'Must Use Plugins': http://wp.exemple.com/wp-content/mu-plugins/
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 80%
+ | Reference: http://codex.wordpress.org/Must_Use_Plugins
+
+[+] The external WP-Cron seems to be enabled: http://wp.exemple.com/wp-cron.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 60%
+ | References:
+ |  - https://www.iplocation.net/defend-wordpress-from-ddos
+ |  - https://github.com/wpscanteam/wpscan/issues/1299
+
+[+] WordPress version 5.4 identified (Latest, released on 2020-03-31).
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://wp.exemple.com/feed/, <generator>https://wordpress.org/?v=5.4</generator>
+ |  - http://wp.exemple.com/comments/feed/, <generator>https://wordpress.org/?v=5.4</generator>
+
+[+] WordPress theme in use: stylish
+ | Location: http://wp.exemple.com/wp-content/themes/stylish/
+ | Readme: http://wp.exemple.com/wp-content/themes/stylish/readme.txt
+ | [!] An error log file has been found: http://wp.exemple.com/wp-content/themes/stylish/error_log
+ | Style URL: http://wp.exemple.com/wp-content/themes/stylish/style.css
+ | Style Name: Stylish
+ | Style URI: http://smthemes.com/stylish/
+ | Description: Template by SMThemes.com...
+ | Author: The Smart Magazine Themes
+ | Author URI: http://smthemes.com/
+ |
+ | Found By: Css Style In Homepage (Passive Detection)
+ | Confirmed By: Css Style In 404 Page (Passive Detection)
+ |
+ | Version: 2.3 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://wp.exemple.com/wp-content/themes/stylish/style.css, Match: 'Version: 2.3'
+
+[+] Enumerating All Plugins (via Passive Methods)
+[+] Checking Plugin Versions (via Passive and Aggressive Methods)
+
+[i] Plugin(s) Identified:
+
+[+] contact-form-7
+ | Location: http://wp.exemple.com/wp-content/plugins/contact-form-7/
+ | Last Updated: 2020-03-07T10:12:00.000Z
+ | [!] The version is out of date, the latest version is 5.1.7
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | [!] 1 vulnerability identified:
+ |
+ | [!] Title: Contact Form 7 <= 5.0.3 - register_post_type() Privilege Escalation
+ |     Fixed in: 5.0.4
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/9127
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-20979
+ |      - https://contactform7.com/2018/09/04/contact-form-7-504/
+ |      - https://plugins.trac.wordpress.org/changeset/1935726/contact-form-7
+ |      - https://plugins.trac.wordpress.org/changeset/1934594/contact-form-7
+ |      - https://plugins.trac.wordpress.org/changeset/1934343/contact-form-7
+ |      - https://plugins.trac.wordpress.org/changeset/1934327/contact-form-7
+ |      - https://www.ripstech.com/php-security-calendar-2018/#day-18
+ |
+ | Version: 4.1.1 (100% confidence)
+ | Found By: Query Parameter (Passive Detection)
+ |  - http://wp.exemple.com/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=4.1.1
+ |  - http://wp.exemple.com/wp-content/plugins/contact-form-7/includes/js/scripts.js?ver=4.1.1
+ | Confirmed By:
+ |  Readme - Stable Tag (Aggressive Detection)
+ |   - http://wp.exemple.com/wp-content/plugins/contact-form-7/readme.txt
+ |  Readme - ChangeLog Section (Aggressive Detection)
+ |   - http://wp.exemple.com/wp-content/plugins/contact-form-7/readme.txt
+
+[+] ml-slider
+ | Location: http://wp.exemple.com/wp-content/plugins/ml-slider/
+ | Last Updated: 2020-04-16T10:28:00.000Z
+ | [!] The version is out of date, the latest version is 3.16.4
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | Version: 3.3.1 (80% confidence)
+ | Found By: Readme - Stable Tag (Aggressive Detection)
+ |  - http://wp.exemple.com/wp-content/plugins/ml-slider/readme.txt
+
+[+] wordpress-seo
+ | Location: http://wp.exemple.com/wp-content/plugins/wordpress-seo/
+ | Last Updated: 2020-04-14T10:12:00.000Z
+ | [!] The version is out of date, the latest version is 13.5
+ |
+ | Found By: Comment (Passive Detection)
+ |
+ | [!] 7 vulnerabilities identified:
+ |
+ | [!] Title: Yoast SEO <= 2.1.1 - Authenticated Stored DOM XSS
+ |     Fixed in: 2.2
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/8045
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2012-6692
+ |      - https://packetstormsecurity.com/files/132294/
+ |
+ | [!] Title: Yoast SEO <= 3.2.4 - Subscriber Settings Sensitive Data Exposure
+ |     Fixed in: 3.2.5
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/8487
+ |      - https://www.wordfence.com/blog/2016/05/yoast-seo-vulnerability/
+ |
+ | [!] Title: Yoast SEO <= 3.2.5 - Unspecified Cross-Site Scripting (XSS)
+ |     Fixed in: 3.3.0
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/8569
+ |      - https://wordpress.org/plugins/wordpress-seo/changelog/
+ |
+ | [!] Title: Yoast SEO <= 3.4.0 - Authenticated Stored Cross-Site Scripting (XSS)
+ |     Fixed in: 3.4.1
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/8583
+ |      - https://plugins.trac.wordpress.org/changeset/1466243/wordpress-seo
+ |
+ | [!] Title: Yoast SEO <= 5.7.1 - Authenticated Cross-Site Scripting (XSS)
+ |     Fixed in: 5.8
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/8960
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-16842
+ |      - https://plugins.trac.wordpress.org/changeset/1766831/wordpress-seo/trunk/admin/google_search_console/class-gsc-table.php
+ |      - https://packetstormsecurity.com/files/145080/
+ |
+ | [!] Title: Yoast SEO <= 9.1 - Authenticated Race Condition
+ |     Fixed in: 9.2
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/9150
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-19370
+ |      - https://plugins.trac.wordpress.org/changeset/1977260/wordpress-seo
+ |      - https://packetstormsecurity.com/files/150497/
+ |      - https://github.com/Yoast/wordpress-seo/pull/11502/commits/3bfa70a143f5ea3ee1934f3a1703bb5caf139ffa
+ |
+ | [!] Title:  Yoast SEO 1.2.0-11.5 - Authenticated Stored XSS
+ |     Fixed in: 11.6
+ |     References:
+ |      - https://wpvulndb.com/vulnerabilities/9445
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-13478
+ |      - https://gist.github.com/sybrew/2f53625104ee013d2f599ac254f635ee
+ |      - https://github.com/Yoast/wordpress-seo/pull/13221
+ |      - https://yoast.com/yoast-seo-11.6/
+ |
+ | Version: 1.7.4 (100% confidence)
+ | Found By: Comment (Passive Detection)
+ |  - http://wp.exemple.com/, Match: 'optimized with the Yoast WordPress SEO plugin v1.7.4 -'
+ | Confirmed By:
+ |  Readme - Stable Tag (Aggressive Detection)
+ |   - http://wp.exemple.com/wp-content/plugins/wordpress-seo/readme.txt
+ |  Readme - ChangeLog Section (Aggressive Detection)
+ |   - http://wp.exemple.com/wp-content/plugins/wordpress-seo/readme.txt
+
+[+] Enumerating Config Backups (via Passive and Aggressive Methods)
+
+ Checking Config Backups -: |============================================================================================================================================================================================================================================|
+
+[i] No Config Backups Found.
+
+[+] WPVulnDB API OK
+ | Plan: free
+ | Requests Done (during the scan): 5
+ | Requests Remaining: 20
+
+[+] Finished: Wed Apr 22 21:16:51 2020
+[+] Requests Done: 65
+[+] Cached Requests: 7
+[+] Data Sent: 21.555 KB
+[+] Data Received: 279.695 KB
+[+] Memory used: 184.758 MB
+[+] Elapsed time: 00:00:44
