@@ -82,6 +82,7 @@ attach_wpscan_output=Yes
 send_infos=Yes
 send_errors=Yes
 email_errors_to=["admins@domain"]
+# prescan_without_api_token=Yes
 """%json.dumps([{'url':s.strip()} for s in urls])
 
         # Select X from the 50M
