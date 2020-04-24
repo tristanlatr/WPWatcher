@@ -54,7 +54,7 @@ class WPWatcher():
 
         # Dump config
         conf.update({'wp_reports':self.wp_reports.filepath})
-        log.info("WPWatcher configuration:{}".format(self.dump_config(conf)))
+        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Asynchronous executor
         self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=conf['asynch_workers'])
@@ -89,8 +89,6 @@ class WPWatcher():
                 v=safe_log_wpscan_args(v)
             if k == 'smtp_pass' and v != "" :
                 v = '***'
-            if k == 'wp_sites' and v != "" :
-                v = '[ %s sites ]'%(len(v))
             if isinstance(v, (list, dict)):
                 v=json.dumps(v)
             else: v=str(v)
