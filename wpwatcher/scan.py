@@ -126,31 +126,6 @@ class WPWatcherScanner():
             raise InterruptedError
         return None # Interrupt will generate other errors
 
-    def wpscan_site(self, wp_site, wp_report):
-        # WPScan arguments
-        wpscan_arguments=self.wpscan_args+wp_site['wpscan_args']+['--url', wp_site['url']]
-        # Output
-        log.info("Scanning site %s"%wp_site['url'] )
-        # Launch WPScan 
-        (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
-
-        # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
-        if wpscan_exit_code in [0,5]:
-            # Call parse_result from parser.py 
-            log.debug("Parsing WPScan output")
-            wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , self.false_positive_strings+wp_site['false_positive_strings'] )
-            return wp_report
-
-        # Handle scan errors
-        # Quick return if interrupting and Quick return if user cacelled scans and Other errors codes : -9, -2, 127, etc: Just return None
-        if self.interrupting or wpscan_exit_code in [2] or wpscan_exit_code not in [1,3,4] : return None
-
-        # If WPScan error, add the error to the reports
-        # This types if errors will be written into the Json database file exit codes 1,3,4
-        err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
-        wp_report['errors'].append(err_str)
-        raise RuntimeError("WPscan failure")
-
     def skip_this_site(self, wp_report, last_wp_report):
         # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
         if ( self.daemon and 
@@ -174,6 +149,35 @@ class WPWatcherScanner():
         elif len(wp_report['alerts'])>0: wp_report['status']='ALERT'
         elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
         else: wp_report['status']='INFO'
+    
+    # Wrapper to handled WPScan scannign , errors and reporting
+    def wpscan_site(self, wp_site, wp_report):
+        # WPScan arguments
+        wpscan_arguments=self.wpscan_args+wp_site['wpscan_args']+['--url', wp_site['url']]
+        # Output
+        log.info("Scanning site %s"%wp_site['url'] )
+        # Launch WPScan 
+        (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
+
+        # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
+        if wpscan_exit_code in [0,5]:
+            # Call parse_result from parser.py 
+            log.debug("Parsing WPScan output")
+            wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] , self.false_positive_strings+wp_site['false_positive_strings'] )
+            return wp_report
+
+        # Handle scan errors -----
+        
+        # Quick return if interrupting and Quick return if user cacelled scans
+        if self.interrupting or wpscan_exit_code in [2] : return None
+        
+        # Other errors codes : -9, -2, 127, etc:
+        # or wpscan_exit_code not in [1,3,4]
+        # If WPScan error, add the error to the reports
+        # This types if errors will be written into the Json database file exit codes 1,3,4
+        err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
+        wp_report['errors'].append(err_str)
+        raise RuntimeError("WPscan failure")
 
     # Orchestrate the scanning of a site
     def scan_site(self, wp_site, last_wp_report=None):
@@ -199,7 +203,7 @@ class WPWatcherScanner():
         try:
             wp_report = self.wpscan_site(wp_site, wp_report)
         except RuntimeError:
-             # Try to handle error and return
+             # Try to handle error and return, Reccursive call to scan_site
             wp_report, handled = self.handle_wpscan_err(wp_site, wp_report)
             if handled: return wp_report
             else: 

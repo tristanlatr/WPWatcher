@@ -67,6 +67,7 @@ class WPWatcher():
 
     @staticmethod
     def delete_tmp_wpscan_files():
+        
         # Try delete temp files.
         if os.path.isdir('/tmp/wpscan'):
             try: 
@@ -77,6 +78,7 @@ class WPWatcher():
     
     @staticmethod
     def dump_config(conf):
+        
         dump_conf=copy.deepcopy(conf)
         string=''
         for k in dump_conf:
@@ -92,10 +94,12 @@ class WPWatcher():
         return(string)
     
     def wait_all_wpscan_process(self):
+        
         while len(self.scanner.wpscan.processes)>0:
             time.sleep(0.05)
 
     def interrupt(self, sig=None, frame=None):
+        
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):
             raise InterruptedError()
@@ -121,6 +125,7 @@ class WPWatcher():
         self.wait_and_finish_interrupt()
     
     def wait_and_finish_interrupt(self):
+        
         try: 
             with timeout(INTERRUPT_TIMEOUT): self.executor.shutdown(wait=True)
         except TimeoutError: pass
@@ -129,9 +134,11 @@ class WPWatcher():
         exit(-1)
 
     def get_scanned_sites_reports(self):
+        
         return [ e for e in [ self.wp_reports.find_last_wp_report({'site':s}) for s in self.scanner.scanned_sites ] if e ]
 
     def print_scanned_sites_results(self):
+        
         new_reports=self.get_scanned_sites_reports()
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
@@ -139,6 +146,7 @@ class WPWatcher():
     
     @staticmethod
     def format_site(wp_site):
+        
         if 'url' not in wp_site :
             log.error("Invalid site %s"%wp_site)
             wp_site={'url':''}
@@ -156,6 +164,7 @@ class WPWatcher():
 
     # Orchestrate the scanning of a site
     def scan_site(self, wp_site):
+        
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
         wp_report=self.scanner.scan_site(wp_site,  last_wp_report)
@@ -167,6 +176,7 @@ class WPWatcher():
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
+        
         # Check sites are in the config
         if len(self.wp_sites)==0:
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
@@ -199,6 +209,8 @@ class WPWatcher():
 
 # WPWatcherPrescan class ---------------------------------------------------------------------
 class WPWatcherPrescan():
+    """
+    """
 
     def __init__(self, conf):
         if not self.check_api_token_not_installed(): exit(-1)
@@ -214,6 +226,7 @@ class WPWatcherPrescan():
         self.wpwatcher = WPWatcher(self.conf)
     
     def prescan(self):
+        
         self.wpwatcher.wp_reports.no_local_storage=True
         self.wpwatcher.scanner.mail.send_email_report=False
         _,resutls = self.wpwatcher.run_scans_and_notify()
@@ -221,6 +234,7 @@ class WPWatcherPrescan():
         return self.conf
         
     def add_api_token_to_warning_sites(self, resutls):
+        
         warning_reports = [ r for r in resutls if r and r['status'] in ['WARNING','ALERT'] ]
         for site in self.conf['wp_sites']:
             if site['url'] in [ r['site'] for r in warning_reports ] :
@@ -228,6 +242,7 @@ class WPWatcherPrescan():
 
     @staticmethod
     def check_api_token_not_installed():
+        
         if 'WPSCAN_API_TOKEN' in os.environ:
             log.error("WPSCAN_API_TOKEN environnement varible is set, please remove it to allow WPWatcher to handle WPScan API token")
             return False
@@ -243,6 +258,7 @@ class WPWatcherPrescan():
     
     @staticmethod
     def retreive_api_token(wpscan_args):
+        
         if "--api-token" not in wpscan_args:
             log.error("No --api-token in WPScan arguments, please set --api-token to allow WPWatcher to handle WPScan API token")
             return None
