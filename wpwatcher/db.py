@@ -8,8 +8,8 @@ import os
 import json
 import time
 import threading
-from . import log
-from .config import WPWatcherConfig
+from wpwatcher import log
+from wpwatcher.config import WPWatcherConfig
 
 # Database default files
 DEFAULT_REPORTS='.wpwatcher/wp_reports.json'

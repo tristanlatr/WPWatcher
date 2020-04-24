@@ -230,7 +230,13 @@ class WPWatcherTests(unittest.TestCase):
     def test_send_report(self):
        
         # Init WPWatcher
-        wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        wpwatcher = WPWatcher(WPWatcherConfig(string=DEFAULT_CONFIG+"\nattach_wpscan_output=Yes").build_config()[0])
+
+
+        print(wpwatcher.__dict__)
+        print(wpwatcher.scanner.__dict__)
+        print(wpwatcher.scanner.mail.__dict__)
+
         # Send mail
         for s in WP_SITES:
             report={
@@ -249,8 +255,12 @@ class WPWatcherTests(unittest.TestCase):
                 "fixed": ["This issue was fixed"],
                 "wpscan_output":"This is real%s"%(s)
             }
-            notif=WPWatcherNotification(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-            notif.send_report(report, email_to='test')
+
+            
+
+            # notif=WPWatcherNotification(WPWatcherConfig(string=DEFAULT_CONFIG+"\nattach_wpscan_output=Yes").build_config()[0])
+            wpwatcher.scanner.mail.send_report(report, email_to='test')
+
             self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             self.assertNotEqual(report['last_email'], None)
 

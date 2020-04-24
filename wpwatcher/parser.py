@@ -148,6 +148,7 @@ def check_valid_section(data, section):
 
 def parse_slugs_vulnerabilities(node):
     warnings, alerts=[],[]
+    if not node: return ((warnings, alerts))
     for slug in node:
         try: alerts.extend(parse_findings(node[slug]['vulnerabilities']))
         except KeyError: pass
@@ -157,7 +158,7 @@ def parse_slugs_vulnerabilities(node):
 
 def parse_section_alerts(section, node):
     warnings, alerts=[],[]
-    warnings_alt,alerts_alt=[],[]
+    if not node: return ((warnings, alerts))
     if section=='version':
         warnings.extend(parse_warning_wordpress(node))
     if section=='main_theme':
@@ -165,6 +166,7 @@ def parse_section_alerts(section, node):
     if any ([section==c for c in ['main_theme','version']]):
         try: alerts.extend(parse_findings(node['vulnerabilities']))
         except KeyError: pass
+    warnings_alt,alerts_alt=[],[]
     if any([section==c for c in ['themes', 'plugins', 'timthumbs']]):
         warnings_alt, alerts_alt=parse_slugs_vulnerabilities(node)
         warnings.extend(warnings_alt)

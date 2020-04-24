@@ -12,12 +12,12 @@ import os
 
 from datetime import timedelta, datetime
 from urllib.parse import urlparse
-from . import log
-from .utils import get_valid_filename, safe_log_wpscan_args, oneline
-from .parser import parse_results
-from .config import WPWatcherConfig
-from .email import WPWatcherNotification
-from .wpscan import WPScanWrapper
+from wpwatcher import log
+from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline
+from wpwatcher.parser import parse_results
+from wpwatcher.config import WPWatcherConfig
+from wpwatcher.notification import WPWatcherNotification
+from wpwatcher.wpscan import WPScanWrapper
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
 

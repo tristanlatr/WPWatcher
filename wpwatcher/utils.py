@@ -12,7 +12,7 @@ import copy
 import signal
 from contextlib import contextmanager
 from datetime import timedelta
-from . import log
+from wpwatcher import log
 # Few static helper methods -------------------
 @contextmanager
 def timeout(time):

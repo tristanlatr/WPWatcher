@@ -5,9 +5,9 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import time
-from . import log
-from .core import WPWatcher
-from .db import WPWatcherDataBase
+from wpwatcher import log
+from wpwatcher.core import WPWatcher
+from wpwatcher.db import WPWatcherDataBase
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcherDaemon():

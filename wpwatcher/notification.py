@@ -12,7 +12,8 @@ import traceback
 import threading
 import time
 from datetime import datetime
-from email import encoders
+# from email import encoders
+from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -74,7 +75,7 @@ class WPWatcherNotification():
         self.server.quit()
 
     # Send email report with status and timestamp
-    def send_report(self, wp_report, email_to, send_infos=False, send_warnings=True, send_errors=False, attach_wpscan_output=False):
+    def send_report(self, wp_report, email_to) : #, send_infos=False, send_warnings=True, send_errors=False, attach_wpscan_output=False):
 
         # Building message
         message = MIMEMultipart("html")
@@ -84,21 +85,21 @@ class WPWatcherNotification():
 
         # Email body
         body=self.build_message(wp_report, 
-            warnings=send_warnings or send_infos, # switches to include or not warnings and infos
-            infos=send_infos )
+            warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
+            infos=self.send_infos )
 
         message.attach(MIMEText(body))
         
         # Attachment log if attach_wpscan_output
-        if attach_wpscan_output:
+        if self.attach_wpscan_output:
             # Remove color
             wp_report['wpscan_output'] = re.sub(r'(\x1b|\[[0-9][0-9]?m)','', str(wp_report['wpscan_output']))
             # Read the WPSCan output
             attachment=io.BytesIO(wp_report['wpscan_output'].encode())
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-            # Encode file in ASCII characters to send by email    
-            encoders.encode_base64(part)
+            part = MIMEApplication(
+                attachment.read(),
+                Name='WPScan_output'
+            )
             # Sanitize WPScan report filename 
             wpscan_report_filename=get_valid_filename('WPScan_output_%s_%s' % (wp_report['site'], wp_report['datetime']))
             # Add header as key/value pair to attachment part
@@ -108,7 +109,8 @@ class WPWatcherNotification():
             )
             # Attach the report
             message.attach(part)
-
+            log.info("%s attached"%(wpscan_report_filename))
+        else: log.info("No file attached, set attach_wpscan_output=Yes or use --attach to attach WPScan output to emails")
         # # Connecting and sending
         self.send_mail(message, email_to)
 
@@ -166,10 +168,7 @@ class WPWatcherNotification():
 
         try:
             with mail_lock:
-                self.send_report(wp_report, to, send_infos=self.send_infos, 
-                    send_warnings=self.send_warnings, 
-                    send_errors=self.send_errors, 
-                    attach_wpscan_output=self.attach_wpscan_output)
+                self.send_report(wp_report, to)
                 return True
                 
         # Handle send mail error

@@ -17,7 +17,7 @@ from wpwatcher.utils import parse_timedelta, results_summary
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
-from .daemon import WPWatcherDaemon
+from wpwatcher.daemon import WPWatcherDaemon
 
 class WPWatcherCLI():
     def __init__(self):
