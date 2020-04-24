@@ -6,16 +6,12 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import threading
 import re
-import smtplib
-import traceback
 import os
 
 from datetime import timedelta, datetime
-from urllib.parse import urlparse
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline
 from wpwatcher.parser import parse_results
-from wpwatcher.config import WPWatcherConfig
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 # Wait when API limit reached
