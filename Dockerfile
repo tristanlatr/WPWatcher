@@ -4,8 +4,8 @@ FROM ruby:alpine
 RUN apk --update add --virtual build-dependencies ruby-dev build-base &&\
     apk --update add curl &&\
     apk --update add git
-# Install WPScan lastest tested version
-RUN gem install wpscan -v 3.7.11
+# Install WPScan lastest version
+RUN gem install wpscan
 # Python install
 ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache python3
