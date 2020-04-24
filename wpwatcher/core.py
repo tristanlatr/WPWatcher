@@ -219,13 +219,14 @@ class WPWatcherPrescan():
     
     def prescan(self):
         self.wpwatcher.scanner.mail.send_email_report=False
+        self.wpwatcher.scanner.daemon=False
         _,resutls = self.wpwatcher.run_scans_and_notify()
         self.add_api_token_to_warning_sites(resutls)
         return self.conf
         
     def add_api_token_to_warning_sites(self, resutls):
         warning_reports = [ r for r in resutls if r['status'] in ['WARNING','ALERT'] ]
-        for site in self.conf['wp_site']:
+        for site in self.conf['wp_sites']:
             if site['url'] in [ r['site'] for r in warning_reports ] :
                 site['wpscan_args'].extend([ "--api-token", self.api_token ])
 
