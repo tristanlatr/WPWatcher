@@ -29,6 +29,7 @@
   - Optionnal follow URL redirection if WPScan fails and propose to ignore main redirect 
   - Save raw WPScan results into files
   - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
+  - Optionnal prescan sites without API token, then use token on site having issues (i.e. outdated Wordpress, plugin version) only to save calls ;-)
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
