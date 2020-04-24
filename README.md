@@ -119,15 +119,15 @@ Simple usage, scan 2 sites with default config
 
     wpwatcher --url exemple.com exemple1.com
 
-Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached and ignore the WPScan No WPVulnDB API Token warning.
+Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached. Scan all sites without API token first and use token on sites with outdated plugins or WordPress version only. If you reach your API limit, it will wait and continue 24h later.
 
 ```bash
 wpwatcher --urls sites.txt \
-        --wpscan_args "--rua --force --stealthy" \
+        --wpscan_args "--rua --force --stealthy --api-token <TOKEN>" \
         --follow_redirect --workers 5 \
         --send --attach \
         --email_to collaborator1@office.ca collaborator2@office.ca \
-        --fpstr "No WPVulnDB API Token given"
+        --prescan_without_api_token --api_limit_wait
 ```
 
 #### Notes on script behaviours
