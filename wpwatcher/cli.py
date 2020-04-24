@@ -42,7 +42,7 @@ class WPWatcherCLI():
             # Run scans and quit
             # Create main object
             wpwatcher=WPWatcher(configuration)
-            exit_code,results=wpwatcher.run_scans_and_notify()
+            exit_code,_=wpwatcher.run_scans_and_notify()
             exit(exit_code)
             
     @staticmethod
@@ -66,7 +66,7 @@ class WPWatcherCLI():
         parser = argparse.ArgumentParser(description="""WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.
     Some config arguments can be passed to the command.
     It will overwrite previous values from config file(s).
-    Check %s for more informations."""%(GIT_URL), formatter_class=argparse.RawTextHelpFormatter)
+    Check %s for more informations."""%(GIT_URL))
         parser.add_argument('--conf', '-c', metavar='File path', help="""The script * must read a configuration file to set mail server settings, WPScan path and other options *.     
     If no config file is found, mail server settings will have default values.  
     Setup mail server settings and turn on `send_email_report` in the config file if you want to receive reports.  
@@ -77,29 +77,28 @@ class WPWatcherCLI():
     Use `wpwatcher --template_conf > ~/.wpwatcher/wpwatcher.conf && vim ~/.wpwatcher/wpwatcher.conf` to create (or overwrite) and edit the new default config file.""", action='store_true')
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
         parser.add_argument('--wprs', metavar="Path to json file", help="Print database (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
-
         # Declare arguments that will overwrite config options
-        parser.add_argument('--wp_sites', '--url', metavar="URL", help="Configure wp_sites", nargs='+', default=None)
-        parser.add_argument('--wp_sites_list', '--urls', metavar="File path", help="Configure wp_sites from a list of URLs", default=None)
-        parser.add_argument('--email_to', '--em', metavar="Email", help="Configure email_to", nargs='+', default=None)
-        parser.add_argument('--send_email_report', '--send', help="Configure send_email_report=Yes", action='store_true')
-        parser.add_argument('--send_infos', '--infos', help="Configure send_infos=Yes", action='store_true')
-        parser.add_argument('--send_errors', '--errors', help="Configure send_errors=Yes", action='store_true')
-        parser.add_argument('--attach_wpscan_output', '--attach', help="Configure attach_wpscan_output=Yes", action='store_true')
-        parser.add_argument('--fail_fast', '--ff', help="Configure fail_fast=Yes", action='store_true')
-        parser.add_argument('--api_limit_wait', '--wait', help="Configure api_limit_wait=Yes", action='store_true')
-        parser.add_argument('--daemon',  help="Configure daemon=Yes", action='store_true')
-        parser.add_argument('--daemon_loop_sleep','--loop', metavar='Time string', help="Configure daemon_loop_sleeps")
-        parser.add_argument('--wp_reports', '--reports', metavar="File path", help="Configure wp_reports", default=None)
-        parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Configure resend_emails_after")
-        parser.add_argument('--asynch_workers','--workers', metavar="Number of asynchronous workers", help="Configure asynch_workers", type=int)
-        parser.add_argument('--log_file','--log', metavar="Logfile path", help="Configure log_file")
-        parser.add_argument('--follow_redirect','--follow',  help="Configure follow_redirect=Yes", action='store_true')
-        parser.add_argument('--wpscan_output_folder','--wpout', metavar="WPScan results folder", help="Configure wpscan_output_folder")
-        parser.add_argument('--wpscan_args','--wpargs', metavar='WPScan arguments as string', help='Configure wpscan_args')
-        parser.add_argument('--false_positive_strings','--fpstr', metavar='False positive strings', help='Configure false_positive_strings', nargs='+', default=None)
-        parser.add_argument('--verbose', '-v', help="Configure verbose=Yes", action='store_true')
-        parser.add_argument('--quiet', '-q', help="Configure quiet=Yes", action='store_true')
+        parser.add_argument('--wp_sites', '--url', metavar="URL", help="Site(s) to scan, you can pass multiple values", nargs='+', default=None)
+        parser.add_argument('--wp_sites_list', '--urls', metavar="File path", help="Read URLs from a text file. File must contain one URL per line", default=None)
+        parser.add_argument('--send_email_report', '--send', help="Enable email report sending", action='store_true')
+        parser.add_argument('--email_to', '--em', metavar="Email", help="Email the specified receipent(s) you can pass multiple values", nargs='+', default=None)
+        parser.add_argument('--send_infos', '--infos', help="Email INFO reports", action='store_true')
+        parser.add_argument('--send_errors', '--errors', help="Email ERROR reports", action='store_true')
+        parser.add_argument('--attach_wpscan_output', '--attach', help="Attach WPScan output to emails", action='store_true')
+        parser.add_argument('--fail_fast', '--ff', help="Interrupt scans if any WPScan or sendmail failure", action='store_true')
+        parser.add_argument('--api_limit_wait', '--wait', help="Sleep 24h if API limit reached", action='store_true')
+        parser.add_argument('--daemon',  help="Loop and scan for ever", action='store_true')
+        parser.add_argument('--daemon_loop_sleep','--loop', metavar='Time string', help="Time interval to sleep in daemon loop")
+        parser.add_argument('--wp_reports', '--reports', metavar="File path", help="Database Json file", default=None)
+        parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Minimum time interval to resend email reports")
+        parser.add_argument('--asynch_workers','--workers', metavar="Number", help="Number of asynchronous workers", type=int)
+        parser.add_argument('--log_file','--log', metavar="File path", help="Logfile replicates all output with timestamps")
+        parser.add_argument('--follow_redirect','--follow',  help="Follow site redirection if causes WPscan failure", action='store_true')
+        parser.add_argument('--wpscan_output_folder','--wpout', metavar="Folder path", help="Write all WPScan results in sub directories 'info', 'warning', 'alert' and 'error'")
+        parser.add_argument('--wpscan_args','--wpargs', metavar='Arguments', help="WPScan arguments as string. See 'wpscan --help' for more infos")
+        parser.add_argument('--false_positive_strings','--fpstr', metavar='String', help='False positive strings, you can pass multiple values', nargs='+', default=None)
+        parser.add_argument('--verbose', '-v', help="Verbose output, print WPScan raw output and parsed WPScan results.", action='store_true')
+        parser.add_argument('--quiet', '-q', help="Print only errors and WPScan ALERTS", action='store_true')
         args = parser.parse_args()
         return(args)
 
