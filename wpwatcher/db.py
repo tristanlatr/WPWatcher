@@ -54,9 +54,11 @@ class WPWatcherDataBase():
             log.info("The database file %s do not exist. It will be created."%(filepath))
         return wp_reports
 
-    def update_and_write_wp_reports(self, new_wp_report_list=[]):
+    def update_and_write_wp_reports(self, new_wp_report_list=None):
         # Update the sites that have been scanned, keep others
         # Keep same report order add append new sites at the bottom
+        if not new_wp_report_list: return
+        
         for newr in new_wp_report_list:
             new=True
             for r in self._data:

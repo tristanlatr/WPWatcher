@@ -6,11 +6,8 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 """
 
 # Main program, parse the args, read config and launch scans
-import time
 import argparse
 import shlex
-import json
-import sys
 
 from wpwatcher import VERSION, AUTHORS, GIT_URL, log, init_log
 from wpwatcher.utils import parse_timedelta, results_summary

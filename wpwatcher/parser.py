@@ -41,8 +41,6 @@ Ressource PArsing CLI output:
 
 import json
 import re
-import sys
-import argparse
 
 def parse_results(wpscan_output, false_positives=[]):
     # Init scan messages

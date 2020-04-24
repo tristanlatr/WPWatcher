@@ -7,7 +7,6 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import time
 from wpwatcher import log
 from wpwatcher.core import WPWatcher
-from wpwatcher.db import WPWatcherDataBase
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcherDaemon():

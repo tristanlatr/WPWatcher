@@ -4,10 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-import logging
 import re
-import os
-import sys
 import copy
 import signal
 from contextlib import contextmanager

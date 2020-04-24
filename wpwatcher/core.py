@@ -9,21 +9,17 @@ import os
 import json
 import threading
 import time
-import io
 import shutil
 import concurrent.futures
 import traceback
-import re
-import subprocess
 import signal
 from urllib.parse import urlparse
-from datetime import datetime, timedelta
 
 from wpwatcher import log, init_log
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
-from wpwatcher.utils import safe_log_wpscan_args, get_valid_filename, print_progress_bar, results_summary, timeout
+from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, results_summary, timeout
 
 # Send kill signal after X seconds when cancelling
 INTERRUPT_TIMEOUT=10
