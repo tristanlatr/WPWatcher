@@ -96,3 +96,4 @@ class WPScanWrapper():
             log.error(oneline(err_string))
             (exit_code, output)=(-1, "")
         return((exit_code, output))
+        
