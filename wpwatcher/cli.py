@@ -97,6 +97,7 @@ class WPWatcherCLI():
         parser.add_argument('--wpscan_output_folder','--wpout', metavar="Folder path", help="Write all WPScan results in sub directories 'info', 'warning', 'alert' and 'error'")
         parser.add_argument('--wpscan_args','--wpargs', metavar='Arguments', help="WPScan arguments as string. See 'wpscan --help' for more infos")
         parser.add_argument('--false_positive_strings','--fpstr', metavar='String', help='False positive strings, you can pass multiple values', nargs='+', default=None)
+        parser.add_argument('--prescan_without_api_token','--prescan', help='Scan without API token first and use API token on sites that triggered warnings', action='store_true')
         parser.add_argument('--verbose', '-v', help="Verbose output, print WPScan raw output and parsed WPScan results.", action='store_true')
         parser.add_argument('--quiet', '-q', help="Print only errors and WPScan ALERTS", action='store_true')
         args = parser.parse_args()

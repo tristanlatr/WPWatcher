@@ -130,7 +130,6 @@ wpwatcher --urls sites.txt \
 ```
 
 #### Notes on script behaviours
-- The script must read a configuration file to setup mail server settings and other otions. Setup mail server settings and turn on send_email_report in the config file or use `--send` if you want to receive reports.
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
 - All messages are printed to `stdout`.
@@ -692,7 +691,6 @@ If you like the project and think you could help with making it better, there ar
 - Any contribution would be of great help
 
 ## Running tests
-Requirements: pytest codecov pytest-cov
 ```
 python3 -m unittest tests.quick_test
 ```

@@ -17,7 +17,6 @@ import re
 import subprocess
 import signal
 from urllib.parse import urlparse
-
 from datetime import datetime, timedelta
 
 from wpwatcher import log, init_log
@@ -49,7 +48,7 @@ class WPWatcher():
 
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
-        
+
         # Save sites
         self.wp_sites=conf['wp_sites']
 
@@ -65,7 +64,11 @@ class WPWatcher():
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt() 
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
-        
+
+        # Prescan feature prescan_without_api_token
+        self.prescan=None
+        if conf['prescan_without_api_token']: self.prescan=WPWatcherPrescan(conf)
+
     @staticmethod
     def delete_tmp_wpscan_files():
         # Try delete temp files.
@@ -173,6 +176,10 @@ class WPWatcher():
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
             return((-1, []))
 
+        if self.prescan:
+            arranged_config=self.prescan.prescan()
+            return WPWatcher(arranged_config).run_scans_and_notify()
+
         log.info("Starting scans on %s configured sites"%(len(self.wp_sites)))
         new_reports=[]
         # Sumbit all scans jobs and start scanning
@@ -193,3 +200,57 @@ class WPWatcher():
         else:
             log.info("Scans finished with errors.") 
             return((-1, new_reports))
+
+# WPWatcherPrescan class ---------------------------------------------------------------------
+class WPWatcherPrescan():
+
+    def __init__(self, conf):
+        if not self.check_api_token_not_installed(): exit(-1)
+
+        log.info("Pre scanning all sites without API token...")
+
+        self.conf = copy.deepcopy(conf) 
+        # Format all sites
+        self.conf['wp_sites'] = [ WPWatcher.format_site(s) for s in self.conf['wp_sites'] ]
+        self.api_token = self.retreive_api_token(self.conf['wpscan_args'])
+        if not self.api_token : exit(-1)
+        self.conf['prescan_without_api_token']=False
+        self.wpwatcher = WPWatcher(self.conf)
+    
+    def prescan(self):
+        self.wpwatcher.scanner.mail.send_email_report=False
+        _,resutls = self.wpwatcher.run_scans_and_notify()
+        self.add_api_token_to_warning_sites(resutls)
+        return self.conf
+        
+    def add_api_token_to_warning_sites(self, resutls):
+        warning_reports = [ r for r in resutls if r['status'] in ['WARNING','ALERT'] ]
+        for site in self.conf['wp_site']:
+            if site['url'] in [ r['site'] for r in warning_reports ] :
+                site['wpscan_args'].extend([ "--api-token", self.api_token ])
+
+    @staticmethod
+    def check_api_token_not_installed():
+        if 'WPSCAN_API_TOKEN' in os.environ:
+            log.error("WPSCAN_API_TOKEN environnement varible is set, please remove it to allow WPWatcher to handle WPScan API token")
+            return False
+
+        files=['.wpscan/scan.json', '.wpscan/scan.yml']
+        env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
+        for wpscan_config_file in WPWatcherConfig.find_files(env, files):
+            with open(wpscan_config_file,'r') as wpscancfg:
+                if any ([ 'api_token' in line and line.strip[0] is not "#" for line in wpscancfg.readlines() ]):
+                    log.error('API token is set in the config file %s, please remove it to allow WPWatcher to handle WPScan API token'%(wpscan_config_file))
+                    return False
+        return True
+    
+    @staticmethod
+    def retreive_api_token(wpscan_args):
+        if "--api-token" not in wpscan_args:
+            log.error("No --api-token in WPScan arguments, please set --api-token to allow WPWatcher to handle WPScan API token")
+            return None
+        api_token_index = wpscan_args.index("--api-token")+1
+        token = wpscan_args[api_token_index]
+        del wpscan_args[api_token_index]
+        del wpscan_args[api_token_index-1]
+        return token

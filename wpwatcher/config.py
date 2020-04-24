@@ -63,6 +63,7 @@ class WPWatcherConfig():
                 'follow_redirect':self.getbool(self.parser, 'follow_redirect'),
                 'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
                 'wpscan_args':self.getjson(self.parser,'wpscan_args'),
+                'prescan_without_api_token':self.getbool(self.parser, 'prescan_without_api_token'),
                 # Not configurable with cli arguments
                 'send_warnings':self.getbool(self.parser, 'send_warnings'),
                 'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
@@ -145,6 +146,9 @@ smtp_ssl=Yes
 # Follow main redirection when WPScan failed
 # follow_redirect=Yes
 
+# Prescan with API token then use API on warning sites
+# prescan_without_api_token=Yes
+
 """%(GIT_URL)
 
     # Config default values
@@ -177,7 +181,8 @@ smtp_ssl=Yes
         'wp_reports':'',
         'asynch_workers':'1',
         'follow_redirect':'No',
-        'wpscan_output_folder':''
+        'wpscan_output_folder':'',
+        'prescan_without_api_token':'No'
     }
 
     @staticmethod
@@ -228,42 +233,3 @@ smtp_ssl=Yes
         env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
         
         return(WPWatcherConfig.find_files(env, files, WPWatcherConfig.TEMPLATE_FILE))
-
-        # Old code refactored
-        # if create:
-        #     os.makedirs(os.path.join(os.environ['HOME'],'.wpwatcher'), exist_ok=True)
-        # if 'APPDATA' in os.environ: 
-        #     p=os.path.join(os.environ['APPDATA'],'.wpwatcher/wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        #     elif create: 
-        #         with open(p,'w') as config_file:
-        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-        #             log.info("Init new config file from template: %s"%(p))
-        #         paths.append(p)
-        #     p=os.path.join(os.environ['APPDATA'],'wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        # elif 'HOME' in os.environ: 
-
-        #     p=os.path.join(os.environ['HOME'],'.wpwatcher/wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        #     elif create: 
-        #         with open(p,'w') as config_file:
-        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-        #             log.info("Init new config file: %s"%(p))
-        #         paths.append(p)
-
-        #     p=os.path.join(os.environ['HOME'],'wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        # elif 'XDG_CONFIG_HOME' in os.environ: 
-        #     p=os.path.join(os.environ['XDG_CONFIG_HOME'],'.wpwatcher/wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        #     elif create: 
-        #         with open(p,'w') as config_file:
-        #             config_file.write(WPWatcherConfig.TEMPLATE_FILE)
-        #             log.info("Init new config file: %s"%(p))
-        #     p=os.path.join(os.environ['XDG_CONFIG_HOME'],'wpwatcher.conf')
-        #     if os.path.isfile(p): paths.append(p)
-        # if os.path.isfile('./wpwatcher.conf'): 
-        #     paths.append('./wpwatcher.conf')
-
-        

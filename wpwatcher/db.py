@@ -68,13 +68,12 @@ class WPWatcherDataBase():
                 self._data.append(newr)
         # Write to file if not null
         if not self.no_local_storage :
-            # Write method should be thread safe
+            # Write method thread safe
             while wp_report_lock.locked():
                 time.sleep(0.01)
             wp_report_lock.acquire()
             with open(self.filepath,'w') as reportsfile:
                 json.dump(self._data, reportsfile, indent=4)
-                log.info("Database %s wrote"%(reportsfile))
                 wp_report_lock.release()
 
     def find_last_wp_report(self, wp_report):
