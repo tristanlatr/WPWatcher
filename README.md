@@ -499,6 +499,14 @@ If missing, default to `No`
 follow_redirect=Yes
 ```
 Overwrite with arguments: `--follow`
+
+Prescan sites without API token, then use API token only on site with outdated pugin version or WordPress version only to save API calls
+
+```ini
+prescan_without_api_token=Yes
+```
+Overwrite with argument `--prescan`
+
 </p>
 </details>
 
