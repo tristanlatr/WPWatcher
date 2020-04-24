@@ -59,8 +59,11 @@ class WPWatcherScanner():
                 exit(-1)
             self.api_token = self.retreive_api_token(self.wpscan_args)
             if not self.api_token: 
-                log.error("No --api-token in WPScan arguments, please set --api-token to allow WPWatcher to handle WPScan API token")
+                log.error("No --api-token in WPScan arguments, please set --api-token in config file wpscan_args values or use --wpargs [...] to allow WPWatcher to handle WPScan API token")
                 exit(-1)
+            api_token_index = self.wpscan_args.index("--api-token")+1
+            del self.wpscan_args[api_token_index]
+            del self.wpscan_args[api_token_index-1]
 
         # Init wpscan output folder
         if conf['wpscan_output_folder'] : 
@@ -69,6 +72,33 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(conf['wpscan_output_folder'],'alert/'), exist_ok=True)
             os.makedirs(os.path.join(conf['wpscan_output_folder'],'warning/'), exist_ok=True)
             os.makedirs(os.path.join(conf['wpscan_output_folder'],'info/'), exist_ok=True)
+            
+    @staticmethod
+    def check_api_token_not_installed():
+        
+        if 'WPSCAN_API_TOKEN' in os.environ:
+            log.error("WPSCAN_API_TOKEN environnement varible is set, please remove it to allow WPWatcher to handle WPScan API token")
+            return False
+
+        files=['.wpscan/scan.json', '.wpscan/scan.yml']
+        env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
+        for wpscan_config_file in WPWatcherConfig.find_files(env, files):
+            with open(wpscan_config_file,'r') as wpscancfg:
+                if any ([ 'api_token' in line and line.strip[0] is not "#" for line in wpscancfg.readlines() ]):
+                    log.error('API token is set in the config file %s, please remove it to allow WPWatcher to handle WPScan API token'%(wpscan_config_file))
+                    return False
+        return True
+    
+    @staticmethod
+    def retreive_api_token(wpscan_args):
+
+        if "--api-token" not in wpscan_args:
+            return None
+        api_token_index = wpscan_args.index("--api-token")+1
+        token = wpscan_args[api_token_index]
+        # del wpscan_args[api_token_index]
+        # del wpscan_args[api_token_index-1]
+        return token
 
     @staticmethod
     def get_fixed_issues(wp_report, last_wp_report, issue_type='alerts'):
@@ -263,30 +293,3 @@ class WPWatcherScanner():
         # Discard wpscan_output from report
         del wp_report['wpscan_output']
         return(wp_report)
-
-    @staticmethod
-    def check_api_token_not_installed():
-        
-        if 'WPSCAN_API_TOKEN' in os.environ:
-            log.error("WPSCAN_API_TOKEN environnement varible is set, please remove it to allow WPWatcher to handle WPScan API token")
-            return False
-
-        files=['.wpscan/scan.json', '.wpscan/scan.yml']
-        env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
-        for wpscan_config_file in WPWatcherConfig.find_files(env, files):
-            with open(wpscan_config_file,'r') as wpscancfg:
-                if any ([ 'api_token' in line and line.strip[0] is not "#" for line in wpscancfg.readlines() ]):
-                    log.error('API token is set in the config file %s, please remove it to allow WPWatcher to handle WPScan API token'%(wpscan_config_file))
-                    return False
-        return True
-    
-    @staticmethod
-    def retreive_api_token(wpscan_args):
-
-        if "--api-token" not in wpscan_args:
-            return None
-        api_token_index = wpscan_args.index("--api-token")+1
-        token = wpscan_args[api_token_index]
-        del wpscan_args[api_token_index]
-        del wpscan_args[api_token_index-1]
-        return token
