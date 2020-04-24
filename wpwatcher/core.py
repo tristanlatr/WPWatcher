@@ -219,7 +219,6 @@ class WPWatcherPrescan():
     
     def prescan(self):
         self.wpwatcher.scanner.mail.send_email_report=False
-        self.wpwatcher.scanner.daemon=False
         _,resutls = self.wpwatcher.run_scans_and_notify()
         self.add_api_token_to_warning_sites(resutls)
         return self.conf
