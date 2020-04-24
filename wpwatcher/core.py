@@ -81,14 +81,16 @@ class WPWatcher():
     
     @staticmethod
     def dump_config(conf):
-        bump_conf=copy.deepcopy(conf)
+        dump_conf=copy.deepcopy(conf)
         string=''
-        for k in bump_conf:
-            v=bump_conf[k]
+        for k in dump_conf:
+            v=dump_conf[k]
             if k == 'wpscan_args':
                 v=safe_log_wpscan_args(v)
-            if k == 'smtp_pass' and bump_conf[k] != "" :
+            if k == 'smtp_pass' and v != "" :
                 v = '***'
+            if k == 'wp_sites' and v != "" :
+                v = '[ %s sites ]'%(len(v))
             if isinstance(v, (list, dict)):
                 v=json.dumps(v)
             else: v=str(v)
@@ -218,6 +220,7 @@ class WPWatcherPrescan():
         self.wpwatcher = WPWatcher(self.conf)
     
     def prescan(self):
+        self.wpwatcher.wp_reports.no_local_storage=True
         self.wpwatcher.scanner.mail.send_email_report=False
         _,resutls = self.wpwatcher.run_scans_and_notify()
         self.add_api_token_to_warning_sites(resutls)
