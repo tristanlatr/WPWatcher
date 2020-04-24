@@ -48,7 +48,7 @@ from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 from wpwatcher.parser import parse_results
-from wpwatcher.email import WPWatcherNotification
+from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.scan import WPWatcherScanner
 import random
 import linecache

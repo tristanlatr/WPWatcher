@@ -194,18 +194,6 @@ def wrap_parse_simple_values(data, section, title):
             alerts.append("%s%s"%(title, str(val)))
     return alerts
 
-# def parse_config_backups(data):
-#     return wrap_parse_simple_values(data, 'config_backups', 'WordPress Configuration Backup Found: ')
-
-# def parse_db_exports(data):
-#     return wrap_parse_finding(data, 'db_exports')
-
-# def parse_password_attack(data):
-#     return wrap_parse_simple_values(data, 'password_attack', 'WordPres Weak User Password Found: ')
-
-# def parse_not_fully_configured(data):
-#     return wrap_parse_finding(data, 'not_fully_configured')
-
 def parse_misc_alerts(data):
     return ( wrap_parse_simple_values(data, 'config_backups', 'WordPress Configuration Backup Found: ') + 
         wrap_parse_finding(data, 'db_exports')+ 
@@ -363,7 +351,7 @@ def parse_warning_theme_or_plugin(finding):
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
     findingData+=parse_confidence(finding)
-    findingData+=parse_interesting_entries(finding)
+    # findingData+=parse_interesting_entries(finding)
     return([findingData])
 
 # False Positive Detection
