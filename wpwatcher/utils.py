@@ -5,33 +5,43 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import re
+import threading
 import copy
 import signal
+import time
+import threading
+import concurrent.futures
 from contextlib import contextmanager
 from datetime import timedelta
 from wpwatcher import log
-# Few static helper methods -------------------
-@contextmanager
-def timeout(time):
-    # Register a function to raise a TimeoutError on the signal.
-    # Code from https://www.jujens.eu/posts/en/2018/Jun/02/python-timeout-function/
-    signal.signal(signal.SIGALRM, raise_timeout)
-    # Schedule the signal to be sent after ``time``.
-    signal.alarm(time)
-    try: yield
-    except TimeoutError: raise
-    finally:
-        # Unregister the signal so it won't be triggered
-        # if the timeout is not reached.
-        signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
-def raise_timeout(signum, frame):
-    raise TimeoutError
+# Few static helper methods -------------------
+
+def timeout(timeout, func, args=(), kwargs={}):
+    """ Run func with the given timeout. If func didn't finish running
+        within the timeout, raise TimeoutError
+    """
+    class FuncThread(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+            self.result = None
+
+        def run(self):
+            self.result = func(*args, **kwargs)
+
+    it = FuncThread()
+    it.start()
+    it.join(timeout)
+    if it.isAlive():
+        raise TimeoutError()
+    else:
+        return it.result
 
 # Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
     logged_cmd=copy.deepcopy(wpscan_args)
-    if "--api-token" in logged_cmd :
+    if "--api-token" in "".join(logged_cmd) :
+        logged_cmd=[ val.strip() for val in logged_cmd ]
         logged_cmd[logged_cmd.index("--api-token")+1]="***"
     return logged_cmd
 
@@ -63,8 +73,8 @@ def results_summary(results):
         for m in row['alerts']+row['warnings']+row['errors']:
             pb_components.append(m.splitlines()[0])
         string+='\n'
-        string+=frow.format(row['site'], 
-            row['status'],
+        string+=frow.format(str(row['site']), 
+            str(row['status']),
             str(row['datetime']),
             str(row['last_email']),
             len(row['alerts']+row['warnings']+row['errors']),

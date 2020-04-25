@@ -64,6 +64,7 @@ class WPWatcherConfig():
                 'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
                 'wpscan_args':self.getjson(self.parser,'wpscan_args'),
                 'prescan_without_api_token':self.getbool(self.parser, 'prescan_without_api_token'),
+                'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
                 # Not configurable with cli arguments
                 'send_warnings':self.getbool(self.parser, 'send_warnings'),
                 'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
@@ -149,6 +150,8 @@ smtp_ssl=Yes
 # Prescan with API token then use API on warning sites
 # prescan_without_api_token=Yes
 
+# Scan timeout
+# scan_timeout=5m
 """%(GIT_URL)
 
     # Config default values
@@ -182,7 +185,8 @@ smtp_ssl=Yes
         'asynch_workers':'1',
         'follow_redirect':'No',
         'wpscan_output_folder':'',
-        'prescan_without_api_token':'No'
+        'prescan_without_api_token':'No',
+        'scan_timeout':'5m'
     }
 
     @staticmethod

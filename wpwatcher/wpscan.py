@@ -83,7 +83,7 @@ class WPScanWrapper():
             else : raise RuntimeError
         except RuntimeError:
             err_string, full=self.get_full_err_string(cmd, process.returncode, wpscan_output, err)
-            log.error(err_string+". Use --verbose to print full error")
+            log.error(err_string)
             log.debug(full+'\n'+traceback.format_exc())
             (exit_code, output)=(process.returncode, wpscan_output)
         except FileNotFoundError as err:
@@ -94,7 +94,8 @@ class WPScanWrapper():
 
     @staticmethod
     def get_full_err_string(cmd, returncode, wpscan_output, err):
-        reason_short=[ line for line in wpscan_output.splitlines() if 'aborted' in line.lower() ][0].replace('"','').strip()
+        try: reason_short=[ line for line in wpscan_output.splitlines() if 'aborted' in line.lower() ][0].replace('"','').strip()
+        except IndexError: reason_short=""
         full="%s %s"%("\nWPScan output: %s"%wpscan_output if wpscan_output else '', "\nError output: %s"%err if err else '')
-        short="WPScan command '%s' failed with exit code %s, %s"%(' '.join(safe_log_wpscan_args(cmd)) ,str(returncode), reason_short)
+        short="WPScan command '%s' failed with exit code %s %s"%(' '.join(safe_log_wpscan_args(cmd)) ,str(returncode), reason_short)
         return (short, full)

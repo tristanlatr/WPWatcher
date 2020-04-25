@@ -21,9 +21,6 @@ from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, results_summary, timeout
 
-# Send kill signal after X seconds when cancelling
-INTERRUPT_TIMEOUT=10
-
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
 
@@ -61,7 +58,11 @@ class WPWatcher():
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
 
-        # Prescan feature prescan_without_api_token
+        # Scan timeout
+        self.scan_timeout=conf['scan_timeout']
+
+        #new reports
+        self.new_reports=[]
 
     @staticmethod
     def delete_tmp_wpscan_files():
@@ -96,48 +97,32 @@ class WPWatcher():
         while len(self.scanner.wpscan.processes)>0:
             time.sleep(0.05)
 
-    def interrupt(self, sig=None, frame=None):
-        
-        # If called inside ThreadPoolExecutor, raise Exeception
-        if not isinstance(threading.current_thread(), threading._MainThread):
-            raise InterruptedError()
-
-        log.error("Interrupting...")
-        # Lock for interrupting
-        self.interrupting=True
+    def tear_down_jobs(self):
         # Cancel all jobs
         for f in self.futures:
             if not f.done(): f.cancel()
-        # Send ^C to all WPScan not finished
-        for p in self.scanner.wpscan.processes: p.send_signal(signal.SIGINT)
-        # Wait for all processes to finish , kill after timeout
-        try: 
-            with timeout(INTERRUPT_TIMEOUT): self.wait_all_wpscan_process()
-        except TimeoutError:
-            log.error("Interrupt timeout reached, killing WPScan processes")
-            for p in self.scanner.wpscan.processes: p.kill()
-
-        # Unlock api wait
-        self.scanner.api_wait.set()
-        # Wait all scans finished, print results and quit
-        self.wait_and_finish_interrupt()
-    
-    def wait_and_finish_interrupt(self):
         
-        try: 
-            with timeout(INTERRUPT_TIMEOUT): self.executor.shutdown(wait=True)
-        except TimeoutError: pass
-        self.print_scanned_sites_results()
+    
+    def interrupt(self, sig=None, frame=None):
+        # Lock for interrupting
+        log.error("Interrupting...")
+        # If called inside ThreadPoolExecutor, raise Exeception
+        if not isinstance(threading.current_thread(), threading._MainThread):
+            raise InterruptedError()
+        
+        # Cancel all scans
+        self.scanner.cancel_scans()
+        # Wait all scans finished, print results and quit
+        self.tear_down_jobs()
+        try:
+            timeout(1, self.executor.shutdown, kwargs=dict(wait=True))
+        except TimeoutError : pass
+        self.print_scanned_sites_results([ f.result() for f in self.futures if f.done() ])
         log.info("Scans interrupted.")
         exit(-1)
 
-    def get_scanned_sites_reports(self):
-        
-        return [ e for e in [ self.wp_reports.find_last_wp_report({'site':s}) for s in self.scanner.scanned_sites ] if e ]
-
-    def print_scanned_sites_results(self):
-        
-        new_reports=self.get_scanned_sites_reports()
+    def print_scanned_sites_results(self, new_reports):
+        new_reports = [n for n in new_reports if n]
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
             log.info("Updated %s reports in database: %s"%(len(new_reports),self.wp_reports.filepath))
@@ -161,29 +146,35 @@ class WPWatcher():
         return wp_site
 
     # Orchestrate the scanning of a site
-    def scan_site(self, wp_site, with_api_token=False):
+    def scan_site_wrapper(self, wp_site, with_api_token=False):
         
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
-        if with_api_token: wp_report=self.scanner.scan_with_api_token(wp_site,  last_wp_report)
-        else: wp_report=self.scanner.scan_site(wp_site,  last_wp_report)
+        if with_api_token: 
+            wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
+
+        # Launch scanner
+        wp_report= self.scanner.scan_site(wp_site,  last_wp_report, timeout_seconds=self.scan_timeout.total_seconds())
         # Save report in global instance database and to file when a site has been scanned
         if wp_report: self.wp_reports.update_and_write_wp_reports([wp_report])
+        else: log.info("No report saved for site %s"%wp_site['url'])
         # Print progress
-        print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites)) 
+        print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))     
         return(wp_report)
 
     def run_scans_wrapper(self, wp_sites, **kwargs):
         log.info("Starting scans on %s configured sites"%(len(wp_sites)))
-        new_reports=[]
         for wp_site in wp_sites:
-            self.futures.append(self.executor.submit(self.scan_site, wp_site, **kwargs))
+            self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site, **kwargs))
         for f in self.futures:
-            try: new_reports.append(f.result())
+            try: self.new_reports.append(f.result())
             # Handle interruption from inside threads when using --ff
-            except (InterruptedError):
+            except InterruptedError:
                 self.interrupt()
-        return new_reports
+            except concurrent.futures.CancelledError: pass
+        # Ensure everything is down
+        self.tear_down_jobs()
+        return self.new_reports
 
     # Run WPScan on defined websites
     def run_scans_and_notify(self):
@@ -193,17 +184,14 @@ class WPWatcher():
             log.error("No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path")
             return((-1, []))
 
-        # arranged_config=self.prescan.prescan()
-        # return WPWatcher(arranged_config).run_scans_and_notify()
-
         new_reports=self.run_scans_wrapper(self.wp_sites)
         # Print results and finish
-        self.print_scanned_sites_results()
+        self.print_scanned_sites_results(new_reports)
 
+        # Second scans if needed
         if len(self.scanner.prescanned_sites_warn)>0:
-            self.scanner.scanned_sites=[]
-            new_reports+=self.run_scans_wrapper(self.wp_sites, with_api_token=True)
-            self.print_scanned_sites_results()
+            new_reports+=self.re_run_scans(self.scanner.prescanned_sites_warn)
+            self.print_scanned_sites_results(new_reports)
 
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
             log.info("Scans finished successfully.")
@@ -211,3 +199,10 @@ class WPWatcher():
         else:
             log.info("Scans finished with errors.") 
             return((-1, new_reports))
+
+    def re_run_scans(self, wp_sites):
+        self.scanner.scanned_sites=[]
+        self.futures=[]
+        self.wp_sites=wp_sites
+        return self.run_scans_wrapper(wp_sites, with_api_token=True)
+        
