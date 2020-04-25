@@ -117,7 +117,12 @@ class WPWatcher():
         try:
             timeout(1, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
-        self.print_scanned_sites_results([ f.result() for f in self.futures if f.done() ])
+        new_reports=[]
+        for f in self.futures:
+             if f.done():
+                try: new_reports.append(f.result())
+                except Exception: pass
+        self.print_scanned_sites_results(new_reports)
         log.info("Scans interrupted.")
         exit(-1)
 

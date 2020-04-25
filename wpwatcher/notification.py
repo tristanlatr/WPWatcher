@@ -170,11 +170,10 @@ class WPWatcherNotification():
                 return True
                 
         # Handle send mail error
-        except smtplib.SMTPException:
+        except (smtplib.SMTPException, ConnectionRefusedError):
             log.error("Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc())
             wp_report['errors'].append("Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc())
             raise RuntimeError("Unable to send mail report")
-        finally: mail_lock.release()
             # Fail fast
             #  if not self.check_fail_fast(): return False 
 

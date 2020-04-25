@@ -9,8 +9,11 @@ import threading
 import copy
 import signal
 import time
+import sys
 import threading
 import concurrent.futures
+import queue
+import traceback
 from contextlib import contextmanager
 from datetime import timedelta
 from wpwatcher import log
@@ -22,20 +25,32 @@ def timeout(timeout, func, args=(), kwargs={}):
         within the timeout, raise TimeoutError
     """
     class FuncThread(threading.Thread):
-        def __init__(self):
+        def __init__(self, bucket):
             threading.Thread.__init__(self)
             self.result = None
+            self.bucket = bucket
+            self.err = None
 
         def run(self):
-            self.result = func(*args, **kwargs)
-
-    it = FuncThread()
+            try: self.result = func(*args, **kwargs)
+            except Exception as e: 
+                self.bucket.put(sys.exc_info())
+                self.err=e
+   
+    bucket=queue.Queue()
+    it = FuncThread(bucket)
     it.start()
     it.join(timeout)
     if it.isAlive():
         raise TimeoutError()
     else:
-        return it.result
+        try:
+            exc = bucket.get(block=False)
+        except queue.Empty:
+            return it.result
+        else: 
+            exc_type, exc_obj, exc_trace = exc
+            raise type(it.err)(str(it.err) + '\n%s' % str(exc_trace))
 
 # Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
