@@ -107,15 +107,12 @@ class WPWatcher():
         # Lock for interrupting
         log.error("Interrupting...")
         # If called inside ThreadPoolExecutor, raise Exeception
-        if not isinstance(threading.current_thread(), threading._MainThread):
-            raise InterruptedError()
-        
+        if not isinstance(threading.current_thread(), threading._MainThread): raise InterruptedError()
         # Cancel all scans
         self.scanner.cancel_scans()
         # Wait all scans finished, print results and quit
         self.tear_down_jobs()
-        try:
-            timeout(1, self.executor.shutdown, kwargs=dict(wait=True))
+        try: timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
         new_reports=[]
         for f in self.futures:
@@ -155,8 +152,7 @@ class WPWatcher():
         
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
-        if with_api_token: 
-            wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
+        if with_api_token: wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
 
         # Launch scanner
         wp_report= self.scanner.scan_site(wp_site,  last_wp_report, timeout_seconds=self.scan_timeout.total_seconds())

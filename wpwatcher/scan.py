@@ -102,8 +102,6 @@ class WPWatcherScanner():
             return None
         api_token_index = wpscan_args.index("--api-token")+1
         token = wpscan_args[api_token_index]
-        # del wpscan_args[api_token_index]
-        # del wpscan_args[api_token_index-1]
         return token
 
     @staticmethod
@@ -127,6 +125,7 @@ class WPWatcherScanner():
             if last_wp_report['last_email']:
                 wp_report['last_email']=last_wp_report['last_email']
 
+    
     def handle_wpscan_err_api_wait(self,wp_site, wp_report):
         log.info("API limit has been reached after %s sites, sleeping %s and continuing the scans..."%(len(self.scanned_sites),API_WAIT_SLEEP))
         self.wpscan.init_check_done=False # will re-trigger wpscan update next time wpscan() is called 
@@ -174,7 +173,7 @@ class WPWatcherScanner():
         # Fail fast
         if self.fail_fast and not self.interrupting: 
             log.error("Failure")
-            raise InterruptedError
+            raise InterruptedError()
         return None # Interrupt will generate other errors
 
     def skip_this_site(self, wp_report, last_wp_report):
@@ -214,9 +213,16 @@ class WPWatcherScanner():
         if wpscan_exit_code in [0,5]:
             # Call parse_result from parser.py 
             log.debug("Parsing WPScan output")
-            wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] ,
-                self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
-            return wp_report
+            try:
+                wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] ,
+                    self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
+            except Exception:
+                err="Could not parse WPScan output for site %s"%wp_site['url']
+                log.error(err)
+                wp_report['errors'].append(err)
+                raise RuntimeError("Could not parse WPScan output")
+            else:
+                return wp_report
 
         # Handle scan errors -----
         
@@ -248,9 +254,9 @@ class WPWatcherScanner():
                 self.check_fail_fast()
         return wp_report_new
 
-    def scan_with_api_token(self, wp_site, last_wp_report=None):
-        wp_site['wpscan_args'].extend([ "--api-token", self.api_token ])
-        return self.scan_site(wp_site, last_wp_report)
+    # def scan_with_api_token(self, wp_site, last_wp_report=None):
+    #     wp_site['wpscan_args'].extend([ "--api-token", self.api_token ])
+    #     return self.scan_site(wp_site, last_wp_report)
 
     # timeout wrapper
     def scan_site(self, wp_site, last_wp_report=None, timeout_seconds=300):
@@ -286,8 +292,7 @@ class WPWatcherScanner():
         # Send ^C to all WPScan not finished
         for p in self.wpscan.processes: p.send_signal(signal.SIGINT)
         # Wait for all processes to finish , kill after timeout
-        try:
-            timeout(INTERRUPT_TIMEOUT, self.wait_all_wpscan_process)
+        try: timeout(INTERRUPT_TIMEOUT, self.wait_all_wpscan_process)
         except TimeoutError:
             log.error("Interrupt timeout reached, killing WPScan processes")
             for p in self.wpscan.processes: p.kill()

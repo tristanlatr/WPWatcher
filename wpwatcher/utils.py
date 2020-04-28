@@ -33,24 +33,19 @@ def timeout(timeout, func, args=(), kwargs={}):
 
         def run(self):
             try: self.result = func(*args, **kwargs)
-            except Exception as e: 
+            except Exception as err: 
                 self.bucket.put(sys.exc_info())
-                self.err=e
+                self.err=err
    
     bucket=queue.Queue()
     it = FuncThread(bucket)
     it.start()
     it.join(timeout)
-    if it.isAlive():
-        raise TimeoutError()
+    if it.isAlive(): raise TimeoutError()
     else:
-        try:
-            exc = bucket.get(block=False)
-        except queue.Empty:
-            return it.result
-        else: 
-            exc_type, exc_obj, exc_trace = exc
-            raise type(it.err)(str(it.err) + '\n%s' % str(exc_trace))
+        try: _, _, exc_trace = bucket.get(block=False)
+        except queue.Empty: return it.result
+        else: raise it.err.with_traceback(exc_trace)
 
 # Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
