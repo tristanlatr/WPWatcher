@@ -551,91 +551,55 @@ In addition to log messages, the readable report, and raw WPScan output can be p
 <p>
 
 ```log
-% wpwatcher --url wp.exmple.com wp2.exmple.com wp3.exmple.com
-INFO - Load config file(s) : ['./wpwatcher.conf']
-INFO - Updating WPScan
+% wpwatcher --url www.exemple.com www.exemple2.com 
+INFO - WPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites
+INFO - Load config file(s) : ['/Users/user/Documents/WPWatcher/wpwatcher.conf']
 INFO - Deleted temp WPScan files in /tmp/wpscan/
-INFO - WordPress sites and configuration:
-wp_sites                        =       [{"url": "wp.exmple.com"}, {"url": "wp2.exmple.com"}, {"url": "wp3.exmple.com"}]
-send_email_report               =       True
-send_errors                     =       True
-email_to                        =       []
-send_infos                      =       True
-quiet                           =       False
-verbose                         =       False
-attach_wpscan_output            =       True
-fail_fast                       =       False
-api_limit_wait                  =       False
-daemon                          =       False
-daemon_loop_sleep               =       0:05:00
-resend_emails_after             =       5 days, 0:00:00
-wp_reports                      =       ./test.json
-asynch_workers                  =       1
-log_file                        =
-follow_redirect                 =       True
-send_warnings                   =       False
-false_positive_strings          =       ["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
-email_errors_to                 =       []
-wpscan_path                     =       wpscan
-wpscan_args                     =       ["--format", "cli", "--no-banner", "--random-user-agent", "--disable-tls-checks"]
-smtp_server                     =
-smtp_auth                       =       False
-smtp_user                       =
-smtp_pass                       =       ***
-smtp_ssl                        =       False
-from_email                      =
-INFO - Load wp_reports database: ./test.json
-INFO - Starting scans on 3 configured sites
-INFO - Scanning site http://wp.exmple.com
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] URL: http://wp.exmple.com/ [104.31.70.16] [+] Effective URL: https://wp.exmple.com/ [+] Started: Wed Apr  8 23:48:55 2020
-INFO - ** WPScan INFO http://wp.exmple.com ** Interesting Finding(s):
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] Headers | Interesting Entries: |  - cf-cache-status: DYNAMIC |  - expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct" |  - server: cloudflare |  - cf-ray: 58114157ff55ca53-YUL | Found By: Headers (Passive Detection) | Confidence: 100%
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] This site seems to be a multisite | Found By: Direct Access (Aggressive Detection) | Confidence: 100% | Reference: http://codex.wordpress.org/Glossary#Multisite
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] WordPress theme in use: julesr-aeets | Location: http://wp.exmple.com/wordpress/wp-content/themes/julesr-aeets/ | Style URL: http://wp.exmple.com/wordpress/wp-content/themes/julesr-aeets/style.css | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] Enumerating All Plugins (via Passive Methods)
-INFO - ** WPScan INFO http://wp.exmple.com ** [i] No plugins Found.
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] Enumerating Config Backups (via Passive and Aggressive Methods)
-INFO - ** WPScan INFO http://wp.exmple.com ** Checking Config Backups -: |=============================================================================================================================================================================================================================================================================|
-INFO - ** WPScan INFO http://wp.exmple.com ** [i] No Config Backups Found.
-INFO - ** WPScan INFO http://wp.exmple.com ** [+] Finished: Wed Apr  8 23:49:02 2020 [+] Requests Done: 55 [+] Cached Requests: 4 [+] Data Sent: 17.677 KB [+] Data Received: 153.06 KB [+] Memory used: 213.473 MB [+] Elapsed time: 00:00:06
-INFO - ** WPScan INFO http://wp.exmple.com ** [False positive] [!] No WPVulnDB API Token given, as a result vulnerability data has not been output. [!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
-WARNING - ** WPScan WARNING http://wp.exmple.com ** [+] WordPress version 5.1.1 identified (Insecure, released on 2019-03-13). | Found By: Meta Generator (Passive Detection) |  - https://wp.exmple.com/, Match: 'WordPress 5.1.1' | Confirmed By: Most Common Wp Includes Query Parameter In Homepage (Passive Detection) |  - https://wp.exmple.com/wordpress/wp-includes/css/dist/block-library/style.min.css?ver=5.1.1
-INFO - Not sending WPWatcher WARNING email report because no email are configured for site http://wp.exmple.com
-INFO - Write 1 wp_report(s) in the database ./test.json
-INFO - Progress - [=========                    ] 33% - 1 / 3
-INFO - Scanning site http://wp2.exmple.com
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] URL: http://wp2.exmple.com/ [213.251.157.152] [+] Effective URL: https://wp2.exmple.com/ [+] Started: Wed Apr  8 23:49:10 2020
-INFO - ** WPScan INFO http://wp2.exmple.com ** Interesting Finding(s):
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] Headers | Interesting Entries: |  - server: nginx |  - x-powered-by: PHP/5.6.40, PleskLin | Found By: Headers (Passive Detection) | Confidence: 100%
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] WordPress version 5.4 identified (Latest, released on 2020-03-31). | Found By: Rss Generator (Passive Detection) |  - https://wp2.exmple.com/feed/, <generator>https://wordpress.org/?v=5.4</generator> |  - https://wp2.exmple.com/comments/feed/, <generator>https://wordpress.org/?v=5.4</generator>
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] WordPress theme in use: catch-responsive | Location: http://wp2.exmple.com/wp-content/themes/catch-responsive/ | Latest Version: 2.7.5 (up to date) | Last Updated: 2020-01-31T00:00:00.000Z | Style URL: https://wp2.exmple.com/wp-content/themes/catch-responsive/style.css?ver=5.4 | Style Name: Catch Responsive | Style URI: https://catchthemes.com/themes/catch-responsive/ | Description: Catch Responsive is an extremely flexible and customizable Responsive WordPress theme suitable for a... | Author: Catch Themes | Author URI: https://catchthemes.com/ | Found By: Css Style In Homepage (Passive Detection) | Confirmed By: Css Style In 404 Page (Passive Detection) | Version: 2.7.5 (80% confidence) | Found By: Style (Passive Detection) |  - https://wp2.exmple.com/wp-content/themes/catch-responsive/style.css?ver=5.4, Match: 'Version: 2.7.5'
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] Enumerating All Plugins (via Passive Methods) [+] Checking Plugin Versions (via Passive and Aggressive Methods)
-INFO - ** WPScan INFO http://wp2.exmple.com ** [i] Plugin(s) Identified:
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] feature-a-page-widget | Location: http://wp2.exmple.com/wp-content/plugins/feature-a-page-widget/ | Latest Version: 2.1.1 | Last Updated: 2018-12-05T16:38:00.000Z | Found By: Urls In Homepage (Passive Detection) | The version could not be determined.
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] siteorigin-panels | Location: http://wp2.exmple.com/wp-content/plugins/siteorigin-panels/ | Latest Version: 2.10.15 | Last Updated: 2020-04-07T09:31:00.000Z | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] so-widgets-bundle | Location: http://wp2.exmple.com/wp-content/plugins/so-widgets-bundle/ | Latest Version: 1.16.0 | Last Updated: 2020-04-07T09:37:00.000Z | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] wordpress-seo | Location: http://wp2.exmple.com/wp-content/plugins/wordpress-seo/ | Latest Version: 13.4.1 (up to date) | Last Updated: 2020-04-08T06:05:00.000Z | Found By: Comment (Passive Detection) | Version: 13.4.1 (60% confidence) | Found By: Comment (Passive Detection) |  - https://wp2.exmple.com/, Match: 'optimized with the Yoast SEO plugin v13.4.1 -'
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] Enumerating Config Backups (via Passive and Aggressive Methods)
-INFO - ** WPScan INFO http://wp2.exmple.com ** Checking Config Backups -: |=============================================================================================================================================================================================================================================================================|
-INFO - ** WPScan INFO http://wp2.exmple.com ** [i] No Config Backups Found.
-INFO - ** WPScan INFO http://wp2.exmple.com ** [+] Finished: Wed Apr  8 23:49:25 2020 [+] Requests Done: 66 [+] Cached Requests: 4 [+] Data Sent: 17.715 KB [+] Data Received: 317.92 KB [+] Memory used: 208.801 MB [+] Elapsed time: 00:00:15
-INFO - ** WPScan INFO http://wp2.exmple.com ** [False positive] [!] No WPVulnDB API Token given, as a result vulnerability data has not been output. [!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
-WARNING - ** WPScan WARNING http://wp2.exmple.com ** [+] tablepress | Location: http://wp2.exmple.com/wp-content/plugins/tablepress/ | Last Updated: 2020-04-01T08:54:00.000Z | [!] The version is out of date, the latest version is 1.11 | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | Version: 1.9.2 (10% confidence) | Found By: Query Parameter (Passive Detection) |  - https://wp2.exmple.com/wp-content/plugins/tablepress/css/default.min.css?ver=1.9.2
-INFO - Not sending WPWatcher WARNING email report because no email are configured for site http://wp2.exmple.com
-INFO - Write 1 wp_report(s) in the database ./test.json
-INFO - Progress - [===================          ] 66% - 2 / 3
-INFO - Scanning site http://wp3.exmple.com
-ERROR - WPScan failed with exit code 4. WPScan output:  Scan Aborted: The url supplied 'http://wp3.exmple.com/' seems to be down (Timeout was reached)
-ERROR - Could not scan site http://wp3.exmple.com
-INFO - Not sending WPWatcher ERROR email report because no email are configured for site http://wp3.exmple.com
-INFO - Write 1 wp_report(s) in the database ./test.json
-INFO - Progress - [==============================] 100% - 3 / 3
+INFO - Load wp_reports database: /Users/user/.wpwatcher/wp_reports.json
+INFO - Starting scans on 2 configured sites
+INFO - Scanning site http://www.exemple.com
+INFO - ** WPScan INFO http://www.exemple.com ** [+] URL: http://www.exemple.com/ [167.71.91.231] [+] Effective URL: https://www.exemple.com/ [+] Started: Tue Apr 28 19:30:39 2020
+INFO - ** WPScan INFO http://www.exemple.com ** Interesting Finding(s):
+INFO - ** WPScan INFO http://www.exemple.com ** [+] Headers | Interesting Entry: server: nginx | Found By: Headers (Passive Detection) | Confidence: 100%
+INFO - ** WPScan INFO http://www.exemple.com ** [+] XML-RPC seems to be enabled: https://www.exemple.com/xmlrpc.php | Found By: Link Tag (Passive Detection) | Confidence: 100% | Confirmed By: Direct Access (Aggressive Detection), 100% confidence | References: |  - http://codex.wordpress.org/XML-RPC_Pingback_API |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access
+INFO - ** WPScan INFO http://www.exemple.com ** [+] This site seems to be a multisite | Found By: Direct Access (Aggressive Detection) | Confidence: 100% | Reference: http://codex.wordpress.org/Glossary#Multisite
+INFO - ** WPScan INFO http://www.exemple.com ** [+] This site has 'Must Use Plugins': http://www.exemple.com/wp-content/mu-plugins/ | Found By: Direct Access (Aggressive Detection) | Confidence: 80% | Reference: http://codex.wordpress.org/Must_Use_Plugins
+INFO - ** WPScan INFO http://www.exemple.com ** [+] WordPress version 4.9.13 identified (Latest, released on 2019-12-12). | Found By: Rss Generator (Passive Detection) |  - https://www.exemple.com/feed/, <generator>https://wordpress.org/?v=4.9.13</generator> |  - https://www.exemple.com/comments/feed/, <generator>https://wordpress.org/?v=4.9.13</generator>
+INFO - ** WPScan INFO http://www.exemple.com ** [+] WordPress theme in use: bb-theme-child | Location: http://www.exemple.com/wp-content/themes/bb-theme-child/ | Style URL: https://www.exemple.com/wp-content/themes/bb-theme-child/style.css?ver=4.9.13 | Style Name: Beaver Builder Child Theme | Style URI: http://www.wpbeaverbuilder.com | Description: An example child theme that can be used as a starting point for custom development.... | Author: The Beaver Builder Team | Author URI: http://www.fastlinemedia.com | Found By: Css Style In Homepage (Passive Detection) | Confirmed By: Css Style In 404 Page (Passive Detection) | Version: 1.0 (80% confidence) | Found By: Style (Passive Detection) |  - https://www.exemple.com/wp-content/themes/bb-theme-child/style.css?ver=4.9.13, Match: 'Version: 1.0'
+INFO - ** WPScan INFO http://www.exemple.com ** [+] Enumerating All Plugins (via Passive Methods) [+] Checking Plugin Versions (via Passive and Aggressive Methods)
+INFO - ** WPScan INFO http://www.exemple.com ** [i] Plugin(s) Identified:
+INFO - ** WPScan INFO http://www.exemple.com ** [+] bb-plugin | Location: http://www.exemple.com/wp-content/plugins/bb-plugin/ | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
+INFO - ** WPScan INFO http://www.exemple.com ** [+] bbpowerpack | Location: http://www.exemple.com/wp-content/plugins/bbpowerpack/ | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
+INFO - ** WPScan INFO http://www.exemple.com ** [+] Enumerating Config Backups (via Passive and Aggressive Methods)
+INFO - ** WPScan INFO http://www.exemple.com ** Checking Config Backups -: |================================================================================================================================================================================|
+INFO - ** WPScan INFO http://www.exemple.com ** [i] No Config Backups Found.
+INFO - ** WPScan INFO http://www.exemple.com ** [+] Finished: Tue Apr 28 19:30:47 2020 [+] Requests Done: 71 [+] Cached Requests: 4 [+] Data Sent: 19.451 KB [+] Data Received: 3.523 MB [+] Memory used: 247.629 MB [+] Elapsed time: 00:00:07
+INFO - ** WPScan INFO http://www.exemple.com ** [False positive] [!] No WPVulnDB API Token given, as a result vulnerability data has not been output. [!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+WARNING - ** WPScan WARNING http://www.exemple.com ** [+] stream | Location: http://www.exemple.com/wp-content/plugins/stream/ | Last Updated: 2020-03-19T21:55:00.000Z | [!] The version is out of date, the latest version is 3.4.3 | Found By: Comment (Passive Detection) | Version: 3.2.3 (100% confidence) | Found By: Comment (Passive Detection) |  - https://www.exemple.com/, Match: 'Stream WordPress user activity plugin v3.2.3' | Confirmed By: Readme - Stable Tag (Aggressive Detection) |  - http://www.exemple.com/wp-content/plugins/stream/readme.txt
+INFO - Not sending WPWatcher WARNING email report for site http://www.exemple.com. To receive emails, setup mail server settings in the config and enable send_email_report or use --send.
+INFO - Progress - [===============               ] 50% - 1 / 2
+INFO - Scanning site http://www.exemple2.com
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] URL: http://www.exemple2.com/ [104.31.71.16] [+] Effective URL: https://www.exemple2.com/ [+] Started: Tue Apr 28 19:30:51 2020
+INFO - ** WPScan INFO http://www.exemple2.com ** Interesting Finding(s):
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] Headers | Interesting Entries: |  - cf-cache-status: DYNAMIC |  - expect-ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct" |  - server: cloudflare |  - cf-ray: 58b492d1ec18ca67-YUL |  - cf-request-id: 0264ba172d0000ca67e8275200000001 | Found By: Headers (Passive Detection) | Confidence: 100%
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] This site seems to be a multisite | Found By: Direct Access (Aggressive Detection) | Confidence: 100% | Reference: http://codex.wordpress.org/Glossary#Multisite
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] WordPress theme in use: julesr-aeets | Location: http://www.exemple2.com/wordpress/wp-content/themes/julesr-aeets/ | Style URL: http://www.exemple2.com/wordpress/wp-content/themes/julesr-aeets/style.css | Found By: Urls In Homepage (Passive Detection) | Confirmed By: Urls In 404 Page (Passive Detection) | The version could not be determined.
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] Enumerating All Plugins (via Passive Methods)
+INFO - ** WPScan INFO http://www.exemple2.com ** [i] No plugins Found.
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] Enumerating Config Backups (via Passive and Aggressive Methods)
+INFO - ** WPScan INFO http://www.exemple2.com ** Checking Config Backups -: |================================================================================================================================================================================|
+INFO - ** WPScan INFO http://www.exemple2.com ** [i] No Config Backups Found.
+INFO - ** WPScan INFO http://www.exemple2.com ** [+] Finished: Tue Apr 28 19:30:58 2020 [+] Requests Done: 55 [+] Cached Requests: 4 [+] Data Sent: 19.047 KB [+] Data Received: 156.492 KB [+] Memory used: 214.516 MB [+] Elapsed time: 00:00:06
+INFO - ** WPScan INFO http://www.exemple2.com ** [False positive] [!] No WPVulnDB API Token given, as a result vulnerability data has not been output. [!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+WARNING - ** WPScan WARNING http://www.exemple2.com ** [+] WordPress version 5.1.1 identified (Insecure, released on 2019-03-13). | Found By: Meta Generator (Passive Detection) |  - https://www.exemple2.com/, Match: 'WordPress 5.1.1' | Confirmed By: Most Common Wp Includes Query Parameter In Homepage (Passive Detection) |  - https://www.exemple2.com/wordpress/wp-includes/css/dist/block-library/style.min.css?ver=5.1.1
+INFO - Not sending WPWatcher WARNING email report for site http://www.exemple2.com. To receive emails, setup mail server settings in the config and enable send_email_report or use --send.
+INFO - Progress - [==============================] 100% - 2 / 2
 INFO - Results summary
-Site                      Status   Last email           Issues  Problematic component(s)
-http://wp.exmple.com      WARNING  None                 1       [+] WordPress version 5.1.1 identified (Insecure, released on 2019-03-13).
-http://wp2.exmple.com     WARNING  None                 1       [+] tablepress
-http://wp3.exmple.com     ERROR    None                 1       WPScan failed with exit code 4. 
-INFO - Scans finished with errors.
+Site                            Status   Last scan            Last email           Issues   Problematic component(s)
+http://www.exemple.com     WARNING  2020-04-28T19-30-32  None                 1        [+] stream
+http://www.exemple2.com                WARNING  2020-04-28T19-30-47  None                 1        [+] WordPress version 5.1.1 identified (Insecure, released on 2019-03-13).
+INFO - Updated 2 reports in database: /Users/user/.wpwatcher/wp_reports.json
+INFO - Scans finished successfully.
 ```
 </p>
 </details>
