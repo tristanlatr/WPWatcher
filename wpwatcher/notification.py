@@ -120,6 +120,8 @@ class WPWatcherNotification():
 
     def should_notify(self, wp_report, last_wp_report):
         should=True
+        if not wp_report: return False
+        
         # Return if email seding is disable
         if not self.send_email_report:
             # No report notice
@@ -141,7 +143,7 @@ class WPWatcherNotification():
             log.info("Not sending WPWatcher INFO email report for site %s because send_infos=No. If you want to receive infos emails, set send_infos=Yes in the config or use --infos."%(wp_report['site']))
             should=False
 
-        if wp_report['last_email'] and datetime.strptime(wp_report['datetime'],DATE_FORMAT) - datetime.strptime(wp_report['last_email'],DATE_FORMAT) < self.resend_emails_after and last_wp_report['status']!=wp_report['status'] :
+        if wp_report['last_email'] and datetime.strptime(wp_report['datetime'],DATE_FORMAT) - datetime.strptime(wp_report['last_email'],DATE_FORMAT) < self.resend_emails_after and ( not last_wp_report or last_wp_report['status']!=wp_report['status'] ) :
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_report['site'], self.resend_emails_after))
             should=False

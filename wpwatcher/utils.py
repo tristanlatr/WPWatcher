@@ -41,7 +41,7 @@ def timeout(timeout, func, args=(), kwargs={}):
     it = FuncThread(bucket)
     it.start()
     it.join(timeout)
-    if it.isAlive(): raise TimeoutError()
+    if it.is_alive(): raise TimeoutError()
     else:
         try: _, _, exc_trace = bucket.get(block=False)
         except queue.Empty: return it.result

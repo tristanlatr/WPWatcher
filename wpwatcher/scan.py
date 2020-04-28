@@ -200,7 +200,7 @@ class WPWatcherScanner():
         elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
         else: wp_report['status']='INFO'
     
-    # Wrapper to handled WPScan scannign , errors and reporting
+    # Wrapper to handled WPScan scanning , errors and reporting
     def _wpscan_site(self, wp_site, wp_report):
         # WPScan arguments
         wpscan_arguments=self.wpscan_args+wp_site['wpscan_args']+['--url', wp_site['url']]
@@ -226,7 +226,7 @@ class WPWatcherScanner():
 
         # Handle scan errors -----
         
-        # Quick return if interrupting and Quick return if user cacelled scans
+        # Quick return if interrupting and/or if user cacelled scans
         if self.interrupting or wpscan_exit_code in [2, -2, -9] : return None
         
         # Other errors codes : -9, -2, 127, etc:
