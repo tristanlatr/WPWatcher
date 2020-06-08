@@ -345,7 +345,7 @@ class WPWatcherScanner():
         try: wp_report = timeout(timeout_seconds, self._scan_site, args=(wp_site, wp_report, last_wp_report))
         except TimeoutError:
             wp_report['status']='ERROR'
-            wp_report['errors'].append("Timeout scanning site after %s seconds"%timeout)
+            wp_report['errors'].append("Timeout scanning site after %s seconds"%timeout_seconds)
             log.error("Timeout scanning site %s after %s seconds."%(wp_site['url'], timeout_seconds))
             # Terminate
             self.terminate_scan(wp_site, wp_report)
