@@ -65,9 +65,9 @@ class WPWatcherConfig():
                 'wpscan_args':self.getjson(self.parser,'wpscan_args'),
                 'prescan_without_api_token':self.getbool(self.parser, 'prescan_without_api_token'),
                 'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
+                'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
                 # Not configurable with cli arguments
                 'send_warnings':self.getbool(self.parser, 'send_warnings'),
-                'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
                 'email_errors_to':self.getjson(self.parser,'email_errors_to'),
                 'wpscan_path':self.parser.get('wpwatcher','wpscan_path'),
                 'smtp_server':self.parser.get('wpwatcher','smtp_server'),
