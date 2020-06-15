@@ -193,8 +193,8 @@ class WPWatcherNotification():
         message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])
         message += WPWatcherNotification.format_issues('Alerts',wp_report['alerts'])
         message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
-        message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
-        message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
+        if warnings: message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
+        if infos: message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
                 
         message += "\n\n--"
         message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
