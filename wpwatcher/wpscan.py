@@ -69,7 +69,7 @@ class WPScanWrapper():
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # Append process to current process list and launch
             self.processes.append(process)
-            wpscan_output, err  = process.communicate()
+            wpscan_output, stderr  = process.communicate()
             self.processes.remove(process)
             try: wpscan_output=wpscan_output.decode("utf-8")
             except UnicodeDecodeError: wpscan_output=wpscan_output.decode("latin1")
@@ -78,24 +78,26 @@ class WPScanWrapper():
             if process.returncode in [0,5]:
                 # WPScan comamnd success
                 log.debug("WPScan raw output:\n"+wpscan_output)
-                (exit_code, output)=(process.returncode, wpscan_output)
-            # Handle errors ----
-            else : raise RuntimeError
-        except RuntimeError:
-            err_string, full=self.get_full_err_string(cmd, process.returncode, wpscan_output, err)
-            log.error(err_string)
-            log.debug(full+'\n'+traceback.format_exc())
-            (exit_code, output)=(process.returncode, wpscan_output)
+            
+            # Log error ----
+            else : 
+                err_string, full=self.get_full_err_string(cmd, process.returncode, wpscan_output, stderr)
+                log.error(err_string)
+                log.debug(full+'\n'+traceback.format_exc())
+            
+            return((process.returncode, wpscan_output))
+
         except FileNotFoundError as err:
             err_string="Could not find wpscan executable.\n%s" % (traceback.format_exc())
             log.error(oneline(err_string))
-            (exit_code, output)=(-1, "")
-        return((exit_code, output))
+            raise RuntimeError(err_string) from err
+
+        
 
     @staticmethod
-    def get_full_err_string(cmd, returncode, wpscan_output, err):
+    def get_full_err_string(cmd, returncode, wpscan_output, stderr):
         try: reason_short=[ line for line in wpscan_output.splitlines() if 'aborted' in line.lower() ][0].replace('"','').strip()
         except IndexError: reason_short=""
-        full="%s %s"%("\nWPScan output: %s"%wpscan_output if wpscan_output else '', "\nError output: %s"%err if err else '')
+        full="%s %s"%("\nWPScan output: %s"%wpscan_output if wpscan_output else '', "\nStandard error output: %s"%stderr if stderr else '')
         short="WPScan command '%s' failed with exit code %s %s"%(' '.join(safe_log_wpscan_args(cmd)) ,str(returncode), reason_short)
         return (short, full)
