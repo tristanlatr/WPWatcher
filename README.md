@@ -643,7 +643,7 @@ config, files = WPWatcherConfig(files=['./demo.conf']).build_config() # leave No
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
-                'wpscam_args': ['--stealthy']
+                'wpscan_args': ['--stealthy']
             })
 w=WPWatcher(config)
 exit_code, reports = w.run_scans_and_notify()
