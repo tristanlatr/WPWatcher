@@ -81,9 +81,9 @@ class WPScanWrapper():
             
             # Log error ----
             else : 
-                err_string, full=self.get_full_err_string(cmd, process.returncode, wpscan_output, stderr)
+                err_string, full_err_string=self.get_full_err_string(cmd, process.returncode, wpscan_output, stderr)
                 log.error(err_string)
-                log.debug(full+'\n'+traceback.format_exc())
+                log.debug(full_err_string)
             
             return((process.returncode, wpscan_output))
 
