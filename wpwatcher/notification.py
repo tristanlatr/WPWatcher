@@ -53,7 +53,7 @@ class WPWatcherNotification():
 
     def notify(self, wp_site, wp_report, last_wp_report):
         # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
-        log.debug("\n%s\n"%(WPWatcherNotification.build_message(wp_report, 
+        log.debug("%s\n"%(WPWatcherNotification.build_message(wp_report, 
                 warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
                 infos=self.send_infos)))
         if self.should_notify(wp_report, last_wp_report):
@@ -193,8 +193,8 @@ class WPWatcherNotification():
         message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])
         message += WPWatcherNotification.format_issues('Alerts',wp_report['alerts'])
         message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
-        message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
-        message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
+        if warnings: message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
+        if infos: message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
                 
         message += "\n\n--"
         message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"

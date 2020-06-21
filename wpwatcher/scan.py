@@ -245,11 +245,10 @@ class WPWatcherScanner():
                 wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] ,
                     self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
                 wp_report['errors'] = [] # clear errors if any
-            except Exception:
-                errstr="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
-                log.error(errstr)
-                wp_report['errors'].append(errstr)
-                raise RuntimeError(errstr)
+            except Exception as err:
+                err_str="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
+                log.error(err_str)
+                raise RuntimeError(err_str) from err
             else:
                 return wp_report
 
@@ -263,8 +262,7 @@ class WPWatcherScanner():
         # If WPScan error, add the error to the reports
         # This types if errors will be written into the Json database file exit codes 1,3,4
         err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, safe_log_wpscan_args(wpscan_arguments), wp_report['wpscan_output']))
-        wp_report['errors'].append(err_str)
-        raise RuntimeError("WPscan failure")
+        raise RuntimeError(err_str)
     
     def wpscan_site(self, wp_site, wp_report):
         # Launch WPScan
@@ -272,13 +270,14 @@ class WPWatcherScanner():
             wp_report_new=self._wpscan_site(wp_site, wp_report)
             if wp_report_new: wp_report.update(wp_report_new)
             else : return None
-        except RuntimeError:
+        except RuntimeError as err:
              # Try to handle error and return, Reccursive call to wpscan_site
             wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)
             if handled and wp_report_new: wp_report.update(wp_report_new)
             if handled: return wp_report
             else: 
                 log.error("Could not scan site %s"%wp_site['url'])
+                wp_report['errors'].append(str(err))
                 # Fail fast
                 self.check_fail_fast()
         return wp_report
@@ -345,7 +344,7 @@ class WPWatcherScanner():
         try: wp_report = timeout(timeout_seconds, self._scan_site, args=(wp_site, wp_report, last_wp_report))
         except TimeoutError:
             wp_report['status']='ERROR'
-            wp_report['errors'].append("Timeout scanning site after %s seconds"%timeout)
+            wp_report['errors'].append("Timeout scanning site after %s seconds"%timeout_seconds)
             log.error("Timeout scanning site %s after %s seconds."%(wp_site['url'], timeout_seconds))
             # Terminate
             self.terminate_scan(wp_site, wp_report)

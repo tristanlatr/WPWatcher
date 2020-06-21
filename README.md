@@ -119,15 +119,16 @@ Simple usage, scan 2 sites with default config
 
     wpwatcher --url exemple.com exemple1.com
 
-Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan result attached. Scan all sites without API token first and use token on sites with outdated plugins or WordPress version only. If you reach your API limit, it will wait and continue 24h later.
+Load sites from text file , pass WPScan arguments , follow redirection if WPScan failed , use 5 asynchronous workers , email custom recepients if any alert or warning with full WPScan output attached. If you reach your API limit, it will wait and continue 24h later.
 
 ```bash
 wpwatcher --urls sites.txt \
         --wpscan_args "--rua --force --stealthy --api-token <TOKEN>" \
-        --follow_redirect --workers 5 \
+        --follow_redirect \
+        --workers 5 \
         --send --attach \
         --email_to collaborator1@office.ca collaborator2@office.ca \
-        --prescan_without_api_token --api_limit_wait
+        --api_limit_wait
 ```
 
 #### Notes on script behaviours
@@ -661,7 +662,7 @@ config, files = WPWatcherConfig(files=['./demo.conf']).build_config() # leave No
 config.update({ 'send_infos':   True,
                 'wp_sites':     [   {'url':'exemple1.com'},
                                     {'url':'exemple2.com'}  ],
-                'wpscam_args': ['--stealthy']
+                'wpscan_args': ['--stealthy']
             })
 w=WPWatcher(config)
 exit_code, reports = w.run_scans_and_notify()
