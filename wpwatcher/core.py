@@ -39,15 +39,15 @@ class WPWatcher():
         # Init DB interface
         self.wp_reports=WPWatcherDataBase(conf['wp_reports'])
 
+        # Dump config
+        conf.update({'wp_reports':self.wp_reports.filepath})
+        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
+
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
 
         # Save sites
         self.wp_sites=conf['wp_sites']
-
-        # Dump config
-        conf.update({'wp_reports':self.wp_reports.filepath})
-        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Asynchronous executor
         self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=conf['asynch_workers'])
