@@ -21,8 +21,11 @@ class WPWatcherCLI():
 
     def __init__(self):
         """Main program entrypoint"""
+        
         # Parse arguments
         args=self.parse_args()
+        # Init logger with CLi arguments
+        init_log(args.verbose, args.quiet)
         # If template conf , print and exit
         if args.template_conf: self.template_conf()
         # Print "banner"
@@ -31,8 +34,7 @@ class WPWatcherCLI():
         if args.version: self.verion()
         # Init WPWatcher obhect and dump reports
         if args.wprs!=False: self.wprs(args.wprs, args.daemon)
-        # Init logger with CLi arguments
-        init_log(args.verbose, args.quiet)
+        
         # Read config
         configuration=self.build_config_cli(args)
         
