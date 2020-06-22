@@ -49,7 +49,7 @@ def parse_results(wpscan_output, false_positives=[]):
     try:
         data=json.loads(wpscan_output)
         is_json=True
-    except: pass
+    except ValueError: pass
     if is_json: (messages, warnings, alerts)=parse_json(data)
     else:  (messages, warnings, alerts)=parse_cli(wpscan_output)
     return (ignore_false_positives( messages, warnings, alerts, false_positives))   
