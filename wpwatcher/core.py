@@ -39,15 +39,15 @@ class WPWatcher():
         # Init DB interface
         self.wp_reports=WPWatcherDataBase(conf['wp_reports'])
 
+        # Dump config
+        conf.update({'wp_reports':self.wp_reports.filepath})
+        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
+
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
 
         # Save sites
         self.wp_sites=conf['wp_sites']
-
-        # Dump config
-        conf.update({'wp_reports':self.wp_reports.filepath})
-        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Asynchronous executor
         self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=conf['asynch_workers'])
@@ -57,9 +57,6 @@ class WPWatcher():
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt() 
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
-
-        # Scan timeout
-        self.scan_timeout=conf['scan_timeout']
 
         #new reports
         self.new_reports=[]
@@ -92,10 +89,10 @@ class WPWatcher():
             string+=("\n{:<25}\t=\t{}".format(k,v))
         return(string)
     
-    def wait_all_wpscan_process(self):
+    # def wait_all_wpscan_process(self):
         
-        while len(self.scanner.wpscan.processes)>0:
-            time.sleep(0.05)
+    #     while len(self.scanner.wpscan.processes)>0:
+    #         time.sleep(0.05)
 
     def tear_down_jobs(self):
         # Cancel all jobs
@@ -112,6 +109,7 @@ class WPWatcher():
         self.scanner.cancel_scans()
         # Wait all scans finished, print results and quit
         self.tear_down_jobs()
+        # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try: timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
         new_reports=[]
@@ -136,6 +134,10 @@ class WPWatcher():
             log.error("Invalid site %s"%wp_site)
             wp_site={'url':''}
         else:
+
+            #Strip URL string
+            wp_site['url']=wp_site['url'].strip()
+
             # Format sites with scheme indication
             p_url=list(urlparse(wp_site['url']))
             if p_url[0]=="": 
@@ -155,7 +157,7 @@ class WPWatcher():
         if with_api_token: wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
 
         # Launch scanner
-        wp_report= self.scanner.scan_site(wp_site,  last_wp_report, timeout_seconds=self.scan_timeout.total_seconds())
+        wp_report= self.scanner.scan_site(wp_site,  last_wp_report)
         # Save report in global instance database and to file when a site has been scanned
         if wp_report: self.wp_reports.update_and_write_wp_reports([wp_report])
         else: log.info("No report saved for site %s"%wp_site['url'])

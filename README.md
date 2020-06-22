@@ -293,6 +293,22 @@ You can store the API Token in the WPScan default config file at `~/.wpscan/scan
 
 ### Full configuration options
 
+<!-- Config option | Accepted values, config file | Argument | Accepted values, argument | Default value
+--- | --- | --- | --- | ---
+`wpscan_path` | Strings | NA | NA | Assume `wpscan` is in your `PATH` 
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`false_positive_strings` | Json string | `--false_positive_strings [Strings...]` or `--fpstr [Strings...]` | Strings | Empty list
+`wp_sites` | Json string | `--wp_sites [URL...]` or `--url "[URL...]` or `--urls File path` | List of URLs or file path | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+
+
+*Still* | `renders` | **nicely**
+1 | 2 | 3 -->
+
 <details><summary><b>See all configuration options with explanatory comments.</b></summary>
 <p>
 
