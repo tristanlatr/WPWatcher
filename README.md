@@ -293,7 +293,7 @@ You can store the API Token in the WPScan default config file at `~/.wpscan/scan
 
 ### Full configuration options
 
-Config option | Accepted values, config file | Argument | Accepted values, argument | Default value
+<!-- Config option | Accepted values, config file | Argument | Accepted values, argument | Default value
 --- | --- | --- | --- | ---
 `wpscan_path` | Strings | NA | NA | Assume `wpscan` is in your `PATH` 
 `wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
@@ -307,10 +307,7 @@ Config option | Accepted values, config file | Argument | Accepted values, argum
 
 
 *Still* | `renders` | **nicely**
-1 | 2 | 3
-
-
-
+1 | 2 | 3 -->
 
 <details><summary><b>See all configuration options with explanatory comments.</b></summary>
 <p>
