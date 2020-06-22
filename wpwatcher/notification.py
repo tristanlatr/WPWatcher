@@ -36,7 +36,7 @@ class WPWatcherNotification():
         self.smtp_user=conf['smtp_user']
         self.smtp_pass=conf['smtp_pass']
 
-        #store specific notification values
+        # store specific notification values
         self.send_email_report=conf['send_email_report']
         self.email_to=conf['email_to']
         self.email_errors_to=conf['email_errors_to']
@@ -46,8 +46,6 @@ class WPWatcherNotification():
         self.attach_wpscan_output=conf['attach_wpscan_output']
         self.resend_emails_after=conf['resend_emails_after']
 
-        # and copy config as is
-        # self.conf=conf
         # mail server, will be created when sending mails
         self.server=None
 
