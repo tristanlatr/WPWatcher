@@ -39,15 +39,15 @@ class WPWatcher():
         # Init DB interface
         self.wp_reports=WPWatcherDataBase(conf['wp_reports'])
 
+        # Dump config
+        conf.update({'wp_reports':self.wp_reports.filepath})
+        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
+
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
 
         # Save sites
         self.wp_sites=conf['wp_sites']
-
-        # Dump config
-        conf.update({'wp_reports':self.wp_reports.filepath})
-        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Asynchronous executor
         self.executor=concurrent.futures.ThreadPoolExecutor(max_workers=conf['asynch_workers'])
@@ -92,10 +92,10 @@ class WPWatcher():
             string+=("\n{:<25}\t=\t{}".format(k,v))
         return(string)
     
-    def wait_all_wpscan_process(self):
+    # def wait_all_wpscan_process(self):
         
-        while len(self.scanner.wpscan.processes)>0:
-            time.sleep(0.05)
+    #     while len(self.scanner.wpscan.processes)>0:
+    #         time.sleep(0.05)
 
     def tear_down_jobs(self):
         # Cancel all jobs
@@ -112,6 +112,7 @@ class WPWatcher():
         self.scanner.cancel_scans()
         # Wait all scans finished, print results and quit
         self.tear_down_jobs()
+        # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try: timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
         new_reports=[]
