@@ -136,6 +136,10 @@ class WPWatcher():
             log.error("Invalid site %s"%wp_site)
             wp_site={'url':''}
         else:
+            
+            #Strip URL string
+            wp_site['url']=wp_site['url'].strip()
+
             # Format sites with scheme indication
             p_url=list(urlparse(wp_site['url']))
             if p_url[0]=="": 
