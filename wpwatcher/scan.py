@@ -32,7 +32,6 @@ DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
 class WPWatcherScanner():
     
     def __init__(self, conf):
-        # self.conf=conf
 
         # Create (lazy) wpscan link
         self.wpscan=WPScanWrapper(conf['wpscan_path'])
@@ -91,7 +90,7 @@ class WPWatcherScanner():
         env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
         for wpscan_config_file in WPWatcherConfig.find_files(env, files):
             with open(wpscan_config_file,'r') as wpscancfg:
-                if any ([ 'api_token' in line and line.strip[0] is not "#" for line in wpscancfg.readlines() ]):
+                if any ([ 'api_token' in line and line.strip()[0] != "#" for line in wpscancfg.readlines() ]):
                     log.error('API token is set in the config file %s, please remove it to allow WPWatcher to handle WPScan API token'%(wpscan_config_file))
                     return False
         return True
