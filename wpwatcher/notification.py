@@ -56,6 +56,7 @@ class WPWatcherNotification():
                 infos=self.send_infos)))
         if self.should_notify(wp_report, last_wp_report):
             self._notify(wp_site, wp_report, last_wp_report)
+            return True
         else: return False
 
     def send_mail(self, message, to):
@@ -109,11 +110,6 @@ class WPWatcherNotification():
         else: log.info("No file attached, set attach_wpscan_output=Yes or use --attach to attach WPScan output to emails")
         # # Connecting and sending
         self.send_mail(message, email_to)
-
-        # Store report time
-        wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
-        # Discard fixed items because infos have been sent
-        wp_report['fixed']=[]
         log.info("Email sent: %s to %s" % (message['Subject'], email_to))
 
     def should_notify(self, wp_report, last_wp_report):

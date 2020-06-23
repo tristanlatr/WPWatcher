@@ -63,6 +63,13 @@ def ignore_false_positives(messages, warnings, alerts, false_positives):
             messages.append("[False positive]\n"+alert)
     return messages, warnings, alerts
 
+# False Positive Detection
+def is_false_positive(string, false_positives):
+    for fp_string in false_positives:
+        if fp_string in string:
+            return True
+    return False
+
 def parse_cli_toogle(line, warning_on, alert_on):
     # Color parsing
     if "33m[!]" in line: warning_on=True
@@ -351,10 +358,3 @@ def parse_warning_theme_or_plugin(finding):
     findingData+=parse_confidence(finding)
     # findingData+=parse_interesting_entries(finding)
     return([findingData])
-
-# False Positive Detection
-def is_false_positive(string, false_positives):
-    for fp_string in false_positives:
-        if fp_string in string:
-            return True
-    return False
