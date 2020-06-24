@@ -383,7 +383,7 @@ Note: WPScan No WPVulnDB API Token given warning is automatically ignored.
 ```ini
 false_positive_strings=[]
 ```
-Overwrite with arguments: `--fpstr tring [String ...]`
+Overwrite with arguments: `--fpstr String [String ...]`
 
 #### Notifications
 
