@@ -126,7 +126,7 @@ def parse_cli(wpscan_output):
 
         # End of the message
 
-        # Post process message to separate ALERTS into different messages of same status
+        # Post process message to separate ALERTS into different messages of same status and add rest of the infos to warnings
         if alert_on: 
             messages_separated=[]
             msg=[]

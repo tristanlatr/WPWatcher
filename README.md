@@ -341,24 +341,25 @@ wpscan_args=[   "--format", "cli",
                 "--enumerate", "t,p,tt,cb,dbe,u,m"]
 ```
 Overwrite with `--wpargs "WPScan arguments"`. If you run into option parsing error, start the arguments string with a space or use equals sign `--wpargs="[...]"` to avoid [argparse bug](https://stackoverflow.com/questions/16174992/cant-get-argparse-to-read-quoted-string-with-dashes-in-it?noredirect=1&lq=1).
-#### False positive strings
-You can use this to ignore some warnings or alerts.  
-False positives will still be processed as infos: Use with care.   
-Must be a valid Json string
-```ini
-false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
-```
-#### Monitored sites
+
+#### Monitored sites and false positives
 List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments.
 Each dictrionnary must contain at least a `"url"` key.
+
+You can use `false_positive_strings` to ignore some warnings or alerts.  
+False positives will still be processed as infos.
+Use case for site specific false positives: Vulnerabilities are found but WPScan can't dertermine plugin version, so all vulnerabilites are printed. Aafter checking your plugsin version, add vulnerabily title in the list of false positive in the `wp_sites` entries
+
 Must be a valid Json string.
-Must be supplied with config file or argument.
+Must be supplied with config file or CLI arguments.
 ```ini
 wp_sites=   [
         {   
             "url":"exemple.com",
             "email_to":["site_owner@domain.com"],
-            "false_positive_strings":["Vulnerability 123"],
+            "false_positive_strings":[
+                "Yoast SEO 1.2.0-11.5 - Authenticated Stored XSS",
+                "Yoast SEO <= 9.1 - Authenticated Race Condition"],
             "wpscan_args":["--stealthy"]
         },
         {   
@@ -373,6 +374,14 @@ wp_sites=   [
     ]
 ```
 Overwrite with arguments: `--url URL [URL...]` or `--urls File path`. Custom email report recepients, false positives and specific wpscan arguments are not supported with CLI arguments
+
+##### Global false positive strings
+Must be a valid Json string.
+Note: WPScan No WPVulnDB API Token given warning is automatically ignored.
+```ini
+false_positive_strings=[]
+```
+Overwrite with arguments: `--fpstr tring [String ...]`
 
 #### Notifications
 
