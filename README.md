@@ -376,8 +376,10 @@ wp_sites=   [
 Overwrite with arguments: `--url URL [URL...]` or `--urls File path`. Custom email report recepients, false positives and specific wpscan arguments are not supported with CLI arguments
 
 ##### Global false positive strings
-Must be a valid Json string.
-Note: WPScan No WPVulnDB API Token given warning is automatically ignored.
+For instance, add `The version could not be determined` to global false positive strings to ignore warnings when WPScan did not find plugin version.
+
+Must be a valid Json string.  
+Note: WPScan No WPVulnDB API Token given warning is automatically ignored.  
 ```ini
 false_positive_strings=[]
 ```
