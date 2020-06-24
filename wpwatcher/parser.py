@@ -51,7 +51,7 @@ def parse_results(wpscan_output, false_positives=[]):
         is_json=True
     except ValueError: pass
     if is_json: (messages, warnings, alerts)=parse_json(data)
-    else:  (messages, warnings, alerts)=parse_cli(wpscan_output)
+    else:  (messages, warnings, alerts)=parse_cli(wpscan_output, false_positives)
     return (ignore_false_positives( messages, warnings, alerts, false_positives))   
 
 def ignore_false_positives(messages, warnings, alerts, false_positives):
@@ -92,7 +92,7 @@ def parse_cli_toogle(line, warning_on, alert_on):
         warning_on = True 
     return ((warning_on, alert_on))
 
-def parse_cli(wpscan_output):
+def parse_cli(wpscan_output, false_positives):
     if "[+]" not in wpscan_output: 
         raise ValueError("The file does not seem to be a WPScan CLI log.")
     # Init scan messages
@@ -137,8 +137,15 @@ def parse_cli(wpscan_output):
                 msg.append(l)
 
             # Append Vulnerabilities messages to ALERTS and other infos in one message
-            alerts.extend([ m for m in messages_separated if '| [!] Title' in m.splitlines()[0] ])
-            warnings.append('\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ]))
+            vulnerabilities = [ m for m in messages_separated if '| [!] Title' in m.splitlines()[0] ]
+            alerts.extend(vulnerabilities)
+
+            # Add rest of the plugin infos to warnings or infos if every vulnerabilities are ignore
+            plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
+            if len([v for v in vulnerabilities if not is_false_positive(v, false_positives)])>0:
+                warnings.append(plugin_infos)
+            else:
+                messages.append("[False positive]\n"+plugin_infos)
 
         elif warning_on: warnings.append(current_message)
         else: messages.append(current_message)
