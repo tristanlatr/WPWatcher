@@ -93,13 +93,15 @@ def parse_cli_toogle(line, warning_on, alert_on):
     return ((warning_on, alert_on))
 
 def parse_cli(wpscan_output):
-    if "[+]" not in wpscan_output: raise Exception("The file does not seem to be a WPScan CLI log.")
+    if "[+]" not in wpscan_output: 
+        raise ValueError("The file does not seem to be a WPScan CLI log.")
     # Init scan messages
     ( messages, warnings, alerts ) = ([],[],[])
     # Init messages toogles
     warning_on, alert_on = False, False
     message_lines=[] 
     current_message=""
+
     # Every blank ("") line will be considered as a message separator
     for line in wpscan_output.splitlines()+[""]:
 
@@ -119,11 +121,25 @@ def parse_cli(wpscan_output):
 
         # Message separator just a white line.
         # Only if the message if not empty. 
-        if ( line!="" or current_message == "" ) : continue
+        if ( line.strip() not in [""] or current_message.strip() == "" ) : 
+            continue
 
         # End of the message
-        # Append messages to list of infos, warns and alerts
-        if alert_on: alerts.append(current_message)
+
+        # Post process message to separate ALERTS into different messages of same status
+        if alert_on: 
+            messages_separated=[]
+            msg=[]
+            for l in message_lines+["|"]:
+                if l.strip() == "|":
+                    messages_separated.append('\n'.join([ m for m in msg if m not in ["","|"]] ))
+                    msg=[]
+                msg.append(l)
+
+            # Append Vulnerabilities messages to ALERTS and other infos in one message
+            alerts.extend([ m for m in messages_separated if '| [!] Title' in m.splitlines()[0] ])
+            messages.append('\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ]))
+
         elif warning_on: warnings.append(current_message)
         else: messages.append(current_message)
         message_lines=[]
