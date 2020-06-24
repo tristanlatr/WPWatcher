@@ -213,7 +213,7 @@ class WPWatcherScanner():
     def handle_wpscan_err_follow_redirect(self,wp_site, wp_report):
         url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
             wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
-            
+
         if len(url)==1:
             wp_site['url']=url[0].strip()
             log.info("Following redirection to %s"%wp_site['url'])
@@ -314,7 +314,7 @@ class WPWatcherScanner():
         try:
             # Abnormal failure exit codes not in 0-5
             if not self.wpscan_site(wp_site, wp_report): 
-                log.error("Abnormal failure scanning %s exit codes not in 0-5"%(wp_site['url']))
+                log.error("Abnormal failure scanning %s exit codes not 0 or 5"%(wp_site['url']))
                 return None
 
         except RuntimeError as err:
