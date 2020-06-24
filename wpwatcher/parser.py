@@ -138,7 +138,7 @@ def parse_cli(wpscan_output):
 
             # Append Vulnerabilities messages to ALERTS and other infos in one message
             alerts.extend([ m for m in messages_separated if '| [!] Title' in m.splitlines()[0] ])
-            messages.append('\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ]))
+            warnings.append('\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ]))
 
         elif warning_on: warnings.append(current_message)
         else: messages.append(current_message)
