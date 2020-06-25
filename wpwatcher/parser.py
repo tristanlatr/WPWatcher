@@ -127,7 +127,7 @@ def parse_cli(wpscan_output, false_positives):
         # End of the message
 
         # Post process message to separate ALERTS into different messages of same status and add rest of the infos to warnings
-        if alert_on or warning_on: 
+        if (alert_on or warning_on) and any(s in current_message for s in ['vulnerabilities identified','vulnerability identified']) : 
             messages_separated=[]
             msg=[]
             for l in message_lines+["|"]:
@@ -143,6 +143,7 @@ def parse_cli(wpscan_output, false_positives):
 
             # Add rest of the plugin infos to warnings or infos if every vulnerabilities are ignore
             plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
+            
             if len([v for v in vulnerabilities if not is_false_positive(v, false_positives)])>0:
                 warnings.append(plugin_infos)
             else:
