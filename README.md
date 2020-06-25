@@ -326,11 +326,9 @@ Option | Accepted values in config file | CLI argument | Accepted values in CLI 
 `asynch_workers` | Int | `--workers Number` | Int | 1
 `follow_redirect` | Boolean Yes/No | `--follow` | No value | No
 `prescan_without_api_token` | Boolean Yes/No | `--prescan` | No value | No
-`scan_timeout` | String| NA | NA | `5m`
+`scan_timeout` | String| NA | NA | `5m`  
 
-
-*Still* | `renders` | **nicely**
-1 | 2 | 3
+---  
 
 <details><summary><b>See more explanatory comments and exemples</b></summary>
 <p>
