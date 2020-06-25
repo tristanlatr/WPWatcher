@@ -291,25 +291,48 @@ from_email=WordPressWatcher@exemple.com
 ```
 You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
-### Full configuration options
+### Configuration options
 
-<!-- Config option | Accepted values, config file | Argument | Accepted values, argument | Default value
+Option | Accepted values in config file | CLI argument | Accepted values in CLI argument | Default value
 --- | --- | --- | --- | ---
 `wpscan_path` | Strings | NA | NA | Assume `wpscan` is in your `PATH` 
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`false_positive_strings` | Json string | `--false_positive_strings [Strings...]` or `--fpstr [Strings...]` | Strings | Empty list
-`wp_sites` | Json string | `--wp_sites [URL...]` or `--url "[URL...]` or `--urls File path` | List of URLs or file path | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpargs "WPScan arguments"` | String | `--no-banner --random-user-agent`
+`wp_sites` | Json string (Fully configurable) | `--url URL [URL...]`| Strings | None
+`wp_sites` from text file | NA | `--urls Path` | String | None
+`false_positive_strings` | Json string | `--fpstr String [String...]` | Strings | None
+`send_email_report` | Boolean Yes/No | `--send` | No value | No
+`email_to` | Json string | `--email_to Email [Email ...]`| Strings | Empty list
+`send_infos` | Boolean Yes/No | `--infos` | No value | No
+`send_warnings` | Boolean Yes/No | NA | NA | Yes
+`send_errors` | Boolean Yes/No | `--errors` | No value | No
+`attach_wpscan_output` | Boolean Yes/No | `--attach "args"` | No value | No
+`resend_emails_after` | String | `--resend String` | String | `0s`
+`email_errors_to` | Json string | NA | NA | None
+`from_email` | String | NA | NA | None
+`smtp_server` | String | NA | NA | None
+`smtp_auth` | String | NA | NA | None
+`smtp_user` | String | NA | NA | None
+`smtp_pass` | String | NA | NA | None
+`smtp_ssl` | Boolean Yes/No | NA | NA | No
+`api_limit_wait` | Boolean Yes/No | `--wait` | No value | No
+`daemon` | Boolean Yes/No | `--daemon` | No value | No
+`daemon_loop_sleep` | String | `--loop` | String | `0s`
+`log_file` | String | `--log Path` | String | None
+`quiet` | Boolean Yes/No | `--quiet` | No value | No
+`verbose` | Boolean Yes/No | `--verbose` | No value | No
+`wpscan_output_folder` | String | `--wpout Path` | String | None
+`wp_reports` | String | `--reports Path` | String | `~/.wpwatcher/wp_reports.json`
+`fail_fast` | Boolean Yes/No | `--ff` | No value | No
+`asynch_workers` | Int | `--workers Number` | Int | 1
+`follow_redirect` | Boolean Yes/No | `--follow` | No value | No
+`prescan_without_api_token` | Boolean Yes/No | `--prescan` | No value | No
+`scan_timeout` | String| NA | NA | `5m`
 
 
 *Still* | `renders` | **nicely**
-1 | 2 | 3 -->
+1 | 2 | 3
 
-<details><summary><b>See all configuration options with explanatory comments.</b></summary>
+<details><summary><b>See more explanatory comments and exemples</b></summary>
 <p>
 
 #### WPScan path
