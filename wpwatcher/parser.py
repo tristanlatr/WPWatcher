@@ -41,6 +41,242 @@ Ressource PArsing CLI output:
 
 import json
 import re
+import abc
+
+ALERT=1
+WARNING=2
+INFO=3
+
+class Component():
+    def __init__(self, data): 
+        self.data=data
+    
+    def get_infos(self):
+        return []
+
+    def get_warnings(self):
+        return []
+
+    def get_alerts(self):
+        return []
+
+    def get_all_messages(self):
+        return(
+            self.get_infos(),
+            self.get_warnings(),
+            self.get_alerts()
+        )
+
+class WPScanJsonParser(Component):
+    def __init__(self, data, false_positives=None):
+        Component.__init__(self, data)
+
+        self.false_positives=false_positives
+        self.status=None
+        self.components=[]
+
+    def get_infos(self):
+        infos=[]
+        [ infos.extend(component.get_infos()) for component in self.components ]
+        return infos
+
+    def get_warnings(self):
+        warnings=[]
+        [ warnings.extend(component.get_warnings()) for component in self.components ]
+        return warnings
+
+    def get_alerts(self):
+        alerts=[]
+        [ alerts.extend(component.get_alerts()) for component in self.components ]
+        return alerts
+
+class Vulnerability(Component):
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.title=None
+        self.cvss=None
+        self.fixed_in=None
+        self.references=None
+
+class WPItem(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.slug=None
+        self.location=None
+        self.latest_version=None
+        self.last_updated=None
+        self.outdated=None
+        self.readme_url=None
+        self.directory_listing=None
+        self.error_log_url=None 
+    pass
+
+class Finding(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.found_by=None
+        self.confidence=None
+        self.interesting_entries=None
+        self.confirmed_by=None
+        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get('vulnerabilities', [])]
+    pass
+
+class WPItemVersion(Finding):
+    # From themes, plugins and timthumbs
+    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
+    #  https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
+    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.number=None
+        self.confidence=None
+    pass
+
+class Plugin(Finding, WPItem):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
+    def __init__(self, data):
+        Finding.__init__(self, data)
+        WPItem.__init__(self, data)
+
+        self.version=WPItemVersion(data.get('version', None))
+
+class Theme(Finding, WPItem):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        WPItem.__init__(self, data)
+
+        self.style_url=None
+        self.style_name=None
+        self.style_uri=None
+        self.description=None
+        self.author=None
+        self.author_uri=None
+        self.template=None
+        self.license=None
+        self.license_uri=None
+        self.tags=None
+        self.text_domain=None
+
+        self.version=WPItemVersion(data.get('version', None))
+        self.parents=None
+
+class Timthumb(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.version=WPItemVersion(data.get('version', None))
+
+class MainTheme(Theme): 
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/main_theme/theme.erb
+    def __init__(self, data): 
+        Theme.__init__(self, data)
+
+class WPVersion(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_version/version.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.number=None
+        self.release_date=None
+        self.status=None
+        pass
+
+class DBExport(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+
+class PasswordAttack(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.users=[User(data.get(user)) for user in data]
+
+class NotFullyConfigured(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/not_fully_configured.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+class Media(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/medias.erb
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.url=None
+
+class ConfigBackup(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/config_backups.erb   
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+
+class User(Finding):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/users.erb
+    # And https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
+
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.id=None
+        self.username=None
+        self.password=None
+
+class VulnAPI(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/vuln_api/status.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.http_error=None
+        self.plan=None
+        self.requests_done_during_scan=None
+        self.requests_remaining=None
+        self.error=None
+
+class InterestingFinding(Finding):
+    # From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb
+    # interesting_findings
+    def __init__(self, data): 
+        Finding.__init__(self, data)
+        self.url=None
+        self.to_s=None
+        self.type=None
+        self.references=None
+
+class Banner(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/banner.erb
+    # banner
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.description=None
+
+class ScanStarted(Component):
+    # From https://github.com/wpscanteam/CMSScanner/blob/04f8dbb7b0ac503e7fb46739bb34f40202545cc8/app/views/json/core/started.erb
+
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.start_time=None
+        self.start_memory=None
+        self.target_url=None
+        self.target_ip=None
+        self.effective_url=None
+
+class ScanFinished(Component):
+    # From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/core/finished.erb
+    def __init__(self, data): 
+        Component.__init__(self, data)
+
+        self.stop_time=None
+        self.elapsed=None
+        self.requests_done=None
+        self.cached_requests=None
+        self.data_sent_humanised=None
+        self.data_received_humanised=None
+        self.used_memory_humanised=None
 
 def parse_results(wpscan_output, false_positives=[]):
     # Init scan messages
@@ -163,14 +399,130 @@ def parse_cli(wpscan_output, false_positives):
 def parse_json(data):
     infos, warnings, alerts=[],[],[]
     # Do a sanity check to confirm the data is ok
-    if data and 'target_url' in data and data['target_url']:
-        warnings, alerts=parse_vulnerabilities_and_outdated(data)
-        infos.extend(parse_misc_infos(data))
-        warnings.extend(parse_misc_warnings(data))
-        alerts.extend(parse_misc_alerts(data))
-        return (( infos, warnings, alerts ))
+    if not data or not 'target_url' in data or not data['target_url']:
+        raise ValueError("No data in wpscan JSON output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
+
+    # warnings, alerts=parse_vulnerabilities_and_outdated(data)
+    # infos.extend(parse_misc_infos(data))
+    # warnings.extend(parse_misc_warnings(data))
+    # alerts.extend(parse_misc_alerts(data))
+    wp_warning = parse_warning_wordpress(data.get('version', None))
+    if wp_warning: 
+        warnings.append(wp_warning)
+
+    main_theme_warning = parse_warning_theme_or_plugin(data.get('main_theme', None))
+    if main_theme_warning: 
+        warnings.append(main_theme_warning)
+
+    for slug in data.get('plugins', {}):
+        plugin_warning = parse_warning_theme_or_plugin(data.get('plugins').get(slug))
+        if plugin_warning: 
+            if not data.get('plugins').get(slug).get('version', None):
+                plugin_warning+="\nThe version could not be determined, all known vulnerabilites are listed"
+            warnings.append(plugin_warning)
+    # WIP
+
+    return (( infos, warnings, alerts ))
+
+def parse_warning_wordpress(finding):
+    if not finding: 
+        return None
+    if finding.get('status', None)=="insecure":
+        fdata=""
+        fdata+="Insecure WordPress version %s identified (released on %s)"%(finding['number'], finding['release_date'])
+        fdata+=parse_confidence(finding)
+    return fdata
+    
+    # if "interesting_entries" in finding:
+    #         if len(finding["interesting_entries"]) > 0:
+    #             findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
+    # if "found_by" in finding:
+    #         findingData += "\nFound by: %s" % finding["found_by"]
+
+def parse_warning_theme_or_plugin(finding):
+    if not finding: 
+        return None
+    fdata=""
+    if 'slug' in finding:
+        fdata+="%s" % finding['slug']
+    # Test if there is issues
+    issue_data=""
+    if finding.get('outdated', None): 
+        issue_data+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
+    if finding.get('directory_listing', None): 
+        issue_data+="\nDirectory listing is enabled"
+    if finding.get('error_log_url', None): 
+        issue_data+="\nAn error log file has been found: %s" % (finding["error_log_url"])
+
+    if not issue_data: 
+        return None # Return if no issues
     else: 
-        raise Exception("No data in wpscan Json output (None) or no 'target_url' field present in the provided Json data. The scan might have failed, data: \n"+str(data))
+        fdata+=issue_data
+
+    if "location" in finding: 
+        fdata += "\nLocation: %s" % finding["location"]
+
+    # if "found_by" in finding:
+    #     fdata += "\nFound by: %s" % finding["found_by"]
+
+    fdata+=parse_confidence(finding)
+    # fdata+=parse_interesting_entries(finding)
+    return(fdata)
+
+
+
+def parse_vulnerability(finding):
+    # Finding can be a vulnerability or other
+    findingData = ""
+    refData = ""
+    title=""
+    # title = "%s:"%(finding_type) if finding_type else ""
+
+    # if type(finding) is not dict: 
+    #     raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
+
+    # For interesting findings
+    # if "type" in finding: title += "%s\n" % finding["type"]
+    # if "to_s" in finding: title += "%s" % finding["to_s"]
+    # For vulnerabilities
+    if "title" in finding: title += "%s" % finding["title"]
+    findingData += "%s" % title
+    if "fixed_in" in finding: findingData += "\nFixed In: %s" % finding["fixed_in"]
+    # if "url" in finding: findingData += "\nURL: %s" % finding["url"]
+    # findingData+=parse_confidence(finding)
+    # findingData+=parse_interesting_entries(finding)
+    refData=parse_references(finding)
+
+    # if "comfirmed_by" in finding:
+    #     if len(finding["confirmed_by"]) > 0:
+    #         findingData += "\nConfirmed By:\n"
+    #         findingData+="\n- ".join(finding["confirmed_by"])
+    # if "found_by" in finding:
+    #     findingData += "\nFound by: %s" % finding["found_by"]
+
+    return ("%s %s" % (findingData, refData) )
+
+def parse_references(finding):
+    refData = ""
+    if not check_valid_section(finding, 'references'):
+        return refData
+    refData += "\nReferences:"
+    for ref in finding["references"]:
+        refData+=parse_ref(finding, ref)
+    return refData
+
+def parse_ref(finding, ref):
+    refData=""
+    if ref =='cve':
+        for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
+    elif ref == 'wpvulndb': 
+        for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+    else:
+        refData += "\n- %s: %s" % (ref, "\n".join(finding["references"][ref]) )
+    return refData
+
+######## END RE WRITE ########
+
 
 def check_valid_section(data, section):
     if section in data and ( data[section] is not None or len(data[section])>0 ) : return True
@@ -269,55 +621,6 @@ def parse_confidence(finding):
             fdata += "\nConfidence: %s" % finding["confidence"]
     return fdata
 
-def parse_vulnerability_or_finding(finding):
-    # Finding can be a vulnerability or other
-    findingData = ""
-    refData = ""
-    title=""
-    # title = "%s:"%(finding_type) if finding_type else ""
-
-    if type(finding) is not dict: raise TypeError("Must be a dict, method parse_a_finding() for data {}".format(finding)) 
-
-    # For interesting findings
-    if "type" in finding: title += "%s\n" % finding["type"]
-    if "to_s" in finding: title += "%s" % finding["to_s"]
-    # For vulnerabilities
-    if "title" in finding: title += "%s" % finding["title"]
-    findingData += "%s" % title
-    if "fixed_in" in finding: findingData += "\nFixed In: %s" % finding["fixed_in"]
-    if "url" in finding: findingData += "\nURL: %s" % finding["url"]
-    findingData+=parse_confidence(finding)
-    findingData+=parse_interesting_entries(finding)
-    refData=parse_references(finding)
-
-    # if "comfirmed_by" in finding:
-    #     if len(finding["confirmed_by"]) > 0:
-    #         findingData += "\nConfirmed By:\n"
-    #         findingData+="\n- ".join(finding["confirmed_by"])
-    # if "found_by" in finding:
-    #     findingData += "\nFound by: %s" % finding["found_by"]
-
-    return ("%s %s" % (findingData, refData) )
-
-def parse_references(finding):
-    refData = ""
-    if not check_valid_section(finding, 'references'):
-        return refData
-    refData += "\nReferences:"
-    for ref in finding["references"]:
-        refData+=parse_ref(finding, ref)
-    return refData
-
-def parse_ref(finding, ref):
-    refData=""
-    if ref =='cve':
-        for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-    elif ref == 'wpvulndb': 
-        for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-    else:
-        refData += "\n- %s: %s" % (ref, ", ".join(finding["references"][ref]) )
-    return refData
-
 # Wrapper to parse findings can take list or dict type
 def parse_findings(findings):
     summary = []
@@ -341,45 +644,3 @@ def parse_findings(findings):
 #                 headerInfo += "\nInteresting Entries: %s" % (", ".join(version["interesting_entries"]))
 
 #     return headerInfo
-
-def parse_warning_wordpress(finding):
-    summary=[]
-    if not finding: return summary
-    warn=False
-    findingData=""
-    if 'status' in finding and finding['status']=="insecure":
-        findingData+="Insecure WordPress version %s identified (released on %s)"%(finding['number'], finding['release_date'])
-        warn=True
-    findingData+=parse_confidence(finding)
-    if warn: summary.append(findingData)
-    return(summary)
-
-    # if "interesting_entries" in finding:
-    #         if len(finding["interesting_entries"]) > 0:
-    #             findingData += "\nInteresting Entries: %s" % (", ".join(finding["interesting_entries"]))
-    # if "found_by" in finding:
-    #         findingData += "\nFound by: %s" % finding["found_by"]
-def parse_warning_theme_or_plugin_alerts(finding):
-    findingData=""
-    if 'outdated' in finding and finding['outdated']==True: findingData+="\nThe version is out of date, the latest version is %s" % (finding["latest_version"])
-    if "directory_listing" in finding and finding['directory_listing']: findingData+="\nDirectory listing is enabled"
-    if "error_log_url" in finding and finding['error_log_url']: findingData+="\nAn error log file has been found: %s" % (finding["error_log_url"])
-    return findingData
-
-def parse_warning_theme_or_plugin(finding):
-    summary=[]
-    if not finding: return summary
-    findingData=""
-    if 'slug' in finding: findingData+="%s" % finding['slug']
-    # Test if there is an issue
-    alerts=parse_warning_theme_or_plugin_alerts(finding)
-    if not alerts: return [] # Return if no issues
-    else: findingData+=alerts
-    if "location" in finding: findingData += "\nLocation: %s" % finding["location"]
-
-    # if "found_by" in finding:
-    #     findingData += "\nFound by: %s" % finding["found_by"]
-
-    findingData+=parse_confidence(finding)
-    # findingData+=parse_interesting_entries(finding)
-    return([findingData])
