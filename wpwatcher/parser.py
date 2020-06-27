@@ -41,7 +41,6 @@ Ressource PArsing CLI output:
 
 import json
 import re
-import abc
 
 ALERT=1
 WARNING=2
@@ -62,18 +61,25 @@ class Component():
 
     def get_all_messages(self):
         return(
-            self.get_infos(),
+            self.get_alerts(),
             self.get_warnings(),
-            self.get_alerts()
+            self.get_infos()
         )
+
+    def __str__(self):
+        return('\n'.join(list(self.get_all_messages())))
+    
+    def __repr__(self):
+        return(json.dumps(self.data, indent=4))
 
 class WPScanJsonParser(Component):
     def __init__(self, data, false_positives=None):
         Component.__init__(self, data)
 
         self.false_positives=false_positives
-        self.status=None
         self.components=[]
+
+        # Add components to list
 
     def get_infos(self):
         infos=[]
@@ -91,13 +97,36 @@ class WPScanJsonParser(Component):
         return alerts
 
 class Vulnerability(Component):
+    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb
     def __init__(self, data): 
         Component.__init__(self, data)
 
-        self.title=None
-        self.cvss=None
-        self.fixed_in=None
-        self.references=None
+        self.title=data.get('title', None)
+        self.cvss=data.get('cvss', None)
+        self.fixed_in=data.get('fixed_in', None)
+        self.references=data.get('references', None)
+
+    def get_alerts(self):
+        alert=self.title
+        if self.cvss: 
+            alert+='\nCVSS: {cvss}'.format(cvss=self.cvss)
+        if self.fixed_in: 
+            alert+='\nFixed in: {fixed_in}'.format(fixed_in=self.fixed_in)
+        else:
+            alert+='\nNot yet fixed!'
+        if self.references: 
+            alert+='\nReferences: '
+            for ref in self.references:
+                if ref == 'cve':
+                    for cve in self.references[ref]: 
+                        alert+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-{cve}".format(cve=cve)
+                elif ref == 'wpvulndb': 
+                    for wpvulndb in self.references[ref]:
+                        alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+                else:
+                    for link in self.references[ref]:
+                        alert+="\n- {ref}: {link}".format(ref=ref.title(), link=link)
+        return([alert])
 
 class WPItem(Component):
     # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb
@@ -129,7 +158,7 @@ class Finding(Component):
 class WPItemVersion(Finding):
     # From themes, plugins and timthumbs
     # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
-    #  https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
+    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
     # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
     def __init__(self, data): 
         Finding.__init__(self, data)
@@ -501,25 +530,6 @@ def parse_vulnerability(finding):
     #     findingData += "\nFound by: %s" % finding["found_by"]
 
     return ("%s %s" % (findingData, refData) )
-
-def parse_references(finding):
-    refData = ""
-    if not check_valid_section(finding, 'references'):
-        return refData
-    refData += "\nReferences:"
-    for ref in finding["references"]:
-        refData+=parse_ref(finding, ref)
-    return refData
-
-def parse_ref(finding, ref):
-    refData=""
-    if ref =='cve':
-        for cve in finding["references"][ref]: refData+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-%s"%(cve)
-    elif ref == 'wpvulndb': 
-        for wpvulndb in finding["references"][ref]: refData+="\n- wpvulndb: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
-    else:
-        refData += "\n- %s: %s" % (ref, "\n".join(finding["references"][ref]) )
-    return refData
 
 ######## END RE WRITE ########
 
