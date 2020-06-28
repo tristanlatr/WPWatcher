@@ -41,64 +41,95 @@ Ressource PArsing CLI output:
 
 import json
 import re
+from abc import ABC, abstractmethod
 
-ALERT=1
-WARNING=2
-INFO=3
-
-class Component():
+class Component(ABC):
     def __init__(self, data): 
+        """Base abstract class for all WPScan JSON components"""
         self.data=data
-    
+
+    @abstractmethod
     def get_infos(self):
-        return []
+        pass
 
+    @abstractmethod
     def get_warnings(self):
-        return []
+        pass
 
+    @abstractmethod
     def get_alerts(self):
-        return []
-
-    def get_all_messages(self):
-        return(
-            self.get_alerts(),
-            self.get_warnings(),
-            self.get_infos()
-        )
+        pass
 
     def __str__(self):
-        return('\n'.join(list(self.get_all_messages())))
+        return('\n\n'.join(self.get_alerts()+self.get_warnings+self.get_infos()))
     
     def __repr__(self):
         return(json.dumps(self.data, indent=4))
 
 class WPScanJsonParser(Component):
-    def __init__(self, data, false_positives=None):
+    def __init__(self, data, false_positives_strings=None):
+        """Main interface to parse WPScan JSON data"""
         Component.__init__(self, data)
 
-        self.false_positives=false_positives
+        self.false_positives_strings=false_positives_strings if false_positives_strings else []
         self.components=[]
-
         # Add components to list
 
+        
+
+        # ... WIP
+
     def get_infos(self):
+        """Add false positives as infos with "[False positive]" prefix"""
         infos=[]
-        [ infos.extend(component.get_infos()) for component in self.components ]
+        for component in self.components:
+            infos.extend(component.get_infos())
+
+            for alert in component.get_alerts()+component.get_warnings():
+                if self.is_false_positive(alert, self.false_positives_strings):
+                    infos.append("[False positive]\n"+alert)
+
         return infos
 
     def get_warnings(self):
+        """Igore false positives and automatically remove special warning if all vuln are ignored"""
         warnings=[]
-        [ warnings.extend(component.get_warnings()) for component in self.components ]
+        for component in self.components:
+            all_warnings=component.get_warnings()
+            component_warnings=self.ignore_false_positives(all_warnings, self.false_positives_strings)
+            # Automatically remove special warning if all vuln are ignored
+            if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
+                component_warnings=[]
+
+            warnings.extend(component_warnings)
+            
         return warnings
 
     def get_alerts(self):
+        """Igore false positives"""
         alerts=[]
-        [ alerts.extend(component.get_alerts()) for component in self.components ]
+        for component in self.components:
+            alerts.extend(self.ignore_false_positives(component.get_alerts(), self.false_positives_strings))
         return alerts
 
+    @staticmethod
+    def ignore_false_positives(messages, false_positives_strings):
+        """Process false positives"""
+        for alert in messages:
+            if WPScanJsonParser.is_false_positive(alert, false_positives_strings):
+                messages.remove(alert)
+        return messages
+
+    @staticmethod
+    def is_false_positive(string, false_positives_strings):
+        """False Positive Detection"""
+        for fp_string in false_positives_strings:
+            if fp_string in string:
+                return True
+
 class Vulnerability(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb
     def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
         Component.__init__(self, data)
 
         self.title=data.get('title', None)
@@ -107,13 +138,15 @@ class Vulnerability(Component):
         self.references=data.get('references', None)
 
     def get_alerts(self):
+        """Return 1 alert. First line of alert string is the vulnerability title. Process CVE and WPVulnDB references to add links"""
         alert=self.title
+
         if self.cvss: 
             alert+='\nCVSS: {cvss}'.format(cvss=self.cvss)
         if self.fixed_in: 
             alert+='\nFixed in: {fixed_in}'.format(fixed_in=self.fixed_in)
         else:
-            alert+='\nNot yet fixed!'
+            alert+='\nNot fixed yet'
         if self.references: 
             alert+='\nReferences: '
             for ref in self.references:
@@ -122,57 +155,177 @@ class Vulnerability(Component):
                         alert+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-{cve}".format(cve=cve)
                 elif ref == 'wpvulndb': 
                     for wpvulndb in self.references[ref]:
-                        alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/%s"%(wpvulndb)
+                        alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/{wpvulndb}".format(wpvulndb=wpvulndb)
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {ref}: {link}".format(ref=ref.title(), link=link)
+
         return([alert])
 
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_infos(self):
+        """Return empty list"""
+        return []
+
 class WPItem(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb
     def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb"""
         Component.__init__(self, data)
 
-        self.slug=None
-        self.location=None
-        self.latest_version=None
-        self.last_updated=None
-        self.outdated=None
-        self.readme_url=None
-        self.directory_listing=None
-        self.error_log_url=None 
-    pass
+        self.slug=data.get('slug', None)
+        self.location=data.get('location', None)
+        self.latest_version=data.get('latest_version', None)
+        self.last_updated=data.get('last_updated', None)
+        self.outdated=data.get('outdated', None)
+        self.readme_url=data.get('readme_url', None)
+        self.directory_listing=data.get('directory_listing', None)
+        self.error_log_url=data.get('error_log_url', None) 
+
+    def get_warnings(self):
+        """Return 0 or 1 warning. The warning can contain infos about oudated plugin, directory listing or accessible error log.
+        First line of warning string is the plugin slug. Location also added as a reference."""
+        warning=self.slug
+
+        # Test if there is issues
+        issue_data=""
+        if self.outdated: 
+            issue_data+="\nThe version is out of date, the latest version is {}".format(self.latest_version)
+        if self.directory_listing: 
+            issue_data+="\nDirectory listing is enabled"
+        if self.error_log_url: 
+            issue_data+="\nAn error log file has been found: {}".format(self.error_log_url)
+
+        if not issue_data: 
+            return [] # Return if no issues
+
+        else: 
+            warning+=issue_data
+
+        if self.location: 
+            warning += "\nLocation: {}".format(self.location)
+
+        return([warning])
+
+    def get_infos(self):
+        """Return 1 info. First line of info string is the plugin slug."""
+        info=self.slug
+        if self.location: 
+            info += "\nLocation: {}".format(self.location)
+        if self.latest_version:
+            info += "\nLatest Version: {} {}".format(self.latest_version, '(up to date)' if not self.outdated else '')
+        if self.last_updated:
+            info += "\nLast Updated: {}".format(self.last_updated)
+        if self.readme_url:
+            info += "\nReadme: {}".format(self.readme_url)
+        return [info]
 
 class Finding(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb
     def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
         Component.__init__(self, data)
 
-        self.found_by=None
-        self.confidence=None
-        self.interesting_entries=None
-        self.confirmed_by=None
-        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get('vulnerabilities', [])]
-    pass
+        self.found_by=data.get("found_by", None)
+        self.confidence=data.get("confidence", None)
+        self.interesting_entries=data.get("interesting_entries", None)
+        self.confirmed_by=data.get("confirmed_by", None)
+
+        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get("vulnerabilities", [])]
+
+    def get_alerts(self):
+        """Return list of vulnerabilities"""
+        alerts=[]
+        for v in self.vulnerabilities:
+            alerts.extend(v.get_alerts())
+        return alerts
+
+    def get_infos(self):
+        """Return 1 info"""
+        info="Found by: {}".format(self.found_by)
+        if self.confidence: 
+            info+="(confidence: {})".format(self.confidence)
+        if self.interesting_entries: 
+            info+="\nInteresting entries: \n- {}".format('\n- '.join(self.interesting_entries))
+        if self.confirmed_by: 
+            info+="Confirmed by: "
+            for entry in self.confirmed_by:
+                info+="\n- {} (confidence: {})".format(entry)
+                if self.confirmed_by[entry].get('confidence', None): 
+                    info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
+
+                if self.confirmed_by.get("interesting_entries", None):
+                    info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
+        return [info]
 
 class WPItemVersion(Finding):
-    # From themes, plugins and timthumbs
-    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
-    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
-    # https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+    
     def __init__(self, data): 
+        """ Themes, plugins and timthumbs Version. From:
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+        """
         Finding.__init__(self, data)
         self.number=None
-        self.confidence=None
-    pass
+    
+    def get_alerts(self):
+        """Return any item version vulnerabilities"""
+        return super().get_alerts()
+
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_infos(self):
+        """Return 1 info"""
+        info="Version: {} ".format(self.number)
+        info+="\n{}".format(super().get_infos()[0])
+        return [info]
 
 class Plugin(Finding, WPItem):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
     def __init__(self, data):
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb"""
         Finding.__init__(self, data)
         WPItem.__init__(self, data)
 
         self.version=WPItemVersion(data.get('version', None))
+
+    def get_alerts(self):
+        """Return list of know vulnerability plugin version. Empty list is returned if plugin version is unrecognized"""
+        alerts=[]
+        if self.version:
+            alerts.extend(Finding.get_alerts(self))
+        return alerts
+
+    def get_warnings(self):
+        """Return plugin warnings, if oudated plugin, directory listing, accessible error log and 
+        for all know vulnerabilities if plugin version could not be recognized.
+        Adds a special warning saying the version is unrecognized if that's the case"""
+        warnings=[]
+        # Get oudated theme warning
+        plugin_warn=WPItem.get_warnings(self)
+        warnings.extend(plugin_warn)
+        # If vulns are found and the version is unrecognized
+        if not self.version and Finding.get_alerts(self):
+            # Adds a special warning saying the version is unrecognized
+            warnings.append("{}\nThe version could not be determined, all known vulnerabilities are listed. Add vulnerabilities titles to false positves strings to ignore these messages.".format(self.slug))
+            warnings.extend(Finding.get_alerts(self))
+        return warnings
+
+    def get_infos(self):
+        """Return 1 info"""
+        info=WPItem.get_infos(self)[0]
+        info+="\n{}".format(Finding.get_infos(self)[0])
+        if self.version:
+            info += "\n{}".format(self.version.get_infos()[0])
+        else:
+            info += "\nThe version could not be determined"
+        return[info]
+
+
+# WIP ...
 
 class Theme(Finding, WPItem):
     # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
@@ -219,6 +372,7 @@ class DBExport(Finding):
     # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb
     def __init__(self, data): 
         Finding.__init__(self, data)
+        self.url=None
 
 class PasswordAttack(Component):
     # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
@@ -318,22 +472,6 @@ def parse_results(wpscan_output, false_positives=[]):
     if is_json: (messages, warnings, alerts)=parse_json(data)
     else:  (messages, warnings, alerts)=parse_cli(wpscan_output, false_positives)
     return (ignore_false_positives( messages, warnings, alerts, false_positives))   
-
-def ignore_false_positives(messages, warnings, alerts, false_positives):
-    #Process false positives
-    for alert in alerts+warnings:
-        if is_false_positive(alert, false_positives):
-            try: alerts.remove(alert)
-            except ValueError: warnings.remove(alert)
-            messages.append("[False positive]\n"+alert)
-    return messages, warnings, alerts
-
-# False Positive Detection
-def is_false_positive(string, false_positives):
-    for fp_string in false_positives:
-        if fp_string in string:
-            return True
-    return False
 
 def parse_cli_toogle(line, warning_on, alert_on):
     # Color parsing
