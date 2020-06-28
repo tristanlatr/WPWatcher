@@ -46,6 +46,8 @@ from abc import ABC, abstractmethod
 class Component(ABC):
     def __init__(self, data): 
         """Base abstract class for all WPScan JSON components"""
+        if not data:
+            data={}
         self.data=data
 
     @abstractmethod
@@ -74,9 +76,6 @@ class WPScanJsonParser(Component):
         self.false_positives_strings=false_positives_strings if false_positives_strings else []
         self.components=[]
         # Add components to list
-
-        
-
         # ... WIP
 
     def get_infos(self):
@@ -130,7 +129,7 @@ class WPScanJsonParser(Component):
 class Vulnerability(Component):
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
-        Component.__init__(self, data)
+        super().__init__(self, data)
 
         self.title=data.get('title', None)
         self.cvss=data.get('cvss', None)
@@ -142,9 +141,9 @@ class Vulnerability(Component):
         alert=self.title
 
         if self.cvss: 
-            alert+='\nCVSS: {cvss}'.format(cvss=self.cvss)
+            alert+='\nCVSS: {}'.format(self.cvss)
         if self.fixed_in: 
-            alert+='\nFixed in: {fixed_in}'.format(fixed_in=self.fixed_in)
+            alert+='\nFixed in: {}'.format(self.fixed_in)
         else:
             alert+='\nNot fixed yet'
         if self.references: 
@@ -152,10 +151,10 @@ class Vulnerability(Component):
             for ref in self.references:
                 if ref == 'cve':
                     for cve in self.references[ref]: 
-                        alert+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-{cve}".format(cve=cve)
+                        alert+="\n- CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-{}".format(cve)
                 elif ref == 'wpvulndb': 
                     for wpvulndb in self.references[ref]:
-                        alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/{wpvulndb}".format(wpvulndb=wpvulndb)
+                        alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/{}".format(wpvulndb)
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {ref}: {link}".format(ref=ref.title(), link=link)
@@ -170,10 +169,72 @@ class Vulnerability(Component):
         """Return empty list"""
         return []
 
-class WPItem(Component):
+class Finding(Component):
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
+        super().__init__(self, data)
+
+        self.found_by=data.get("found_by", None)
+        self.confidence=data.get("confidence", None)
+        self.interesting_entries=data.get("interesting_entries", None)
+        self.confirmed_by=data.get("confirmed_by", None)
+        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get("vulnerabilities", [])]
+
+    def get_alerts(self):
+        """Return list of vulnerabilities"""
+        alerts=[]
+        for v in self.vulnerabilities:
+            alerts.extend(v.get_alerts())
+        return alerts
+
+    def get_infos(self):
+        """Return 1 info"""
+        info=""
+        if self.found_by:
+            info+="Found by: {}".format(self.found_by)
+        if self.confidence: 
+            info+="(confidence: {})".format(self.confidence)
+        if self.interesting_entries: 
+            info+="\nInteresting entries: \n- {}".format('\n- '.join(self.interesting_entries))
+        if self.confirmed_by: 
+            info+="Confirmed by: "
+            for entry in self.confirmed_by:
+                info+="\n- {} (confidence: {})".format(entry)
+                if self.confirmed_by[entry].get('confidence', None): 
+                    info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
+                if self.confirmed_by.get("interesting_entries", None):
+                    info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
+        return [info]
+
+class WPItemVersion(Finding):
+    
+    def __init__(self, data): 
+        """ Themes, plugins and timthumbs Version. From:
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
+        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+        """
+        super().__init__(self, data)
+        self.number=data.get('number', data)
+    
+    def get_alerts(self):
+        """Return any item version vulnerabilities"""
+        return super().get_alerts()
+
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_infos(self):
+        """Return 1 info"""
+        info="Version: {} ".format(self.number)
+        info+="\n{}".format(super().get_infos()[0])
+        return [info]
+
+class WPItem(Finding):
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb"""
-        Component.__init__(self, data)
+        super().__init__(self, data)
 
         self.slug=data.get('slug', None)
         self.location=data.get('location', None)
@@ -183,8 +244,9 @@ class WPItem(Component):
         self.readme_url=data.get('readme_url', None)
         self.directory_listing=data.get('directory_listing', None)
         self.error_log_url=data.get('error_log_url', None) 
+        self.version=WPItemVersion(data.get('version', None))
 
-    def get_warnings(self):
+    def _get_warnings(self):
         """Return 0 or 1 warning. The warning can contain infos about oudated plugin, directory listing or accessible error log.
         First line of warning string is the plugin slug. Location also added as a reference."""
         warning=self.slug
@@ -209,8 +271,31 @@ class WPItem(Component):
 
         return([warning])
 
+    def get_alerts(self):
+        """Return list of know plugin or theme vulnerability. Empty list is returned if plugin version is unrecognized"""
+        alerts=[]
+        if self.version:
+            alerts.extend(super().get_alerts())
+            alerts.extend(self.version.get_alerts())
+        return alerts
+
+    def get_warnings(self):
+        """Return plugin or theme warnings, if oudated plugin, directory listing, accessible error log and 
+        for all know vulnerabilities if plugin version could not be recognized.
+        Adds a special warning saying the version is unrecognized if that's the case"""
+        warnings=[]
+        # Get oudated theme warning
+        warnings.extend(self._get_warnings())
+        # If vulns are found and the version is unrecognized
+        if not self.version and super().get_alerts():
+            # Adds a special warning saying the version is unrecognized
+            warnings.append("""{}\nThe plugin or theme version could not be determined by WPScan, all known vulnerabilities are listed. 
+            Add vulnerabilities titles to false positves strings to ignore these messages.""".format(self.slug))
+            warnings.extend(super().get_alerts())
+        return warnings
+
     def get_infos(self):
-        """Return 1 info. First line of info string is the plugin slug."""
+        """Return 1 info"""
         info=self.slug
         if self.location: 
             info += "\nLocation: {}".format(self.location)
@@ -220,197 +305,307 @@ class WPItem(Component):
             info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
             info += "\nReadme: {}".format(self.readme_url)
+        if self.version:
+            info += "\n{}".format(self.version.get_infos()[0])
+        else:
+            info += "\nThe version could not be determined"
+        info+=super().get_infos()[0]
         return [info]
 
-class Finding(Component):
-    def __init__(self, data): 
-        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
-        Component.__init__(self, data)
-
-        self.found_by=data.get("found_by", None)
-        self.confidence=data.get("confidence", None)
-        self.interesting_entries=data.get("interesting_entries", None)
-        self.confirmed_by=data.get("confirmed_by", None)
-
-        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get("vulnerabilities", [])]
-
-    def get_alerts(self):
-        """Return list of vulnerabilities"""
-        alerts=[]
-        for v in self.vulnerabilities:
-            alerts.extend(v.get_alerts())
-        return alerts
+class Plugin(WPItem):
+    def __init__(self, data):
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb"""
+        super().__init__(self, data)
 
     def get_infos(self):
         """Return 1 info"""
-        info="Found by: {}".format(self.found_by)
-        if self.confidence: 
-            info+="(confidence: {})".format(self.confidence)
-        if self.interesting_entries: 
-            info+="\nInteresting entries: \n- {}".format('\n- '.join(self.interesting_entries))
-        if self.confirmed_by: 
-            info+="Confirmed by: "
-            for entry in self.confirmed_by:
-                info+="\n- {} (confidence: {})".format(entry)
-                if self.confirmed_by[entry].get('confidence', None): 
-                    info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
+        return ["Plugin: {}".format(super().get_infos()[0])]
 
-                if self.confirmed_by.get("interesting_entries", None):
-                    info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
+    def get_warnings(self):
+        """Return plugin warnings"""
+        if super().get_warnings():
+            return [ "Plugin Warning: {}".format (super().get_warnings()[i]) 
+                for i in range(len(super().get_warnings())) ]
+
+    def get_alerts(self):
+        """Return plugin vulnerabilities"""
+        if super().get_alerts():
+            return [ "Plugin Vulnerability: {}".format (super().get_alerts()[i]) 
+                for i in range(len(super().get_alerts())) ]
+
+class Theme(WPItem):
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb"""
+        super().__init__(self, data)
+
+        self.style_url=data.get('style_url', None)
+        self.style_name=data.get('style_name', None)
+        self.style_uri=data.get('style_uri', None)
+        self.description=data.get('description', None)
+        self.author=data.get('author', None)
+        self.author_uri=data.get('author_uri', None)
+        self.template=data.get('template', None)
+        self.license=data.get('license', None)
+        self.license_uri=data.get('license_uri', None)
+        self.tags=data.get('tags', None)
+        self.text_domain=data.get('text_domain', None)
+        self.parents=[Theme(theme) for theme in data.get('parents', [])]
+
+    def get_infos(self):
+        """Return 1 info"""
+        info=super().get_infos()[0]
+
+        if self.style_url:
+            info+="\nStyle URL: {}".format(self.style_url)
+        if self.style_name:
+            info+="\nStyle Name: {}".format(self.style_name)
+        if self.style_uri:
+            info+="\nStyle URI:: {}".format(self.style_uri)
+        if self.description:
+            info+="\nDescription: {}".format(self.description)
+        if self.author:
+            info+="\nAuthor: {}".format(self.author)
+        if self.author_uri:
+            info+="\nAuthor URI: {}".format(self.author_uri)
+        if self.template:
+            info+="\nTemplate: {}".format(self.template)
+        if self.license:
+            info+="\nLicense: {}".format(self.license)
+        if self.license_uri:
+            info+="\nLicense URI: {}".format(self.license_uri)
+        if self.tags:
+            info+="\nTags: {}".format(self.tags)
+        if self.text_domain:
+            info+="\nDomain {}".format(self.text_domain)
+
+        info+="\n{}".format(Finding.get_infos(self)[0])
+        if self.parents:
+            info+="\nParent Theme(s): {}".format(', '.join([p.slug for p in self.parents]))
+        
+        info = "Theme: {}".format(info)
         return [info]
 
-class WPItemVersion(Finding):
+    def get_warnings(self):
+        """Return theme warnings"""
+        if super().get_warnings():
+            return [ "Theme Warning: {}".format (super().get_warnings()[i]) 
+                for i in range(len(super().get_warnings())) ]
+
+    def get_alerts(self):
+        """Return theme vulnerabilities"""
+        if super().get_alerts():
+            return [ "Theme Vulnerability: {}".format (super().get_alerts()[i]) 
+                for i in range(len(super().get_alerts())) ]
+
+class Timthumb(Finding):
     
     def __init__(self, data): 
-        """ Themes, plugins and timthumbs Version. From:
-        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
-        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb
-        https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb"""
+        super().__init__(self, data)
+        self.url=None
+        self.version=WPItemVersion(data.get('version', None))
+
+    def get_infos(self):
+        """Return 1 info"""
+        info="Timthumb: {}\n{}".format(self.url, super().get_infos()[0])
+        if self.version:
+                info += "\n{}".format(self.version.get_infos()[0])
+        else:
+            info += "\nThe version could not be determined"
+        return [info]
+
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_alerts(self):
+        """Return timthumb vulnerabilities"""
+        if super().get_alerts():
+            return [ "Timthumb Vulnerability: {}".format(alert) for alert in super().get_alerts()+ self.version.get_alerts() ]
+
+
+class MainTheme(Theme): 
+    
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/main_theme/theme.erb"""
+        super().__init__(self, data)
+
+    def get_infos(self):
+        """Return 1 info"""
+        return ["Main Theme: {}".format(super().get_infos()[0])]
+
+    def get_warnings(self):
+        """Return Main Theme warnings"""
+        if super().get_warnings():
+            return [ "Main Theme Warning: {}".format(warning) for warning in super().get_warnings() ]
+
+    def get_alerts(self):
+        """Return Main Theme vulnerabilities"""
+        if super().get_alerts():
+            return [ "Main Theme Vulnerability: {}".format(alert) for alert in super().get_alerts() ]
+
+class WPVersion(Finding):
+    
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_version/version.erb"""
+        super().__init__(self, data)
+        self.number=data.get('number', None)
+        self.release_date=data.get('release_date', None)
+        self.status=data.get('status', None)
+
+    def get_infos(self):
+        """Return 1 info"""
+        if self.number:
+            info="Wordpress Version: {}".format(self.number)
+            if self.release_date:
+                info+="Release Date: {}".format(self.release_date)
+            if self.status:
+                info+="Status: {}".format(self.status.title())  
+        else:
+            info="Wordpress Version: The WordPress version could not be detected"
+       
+        if super().get_infos()[0]:
+            info+="\n{}".format(super().get_infos()[0])
+
+        return [info]
+
+    def get_warnings(self):
+        """Return 0 or 1 Wordpress Version Warning"""
+       
+        if self.status=="insecure":
+            warning="Wordpress Version Warning: "
+            warning+="Insecure WordPress version {} identified (released on {})".format(self.number, self.release_date)
+            return [warning]
+        else:
+            return []
+
+    def get_alerts(self):
+        """Return Wordpress Version vulnerabilities"""
+        if super().get_alerts():
+            return [ "Wordpress Version Vulnerability: {}".format(alert) for alert in super().get_alerts() ]
+
+class DBExport(Finding):
+    
+    def __init__(self, url, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb"""
+        super().__init__(self, data)
+        self.url=url
+
+    def get_alerts(self):
+        """Return DBExport alerts"""
+        alert="Database Export: {}\n{}".format(self.url, super().get_infos()[0])
+        return [alert]
+    
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_infos(self):
+        """Return empty list"""
+        return []
+
+class User(Finding):
+    
+    def __init__(self, username, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/users.erb
+        And https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
         """
-        Finding.__init__(self, data)
-        self.number=None
+        super().__init__(self, data)
+        
+        self.username=username
+        self.id=data.get('id', None)
+        self.password=data.get('password', None)
+
+    def get_infos(self):
+        """Return 1 info"""
+        info="User Identified: {}".format(self.username)
+        info+="\n{}".format(super().get_infos())
+        return [info]
+
+    def get_warnings(self):
+        """Return empty list"""
+        return []
+
+    def get_alerts(self):
+        """Return 1 alert if username / password are found""""
+        if self.password:
+            alert="Username: {}".format(self.username)
+            alert+="Password: {}".format(self.password)
+            return [alert]
+        else:
+            return []
+
+class PasswordAttack(Component):
+    
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb"""
+        super().__init__(self, data)
+
+        self.users = [ User(user, data.get(user)) for user in data ] 
+
+        def get_alerts(self):
+            """Return Password Attack Valid Combinations Found alerts"""
+            alerts=[]
+            for user in self.users:
+                alert="Password Attack Valid Combinations Found:"
+                if user.get_alerts():
+                    alert+="\n{}".format(user.get_alerts()[0])
+                    alerts.append(alert)
+
+            return alerts
+    
+        def get_warnings(self):
+            """Return empty list"""
+            return []
+
+        def get_infos(self):
+            """Return empty list"""
+            return []
+
+class NotFullyConfigured(Component):
+
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/not_fully_configured.erb"""
+        super().__init__(self, data)
+        self.not_fully_configured=data.get('not_fully_configured', None)
     
     def get_alerts(self):
-        """Return any item version vulnerabilities"""
-        return super().get_alerts()
+        """Return 0 or 1 alert"""
+        if self.not_fully_configured: 
+            return ["Wordpress Alert: {}".format(self.not_fully_configured)]
+        else:
+            return []
 
     def get_warnings(self):
         """Return empty list"""
         return []
 
     def get_infos(self):
-        """Return 1 info"""
-        info="Version: {} ".format(self.number)
-        info+="\n{}".format(super().get_infos()[0])
-        return [info]
-
-class Plugin(Finding, WPItem):
-    def __init__(self, data):
-        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb"""
-        Finding.__init__(self, data)
-        WPItem.__init__(self, data)
-
-        self.version=WPItemVersion(data.get('version', None))
-
-    def get_alerts(self):
-        """Return list of know vulnerability plugin version. Empty list is returned if plugin version is unrecognized"""
-        alerts=[]
-        if self.version:
-            alerts.extend(Finding.get_alerts(self))
-        return alerts
-
-    def get_warnings(self):
-        """Return plugin warnings, if oudated plugin, directory listing, accessible error log and 
-        for all know vulnerabilities if plugin version could not be recognized.
-        Adds a special warning saying the version is unrecognized if that's the case"""
-        warnings=[]
-        # Get oudated theme warning
-        plugin_warn=WPItem.get_warnings(self)
-        warnings.extend(plugin_warn)
-        # If vulns are found and the version is unrecognized
-        if not self.version and Finding.get_alerts(self):
-            # Adds a special warning saying the version is unrecognized
-            warnings.append("{}\nThe version could not be determined, all known vulnerabilities are listed. Add vulnerabilities titles to false positves strings to ignore these messages.".format(self.slug))
-            warnings.extend(Finding.get_alerts(self))
-        return warnings
-
-    def get_infos(self):
-        """Return 1 info"""
-        info=WPItem.get_infos(self)[0]
-        info+="\n{}".format(Finding.get_infos(self)[0])
-        if self.version:
-            info += "\n{}".format(self.version.get_infos()[0])
-        else:
-            info += "\nThe version could not be determined"
-        return[info]
+        """Return empty list"""
+        return []
 
 
 # WIP ...
 
-class Theme(Finding, WPItem):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/theme.erb
-    def __init__(self, data): 
-        Finding.__init__(self, data)
-        WPItem.__init__(self, data)
-
-        self.style_url=None
-        self.style_name=None
-        self.style_uri=None
-        self.description=None
-        self.author=None
-        self.author_uri=None
-        self.template=None
-        self.license=None
-        self.license_uri=None
-        self.tags=None
-        self.text_domain=None
-
-        self.version=WPItemVersion(data.get('version', None))
-        self.parents=None
-
-class Timthumb(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb
-    def __init__(self, data): 
-        Finding.__init__(self, data)
-        self.version=WPItemVersion(data.get('version', None))
-
-class MainTheme(Theme): 
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/main_theme/theme.erb
-    def __init__(self, data): 
-        Theme.__init__(self, data)
-
-class WPVersion(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_version/version.erb
-    def __init__(self, data): 
-        Finding.__init__(self, data)
-        self.number=None
-        self.release_date=None
-        self.status=None
-        pass
-
-class DBExport(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb
-    def __init__(self, data): 
-        Finding.__init__(self, data)
-        self.url=None
-
-class PasswordAttack(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
-    def __init__(self, data): 
-        Component.__init__(self, data)
-
-        self.users=[User(data.get(user)) for user in data]
-
-class NotFullyConfigured(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/not_fully_configured.erb
-    def __init__(self, data): 
-        Component.__init__(self, data)
-
 class Media(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/medias.erb
+
     def __init__(self, data): 
-        Finding.__init__(self, data)
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/medias.erb"""
+        super().__init__(self, data)
         self.url=None
 
 class ConfigBackup(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/config_backups.erb   
-    def __init__(self, data): 
-        Finding.__init__(self, data)
-
-class User(Finding):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/users.erb
-    # And https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb
 
     def __init__(self, data): 
-        Finding.__init__(self, data)
-        self.id=None
-        self.username=None
-        self.password=None
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/config_backups.erb"""
+        super().__init__(self, data)
+        self.url=None
 
 class VulnAPI(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/vuln_api/status.erb
+    
     def __init__(self, data): 
-        Component.__init__(self, data)
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/vuln_api/status.erb"""
+        super().__init__(self, data)
 
         self.http_error=None
         self.plan=None
@@ -419,28 +614,28 @@ class VulnAPI(Component):
         self.error=None
 
 class InterestingFinding(Finding):
-    # From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb
-    # interesting_findings
+
     def __init__(self, data): 
-        Finding.__init__(self, data)
+        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb"""
+        super().__init__(self, data)
         self.url=None
         self.to_s=None
         self.type=None
         self.references=None
 
 class Banner(Component):
-    # From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/banner.erb
-    # banner
+
     def __init__(self, data): 
-        Component.__init__(self, data)
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/banner.erb"""
+        super().__init__(self, data)
 
         self.description=None
 
 class ScanStarted(Component):
-    # From https://github.com/wpscanteam/CMSScanner/blob/04f8dbb7b0ac503e7fb46739bb34f40202545cc8/app/views/json/core/started.erb
 
     def __init__(self, data): 
-        Component.__init__(self, data)
+        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/core/started.erb"""
+        super().__init__(self, data)
 
         self.start_time=None
         self.start_memory=None
@@ -449,9 +644,10 @@ class ScanStarted(Component):
         self.effective_url=None
 
 class ScanFinished(Component):
-    # From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/core/finished.erb
+
     def __init__(self, data): 
-        Component.__init__(self, data)
+        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/core/finished.erb"""
+        super().__init__(self, data)
 
         self.stop_time=None
         self.elapsed=None
