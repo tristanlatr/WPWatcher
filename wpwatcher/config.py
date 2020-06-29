@@ -160,7 +160,7 @@ smtp_ssl=Yes
         'false_positive_strings' : 'null',                        
         'wpscan_path':'wpscan',
         'log_file':"",
-        'wpscan_args':'''["--no-banner","--random-user-agent"]''',
+        'wpscan_args':'''["--random-user-agent", "--format", "json"]''',
         'send_email_report':'No',
         'send_errors':'No',
         'email_to':'null',
