@@ -93,12 +93,14 @@ class WPScanJsonParser(Component):
         if data.get('version', None):
             self.components.append(WPVersion(data.get('version')))
         # Add MainTheme
+        main_theme=None
         if data.get('main_theme', None):
-            self.components.append(MainTheme(data.get('main_theme')))
+            main_theme=MainTheme(data.get('main_theme'))
+            self.components.append(main_theme)
         # Add Plugins
         self.components.extend([Plugin(data.get('plugins').get(slug)) for slug in data.get('plugins', {})])
-        # Add Themes
-        self.components.extend([Theme(data.get('themes').get(slug)) for slug in data.get('themes', {})])
+        # Add Themes ; Make sure the main theme is not displayed twice
+        self.components.extend([Theme(data.get('themes').get(slug)) for slug in data.get('themes', {}) if slug!=main_theme.slug])
         # Add Interesting findings
         self.components.extend([InterestingFinding(finding) for finding in data.get('interesting_findings', [])])
         # Add Timthumbs
@@ -239,14 +241,16 @@ class Finding(Component):
         return alerts
 
     def get_infos(self, verbose=False):
-        """Return 1 info"""
+        """Return 1 info, Only interesting entries if not verbose"""
         info=""
-        if self.found_by:
+        if self.found_by and verbose:
             info+="Found by: {} ".format(self.found_by)
-        if self.confidence: 
+        if self.confidence and verbose: 
             info+="(confidence: {})".format(self.confidence)
-        if self.interesting_entries and verbose: 
-            info+="\nInteresting entries: \n- {}".format('\n- '.join(self.interesting_entries))
+        if verbose:
+            info+="\n"
+        if self.interesting_entries: 
+            info+="Interesting entries: \n- {}".format('\n- '.join(self.interesting_entries))
         if self.confirmed_by and verbose: 
             info+="\nConfirmed by: "
             for entry in self.confirmed_by:
@@ -278,7 +282,8 @@ class WPVersion(Finding):
         else:
             info="The WordPress version could not be detected"
        
-        info+="\n{}".format(super().get_infos(verbose)[0])
+        if verbose:
+            info+="\n{}".format(super().get_infos(verbose)[0])
 
         return [info]
 
@@ -388,7 +393,7 @@ class WPItem(Finding):
         # If vulns are found and the version is unrecognized
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
             # Adds a special warning saying the version is unrecognized
-            warning+="\nThe version could not be determined, all known vulnerabilities are listed.\nAdd vulnerabilities titles to false positves strings to ignore these messages."
+            warning+=", all known vulnerabilities are listed.\nAdd vulnerabilities titles to false positves strings to ignore these messages."
         # If any issue
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
             warnings.append(warning)
@@ -409,7 +414,8 @@ class WPItem(Finding):
             info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
             info += "\nReadme: {}".format(self.readme_url)
-        info+="\n{}".format(super().get_infos(verbose)[0])
+        if verbose:
+            info+="\n{}".format(super().get_infos(verbose)[0])
         if self.version.get_infos():
             info += "\n{}".format(self.version.get_infos(verbose)[0])
         else:
@@ -529,7 +535,9 @@ class Timthumb(Finding):
 
     def get_infos(self, verbose=False):
         """Return 1 info"""
-        info="Timthumb: {}\n{}".format(self.url, super().get_infos(verbose)[0])
+        info="Timthumb: {}".format(self.url)
+        if verbose:
+            info+="\n{}".format(super().get_infos(verbose)[0])
         if self.version.get_infos():
                 info += "\n{}".format(self.version.get_infos(verbose)[0])
         else:
@@ -553,8 +561,10 @@ class DBExport(Finding):
         self.url=url
 
     def get_alerts(self, verbose=False):
-        """Return DBExport alerts"""
-        alert="Database Export: {}\n{}".format(self.url, super().get_infos(verbose)[0])
+        """Return 1 DBExport alert"""
+        alert="Database Export: {}".format(self.url)
+        if verbose:
+            alert+="\n{}".format(super().get_infos(verbose)[0])
         return [alert]
     
     def get_warnings(self, verbose=False):
@@ -581,7 +591,8 @@ class User(Finding):
     def get_infos(self, verbose=False):
         """Return 1 info"""
         info="User Identified: {}".format(self.username)
-        info+="\n{}".format(super().get_infos(verbose)[0])
+        if verbose:
+            info+="\n{}".format(super().get_infos(verbose)[0])
         return [info]
 
     def get_warnings(self, verbose=False):
@@ -589,7 +600,7 @@ class User(Finding):
         return []
 
     def get_alerts(self, verbose=False):
-        """Return 0 or 1 alert. Alert if password found"""
+        """Return 0 or 1 alert. Alert if password found. Used by PasswordAttack component"""
         if self.password:
             alert="Username: {}".format(self.username)
             alert+="Password: {}".format(self.password)
@@ -656,7 +667,8 @@ class Media(Finding):
     def get_infos(self, verbose=False):
         """Return 1 Media info"""
         alert="Media: {}".format(self.url)
-        alert+="\n{}".format(super().get_infos(verbose)[0])
+        if verbose:
+            alert+="\n{}".format(super().get_infos(verbose)[0])
         return [alert]
     
     def get_warnings(self, verbose=False):
@@ -678,7 +690,8 @@ class ConfigBackup(Finding):
     def get_alerts(self, verbose=False):
         """Return 1 Config Backup alert"""
         alert="Config Backup: {}".format(self.url)
-        alert+="\n{}".format(super().get_infos(verbose)[0])
+        if verbose:
+            alert+="\n{}".format(super().get_infos(verbose)[0])
         return [alert]
     
     def get_warnings(self, verbose=False):
@@ -842,11 +855,12 @@ class ScanFinished(Component):
         """Return 1 Scan Finished info"""
         # info+='\nStop Time: {}'.format(self.stop_time)
         info='Enlapsed: {} seconds'.format(self.elapsed)
-        info+='\nRequests Done: {}'.format(self.requests_done)
-        info+='\nCached Requests: {}'.format(self.cached_requests)
-        info+='\nData Sent: {}'.format(self.data_sent_humanised)
-        info+='\nData Received: {}'.format(self.data_received_humanised)
-        info+='\nUsed Memory: {}'.format(self.used_memory_humanised)
+        if verbose: 
+            info+='\nRequests Done: {}'.format(self.requests_done)
+            info+='\nCached Requests: {}'.format(self.cached_requests)
+            info+='\nData Sent: {}'.format(self.data_sent_humanised)
+            info+='\nData Received: {}'.format(self.data_received_humanised)
+            info+='\nUsed Memory: {}'.format(self.used_memory_humanised)
 
         return [info]
 
