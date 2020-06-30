@@ -964,7 +964,7 @@ def parse_cli(wpscan_output, false_positives_strings):
             plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
             
             if len([v for v in vulnerabilities if not is_false_positive(v, false_positives_strings)])>0:
-                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed. Add vulnerabilities titles to false positves strings to ignore these messages")
+                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed\nAdd vulnerabilities titles to false positves strings to ignore these messages")
             else:
                 messages.append("[False positive]\n"+plugin_infos)
 
