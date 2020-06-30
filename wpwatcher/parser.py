@@ -245,9 +245,9 @@ class Finding(Component):
             info+="Found by: {} ".format(self.found_by)
         if self.confidence: 
             info+="(confidence: {})".format(self.confidence)
-        if self.interesting_entries: 
+        if self.interesting_entries and verbose: 
             info+="\nInteresting entries: \n- {}".format('\n- '.join(self.interesting_entries))
-        if self.confirmed_by: 
+        if self.confirmed_by and verbose: 
             info+="\nConfirmed by: "
             for entry in self.confirmed_by:
                 info+="\n- {} ".format(entry)
@@ -294,7 +294,7 @@ class WPVersion(Finding):
        
         if self.status=="insecure":
             warning=self._get_infos(verbose)[0]
-            warning+="\nWarning: Insecure WordPress version"
+            warning+="\nWarning: Outdated WordPress version"
             return [warning]
         else:
             return []
@@ -327,7 +327,8 @@ class WPItemVersion(Finding):
         """Return 0 or 1 info. No infos if version cound not be recognized"""
         if self.number:
             info="Current Version: {} ".format(self.number)
-            info+="\n{}".format(super().get_infos(verbose)[0])
+            if verbose:
+                info+="\n{}".format(super().get_infos(verbose)[0])
             return [info]
         else:
             return []
@@ -391,6 +392,8 @@ class WPItem(Finding):
         # If any issue
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
             warnings.append(warning)
+        # If potential vulns
+        if not self.version.get_infos(verbose) and super().get_alerts(verbose):
             warnings.extend(["Potential {}".format(warn) for warn in super().get_alerts(verbose)])
             warnings.extend(["Potential {}".format(warn) for warn in self.version.get_alerts(verbose)])
         return warnings
@@ -402,7 +405,7 @@ class WPItem(Finding):
             info += "Location: {}".format(self.location)
         if self.latest_version:
             info += "\nLatest Version: {}".format(self.latest_version)
-        if self.last_updated:
+        if self.last_updated and verbose:
             info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
             info += "\nReadme: {}".format(self.readme_url)
@@ -465,25 +468,25 @@ class Theme(WPItem):
         if self.style_name:
             info+="\nStyle Name: {}".format(self.style_name)
         if self.style_uri:
-            info+="\nStyle URI:: {}".format(self.style_uri)
-        if self.description:
+            info+="\nStyle URI: {}".format(self.style_uri)
+        if self.description and verbose:
             info+="\nDescription: {}".format(self.description)
         if self.author:
             info+="\nAuthor: {}".format(self.author)
         if self.author_uri:
             info+="\nAuthor URI: {}".format(self.author_uri)
-        if self.template:
+        if self.template and verbose:
             info+="\nTemplate: {}".format(self.template)
-        if self.license:
+        if self.license and verbose:
             info+="\nLicense: {}".format(self.license)
-        if self.license_uri:
+        if self.license_uri and verbose:
             info+="\nLicense URI: {}".format(self.license_uri)
-        if self.tags:
+        if self.tags and verbose:
             info+="\nTags: {}".format(self.tags)
-        if self.text_domain:
-            info+="\nDomain {}".format(self.text_domain)
+        if self.text_domain and verbose:
+            info+="\nDomain: {}".format(self.text_domain)
 
-        if self.parents:
+        if self.parents and verbose:
             info+="\nParent Theme(s): {}".format(', '.join([p.slug for p in self.parents]))
         
         return [info]
