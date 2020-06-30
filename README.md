@@ -545,7 +545,7 @@ prescan_without_api_token=Yes
 ```
 Overwrite with argument `--prescan`
 
-Scan timeout. Default to `5m`
+Scan timeout. Default to `15m`
 ```ini
 scan_timeout=30m
 ```
