@@ -12,24 +12,23 @@
   <a href="https://github.com/tristanlatr/WPWatcher/actions" target="_blank"><img src="https://github.com/tristanlatr/WPWatcher/workflows/test/badge.svg"></a>
   <a href="https://codecov.io/gh/tristanlatr/WPWatcher" target="_blank"><img src="https://codecov.io/gh/tristanlatr/WPWatcher/branch/master/graph/badge.svg"></a>
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
-  <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a>
+  <!-- <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a> -->
 
 </p>
 
 ## Features
   - Scan multiple sites with WPScan
-  - Define reporting emails addresses for every configured site individually and globally
   - Parse WPScan output and divide the results in "Warnings", "Alerts", "Fixed" items, "Informations" and eventually "Errors"
-  - Mail notification and verbosity can be configred, additionnaly WPScan output can be attached to emails. 
-  - Scan sites continuously at defined interval and handled VulnDB API limit.  
-  - Local log file can be configured and also lists all the findings 
+  - Handled VulnDB API limit
+  - Define reporting emails addresses for every configured site individually and globally
   - Define false positives strings for every configured site individually and globally
   - Define WPScan arguments for every configured site individually and globally
-  - Speed up scans using several asynchronous workers
-  - Optionnal follow URL redirection if WPScan fails and propose to ignore main redirect 
   - Save raw WPScan results into files
-  - Parse the results differently whether wpscan argument `--format` is `json` or `cli`
-  - Optionnal prescan sites without API token, then use token on site having issues (i.e. outdated Wordpress, plugin version) only to save calls ;-)
+  - Speed up scans using several asynchronous workers
+  - Follow URL redirection if WPScan fails and propose to ignore main redirect 
+  - Log file also lists all the findings 
+  - Scan sites continuously at defined interval and configure script as a linux service
+  - Prescan sites without API token, then use token on site having issues (i.e. outdated Wordpress, plugin version) only to save API calls
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
@@ -44,11 +43,13 @@ Tested with WPScan 3.7.11 on :
 
 ## Install
 #### With PyPi (stable)
-    pip3 install wpwatcher
+```bash
+python3 -m pip install wpwatcher
+```
 
 #####  Update
 ```bash
-pip3 install wpwatcher --upgrade
+python3 -m pip install wpwatcher --upgrade
 ```
 
 #### Manually (devel)
@@ -75,7 +76,7 @@ Before version 0.5.7
 - Clone the repository
 - Install docker image 
 
-With the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Won't work if you build the image as root.
+<!-- With the user UID, `wpwatcher` will then run as this user. The following will use the current logged user UID. Won't work if you build the image as root.
 ```bash
 docker image build \
     --build-arg USER_ID=$(id -u ${USER}) \
@@ -85,9 +86,8 @@ docker image build \
 `wpwatcher` command would look like :  
 ```bash
 docker run -it -v '/path/to/wpwatcher.conf/folder/:/wpwatcher/.wpwatcher/' wpwatcher [...]
-```
+``` -->
 
-Or install without UID mapping, it will use [docker volumes](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
 ```bash
 docker image build -t wpwatcher .
 ```
@@ -96,20 +96,18 @@ docker image build -t wpwatcher .
 ```
 docker run -it -v 'wpwatcher_data:/wpwatcher/.wpwatcher/' wpwatcher
 ```
-<!-- - Then, as root, check `docker volume inspect wpwatcher_data` to see Mountpoint, other WPWatcher files and create your config file if you want
+
+It will use [docker volumes](https://stackoverflow.com/questions/18496940/how-to-deal-with-persistent-storage-e-g-databases-in-docker?answertab=votes#tab-top) in order to write files and save reports
+
+- Create config file: As root, check `docker volume inspect wpwatcher_data` to see Mountpoint, then create the config file
 ```bash
 docker run -it wpwatcher --template_conf > /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
 vim /var/lib/docker/volumes/wpwatcher_data/_data/wpwatcher.conf
-``` -->
-
-Try it out (No persistent storage)
-```bash
-docker run -it wpwatcher --url exemple1.com
 ```
 
-Create an alias with volume mapping your good to go
+- Create an alias and your good to go
 ```
-alias wpwatcher="docker run -it -v 'volume-name-or-path-to-folder:/wpwatcher/.wpwatcher/' wpwatcher"
+alias wpwatcher="docker run -it -v 'wpwatcher_data:/wpwatcher/.wpwatcher/' wpwatcher"
 ```
 </p>
 </details>
@@ -123,7 +121,7 @@ Load sites from text file , pass WPScan arguments , follow redirection if WPScan
 
 ```bash
 wpwatcher --urls sites.txt \
-        --wpscan_args "--rua --force --stealthy --api-token <TOKEN>" \
+        --wpscan_args "--force --stealthy --api-token <TOKEN>" \
         --follow_redirect \
         --workers 5 \
         --send --attach \
@@ -155,7 +153,6 @@ Create and edit a new config file from template.   (  `--template_conf` argument
 wpwatcher --template_conf > ./wpwatcher.conf
 vim ./wpwatcher.conf
 ```
-Other arguments will simply overwrite config values.
 
 See complete list of options in the section *Full configuration options* bellow or use `wpwatcher --help` to see options configurable with CLI.
 
@@ -170,7 +167,7 @@ Tips:
 - Speed up the scans with multiple asynchronous workers `--workers Number` option   -->
 Please make sure you respect the [WPScan license](https://github.com/wpscanteam/wpscan/blob/master/LICENSE).
 
-#### Setup continuous scanning service, daemon mode
+#### Setup continuous scanning linux service
 
 <details><summary><b>See details and how to</b></summary>
 <p>
@@ -209,7 +206,7 @@ Setup WPWatcher as a service.
     Type=simple
     Restart=always
     RestartSec=1
-    ExecStart=/usr/local/bin/wpwatcher --daemon 
+    ExecStart=/usr/local/bin/wpwatcher --daemon --conf /path/to/wpwatcher.conf
     User=user
 
     [Install]
@@ -245,34 +242,23 @@ Caution: **do not configure crontab execution and continuous scanning at the sam
 <details><summary><b>See contab usage</b></summary>
 <p>
 
-- Crontab usage:
+- Config files:
 
-```
-0 0 * * * wpwatcher --quiet
-```
-
-To print only ERRORS and WPScan ALERTS, use `--quiet` or set `quiet=Yes` in your config.  
-You'll receive email alerts with cron `MAILTO` feature. Add `>/dev/null` to ignore.  
-
-- Crontab with multiple config files usage:
     - `wpwatcher.conf`: contains all configurations except `wp_wites`
-    - `site1.txt`: contains first X urls
-    - `site2.txt`: contain the rest  ...  
+    - `site.txt`: contains a lot of urls
 
-    In your crontab, configure script to run at your convenience. For exemple, with two lists :
+In your crontab, configure script to run at your convenience
 ```
-# Will run at 00:00 on Monday:
-0 0 * * 1 wpwatcher --conf wpwatcher.conf --urls site1.txt --quiet
-# Will run at 00:00 on Tuesday:
-0 0 * * 2 wpwatcher --conf wpwatcher.conf --urls sites2.txt --quiet
+# Will run at 00:00 on Mondays:
+0 0 * * 1 wpwatcher --conf /path/to/wpwatcher.conf --urls /path/to/site.txt --wait > /dev/null
 ```
-Warning, this kind of setup can lead into having two `wpwatcher` executions at the same time. This might result into failure and/or database corruption because of conccurent accesses to reports database file.
+Warning: This kind of setup can lead into having two `wpwatcher` executions at the same time if you have too many URLs. This might result into failure and/or database corruption because of conccurent accesses to reports database file.
 </p>
 </details>
 
 ### Simple configuration with mail report
 
-Simple configuration file without SMTP authentication 
+Simple configuration file with SMTP authentication 
 
 ```ini
 [wpwatcher]
@@ -285,31 +271,56 @@ wpscan_args=[   "--format", "json",
                 "--disable-tls-checks",
                 "--api-token", "YOUR_API_TOKEN" ]
 send_email_report=Yes
-email_to=["me@exemple.com"]
-smtp_server=mailserver.exemple.com:25
-from_email=WordPressWatcher@exemple.com
+email_to=["me@gmail.com"]
+from_email=me@gmail.com
+smtp_user=me@gmail.com
+smtp_server=smtp.gmail.com:587
+smtp_ssl=Yes
+smtp_auth=Yes
+smtp_pass=P@assW0rd
 ```
 You can store the API Token in the WPScan default config file at `~/.wpscan/scan.yml` and not supply it via the wpscan CLI argument in the WPWatcher config file. See [WPSacn readme](https://github.com/wpscanteam/wpscan#save-api-token-in-a-file).
 
-### Full configuration options
+### Configuration options
 
-<!-- Config option | Accepted values, config file | Argument | Accepted values, argument | Default value
+Option | Accepted values in config file | CLI argument | Accepted values in CLI argument | Default value
 --- | --- | --- | --- | ---
 `wpscan_path` | Strings | NA | NA | Assume `wpscan` is in your `PATH` 
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`false_positive_strings` | Json string | `--false_positive_strings [Strings...]` or `--fpstr [Strings...]` | Strings | Empty list
-`wp_sites` | Json string | `--wp_sites [URL...]` or `--url "[URL...]` or `--urls File path` | List of URLs or file path | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
-`wpscan_args` | Json string | `--wpscan_args "args"` or `--wpargs "args"` | String | `["--no-banner","--random-user-agent"]`
+`wpscan_args` | Json string | `--wpargs "WPScan arguments"` | String | `--random-user-agent --format json`
+`wp_sites` | Json string (Fully configurable) | `--url URL [URL...]`| Strings | None
+Loag `wp_sites` URLs from file | NA | `--urls Path` | String | None
+`false_positive_strings` | Json string | `--fpstr String [String...]` | Strings | None
+`send_email_report` | Boolean Yes/No | `--send` | No value | No
+`email_to` | Json string | `--email_to Email [Email ...]`| Strings | No one
+`email_errors_to` | Json string | NA | NA | Same as `email_to` 
+`send_infos` | Boolean Yes/No | `--infos` | No value | No
+`send_warnings` | Boolean Yes/No | NA | NA | Yes
+`send_errors` | Boolean Yes/No | `--errors` | No value | No
+`attach_wpscan_output` | Boolean Yes/No | `--attach` | No value | No
+`resend_emails_after` | String | `--resend String` | String | `0s`
+`api_limit_wait` | Boolean Yes/No | `--wait` | No value | No
+`daemon` | Boolean Yes/No | `--daemon` | No value | No
+`daemon_loop_sleep` | String | `--loop` | String | `0s`
+`log_file` | String | `--log Path` | String | None
+`quiet` | Boolean Yes/No | `--quiet` | No value | No
+`verbose` | Boolean Yes/No | `--verbose` | No value | No
+`wpscan_output_folder` | String | `--wpout Path` | String | None
+`wp_reports` | String | `--reports Path` | String | `~/.wpwatcher/wp_reports.json`
+`fail_fast` | Boolean Yes/No | `--ff` | No value | No
+`asynch_workers` | Int | `--workers Number` | Int | 1
+`follow_redirect` | Boolean Yes/No | `--follow` | No value | No
+`prescan_without_api_token` | Boolean Yes/No | `--prescan` | No value | No
+`scan_timeout` | String| NA | NA | `15m`  
+`from_email` | String | NA | NA | None
+`smtp_server` | String | NA | NA | None
+`smtp_ssl` | Boolean Yes/No | NA | NA | No
+`smtp_auth` | String | NA | NA | None
+`smtp_user` | String | NA | NA | None
+`smtp_pass` | String | NA | NA | None
 
+---  
 
-*Still* | `renders` | **nicely**
-1 | 2 | 3 -->
-
-<details><summary><b>See all configuration options with explanatory comments.</b></summary>
+<details><summary><b>See more explanatory comments and exemples</b></summary>
 <p>
 
 #### WPScan path
@@ -333,7 +344,7 @@ Using `"--format", "cli"` will parse full WPScan output with [!] etc
 
 See `wpscan --help` for more informations about WPScan options  
 ```ini
-wpscan_args=[   "--format", "cli",
+wpscan_args=[   "--format", "json",
                 "--no-banner",
                 "--random-user-agent", 
                 "--disable-tls-checks",
@@ -341,24 +352,25 @@ wpscan_args=[   "--format", "cli",
                 "--enumerate", "t,p,tt,cb,dbe,u,m"]
 ```
 Overwrite with `--wpargs "WPScan arguments"`. If you run into option parsing error, start the arguments string with a space or use equals sign `--wpargs="[...]"` to avoid [argparse bug](https://stackoverflow.com/questions/16174992/cant-get-argparse-to-read-quoted-string-with-dashes-in-it?noredirect=1&lq=1).
-#### False positive strings
-You can use this to ignore some warnings or alerts.  
-False positives will still be processed as infos: Use with care.   
-Must be a valid Json string
-```ini
-false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
-```
-#### Monitored sites
+
+#### Monitored sites and false positives
 List of dictionnary having a url, custom email report recepients, false positives and specific wpscan arguments.
 Each dictrionnary must contain at least a `"url"` key.
+
+You can use `false_positive_strings` to ignore some warnings or alerts.  
+False positives will still be processed as infos.  
+Use case for site specific false positives: Vulnerabilities are found but WPScan can't dertermine plugin version, so all vulnerabilites are printed. After checking your plugin version, add vulnerabily title in the list of false positive in the `wp_sites` entries
+
 Must be a valid Json string.
-Must be supplied with config file or argument.
+Must be supplied with config file or CLI arguments.
 ```ini
 wp_sites=   [
         {   
             "url":"exemple.com",
             "email_to":["site_owner@domain.com"],
-            "false_positive_strings":["Vulnerability 123"],
+            "false_positive_strings":[
+                "Yoast SEO 1.2.0-11.5 - Authenticated Stored XSS",
+                "Yoast SEO <= 9.1 - Authenticated Race Condition"],
             "wpscan_args":["--stealthy"]
         },
         {   
@@ -372,7 +384,15 @@ wp_sites=   [
         }
     ]
 ```
-Overwrite with arguments: `--url URL [URL...]` or `--urls File path`. Custom email report recepients, false positives and specific wpscan arguments are not supported with CLI arguments
+Overwrite with arguments: `--url URL [URL...]` or load URLs from file with `--urls File path`. Custom email report recepients, false positives strings and specific wpscan arguments are not supported with CLI arguments
+
+##### Global false positive strings
+Must be a valid Json string.  
+Note: WPScan No WPVulnDB API Token given warning is automatically ignored.  
+```ini
+false_positive_strings=[]
+```
+Overwrite with arguments: `--fpstr String [String ...]`
 
 #### Notifications
 
@@ -525,9 +545,9 @@ prescan_without_api_token=Yes
 ```
 Overwrite with argument `--prescan`
 
-Scan timeout. Default to `5m`
+Scan timeout. Default to `15m`
 ```ini
-scan_timeout=10m
+scan_timeout=30m
 ```
 
 </p>
@@ -548,9 +568,7 @@ Email notification can have 5 status:
 
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
-Tip: set `"--format","json"` in  `wpscan_args` config option to use the json parsing feature and have more concise email text. 
-
-Alerts, Warnings and Infos might differ whether you're using cli or json format.
+Tip: set `--format cli` in  `wpscan_args` config option or arguments to parse complete WPScan output. Alerts, Warnings and Infos might differ whether you're using cli or json format (i.e. error log found will be considered as an Alert with CLI format instead of Warning.
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
 

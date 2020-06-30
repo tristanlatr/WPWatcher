@@ -142,8 +142,16 @@ class WPWatcherCLI():
                 conf_args['wp_sites']= sites if 'wp_sites' not in conf_args else conf_args['wp_sites']+sites
 
         conf_args=WPWatcherCLI.adjust_special_cli_args(conf_args)
+
         # Overwrite with conf dict biult from CLI Args
-        if conf_args: configuration.update(conf_args)
+        if conf_args: 
+            for k in conf_args:
+                if k == "wpscan_args":
+                    # MAke sure to append new WPScan arguments after defaults
+                    configuration[k].extend(conf_args[k])
+                else:
+                    configuration[k]=conf_args[k]
+
         return configuration
 
     @staticmethod

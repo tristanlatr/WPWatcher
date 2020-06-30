@@ -125,7 +125,10 @@ class WPWatcher():
         new_reports = [n for n in new_reports if n]
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
-            log.info("Updated %s reports in database: %s"%(len(new_reports),self.wp_reports.filepath))
+            if self.wp_reports.filepath != "null":
+                log.info("Updated %s reports in database: %s"%(len(new_reports),self.wp_reports.filepath))
+            else: 
+                log.info("No reports updated in local database")
     
     @staticmethod
     def format_site(wp_site):

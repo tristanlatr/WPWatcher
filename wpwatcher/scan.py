@@ -15,7 +15,7 @@ import multiprocessing.pool
 from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
-from wpwatcher.parser import parse_results
+from wpwatcher.parser import parse_results, is_false_positive
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.config import WPWatcherConfig
@@ -107,22 +107,24 @@ class WPWatcherScanner():
         token = wpscan_args[api_token_index]
         return token
 
-    @staticmethod
-    def get_fixed_issues(wp_report, last_wp_report, issue_type='alerts'):
+    def get_fixed_issues(self, wp_report, last_wp_report, wp_site, issue_type='alerts'):
+        """Return list of fixed issue texts to include in mails"""
         issues=[]
-        for last_alert in last_wp_report[issue_type]:
-            if last_alert.splitlines()[0] not in [ a.splitlines()[0] for a in wp_report[issue_type] ]:
-                issues.append('%s regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s\nIssue details:\n%s'%('Alert' if issue_type=='alerts' else 'Issue', 
-                    last_alert.splitlines()[0], last_wp_report['last_email'], wp_report['datetime'], last_alert))
+        for last_alert in last_wp_report[issue_type] :
+            if not is_false_positive(last_alert, self.false_positive_strings+wp_site['false_positive_strings']) :
+                if last_alert.splitlines()[0] not in [ a.splitlines()[0] for a in wp_report[issue_type] ]:
+                    issues.append('%s regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s\nIssue details:\n%s'%(
+                        'Alert' if issue_type=='alerts' else 'Issue', 
+                        last_alert.splitlines()[0], last_wp_report['last_email'], wp_report['datetime'], last_alert) )
         return issues
 
-    def update_report(self, wp_report, last_wp_report):
+    def update_report(self, wp_report, last_wp_report, wp_site):
         if last_wp_report:
             # Fill out fixed issues and last_email datetime
             # Save already fixed issues but not reported yet
             wp_report['fixed']=last_wp_report['fixed']
-            wp_report['fixed'].extend( self.get_fixed_issues(wp_report, last_wp_report, 'alerts') )
-            if self.mail.send_warnings : wp_report['fixed'].extend( self.get_fixed_issues(wp_report, last_wp_report, 'warnings') )
+            wp_report['fixed'].extend( self.get_fixed_issues(wp_report, last_wp_report, wp_site, issue_type='alerts') )
+            if self.mail.send_warnings : wp_report['fixed'].extend( self.get_fixed_issues(wp_report, last_wp_report, wp_site, issue_type='warnings') )
 
             # Save last email datetime if any
             if last_wp_report['last_email']:
@@ -204,15 +206,20 @@ class WPWatcherScanner():
         self.wpscan.init_check_done=False # will re-trigger wpscan update next time wpscan() is called 
         self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
         if self.interrupting: return ((None, True))
-        return ((self.wpscan_site(wp_site, wp_report), True))
+
+        new_report=self.scan_site(wp_site)
+        return ((new_report, new_report != None))
 
     def handle_wpscan_err_follow_redirect(self,wp_site, wp_report):
         url = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
             wp_report["wpscan_output"].split("The URL supplied redirects to")[1] )
+
         if len(url)==1:
             wp_site['url']=url[0].strip()
             log.info("Following redirection to %s"%wp_site['url'])
-            return ((self.wpscan_site(wp_site, wp_report), True))
+            new_report=self.scan_site(wp_site)
+            return ((new_report, new_report != None))
+
         else:
             err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
             log.error(err_str)
@@ -257,7 +264,8 @@ class WPWatcherScanner():
         # Handle scan errors -----
         
         # Quick return if interrupting and/or if user cacelled scans
-        if self.interrupting or wpscan_exit_code in [2, -2, -9] : return None
+        if self.interrupting or wpscan_exit_code in [2, -2, -9] : 
+            return None
         
         # Other errors codes : -9, -2, 127, etc:
         # or wpscan_exit_code not in [1,3,4]
@@ -272,16 +280,6 @@ class WPWatcherScanner():
             wp_report_new= timeout(self.scan_timeout.total_seconds(), self._wpscan_site, args=(wp_site, wp_report) )
             if wp_report_new: wp_report.update(wp_report_new)
             else : return None
-        except RuntimeError as err:
-             # Try to handle error and return, Reccursive call to wpscan_site
-            wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)
-            if handled and wp_report_new: wp_report.update(wp_report_new)
-            if handled: return wp_report
-            else: 
-                log.error("Could not scan site %s"%wp_site['url'])
-                wp_report['errors'].append(str(err))
-                # Fail fast
-                self.check_fail_fast()
         except TimeoutError:
             wp_report['errors'].append("Timeout scanning site after %s seconds"%self.scan_timeout.total_seconds())
             log.error("Timeout scanning site %s after %s seconds."%(wp_site['url'], self.scan_timeout.total_seconds()))
@@ -309,11 +307,32 @@ class WPWatcherScanner():
         }
 
         # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
-        if last_wp_report and self.skip_this_site(wp_report, last_wp_report): return None
+        if last_wp_report and self.skip_this_site(wp_report, last_wp_report): 
+            return None
         
         # Launch WPScan
-        # Abnormal failure exit codes not in 0-5 and not while tearing down program
-        if not self.wpscan_site(wp_site, wp_report): return None
+        try:
+            # Abnormal failure exit codes not in 0-5
+            if not self.wpscan_site(wp_site, wp_report): 
+                log.error("Abnormal failure scanning %s exit codes not 0 or 5"%(wp_site['url']))
+                return None
+
+        except RuntimeError as err:
+            # Try to handle error and return, recall scan_site()
+            wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)                
+            if handled:
+                wp_report.update(wp_report_new)
+                return wp_report
+
+            elif not self.interrupting: 
+                log.error("Could not scan site %s"%wp_site['url'])
+                log.debug(traceback.format_exc())
+                wp_report['errors'].append(str(err))
+                # Fail fast
+                self.check_fail_fast()
+
+            else:
+                return None
 
         self.fill_report_status(wp_report)
 
@@ -330,11 +349,15 @@ class WPWatcherScanner():
         if wpscan_results_file: log.info("WPScan output saved to file %s"%wpscan_results_file)
         
         # Updating report entry with data from last scan 
-        self.update_report(wp_report, last_wp_report)
+        self.update_report(wp_report, last_wp_report, wp_site)
 
         # Notify recepients if match triggers
         try:
-            self.mail.notify(wp_site, wp_report, last_wp_report)
+            if self.mail.notify(wp_site, wp_report, last_wp_report):
+                # Store report time
+                wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
+                # Discard fixed items because infos have been sent
+                wp_report['fixed']=[]
         except RuntimeError: 
             # Fail fast
             self.check_fail_fast()
