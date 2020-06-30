@@ -186,7 +186,7 @@ smtp_ssl=Yes
         'follow_redirect':'No',
         'wpscan_output_folder':'',
         'prescan_without_api_token':'No',
-        'scan_timeout':'5m'
+        'scan_timeout':'15m'
     }
 
     @staticmethod
