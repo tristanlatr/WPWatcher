@@ -100,7 +100,7 @@ class WPScanJsonParser(Component):
         # Add Plugins
         self.components.extend([Plugin(data.get('plugins').get(slug)) for slug in data.get('plugins', {})])
         # Add Themes ; Make sure the main theme is not displayed twice
-        self.components.extend([Theme(data.get('themes').get(slug)) for slug in data.get('themes', {}) if slug!=main_theme.slug])
+        self.components.extend([Theme(data.get('themes').get(slug)) for slug in data.get('themes', {}) if not main_theme or slug!=main_theme.slug])
         # Add Interesting findings
         self.components.extend([InterestingFinding(finding) for finding in data.get('interesting_findings', [])])
         # Add Timthumbs
