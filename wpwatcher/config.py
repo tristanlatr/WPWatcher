@@ -92,10 +92,7 @@ class WPWatcherConfig():
 
 # WPScan configuration
 # wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
-wpscan_args=[   "--format", "cli",
-                "--no-banner",
-                "--random-user-agent", 
-                "--disable-tls-checks" ]
+# wpscan_args=[ "--format", "json", "--random-user-agent" ]
 
 # False positive string matches
 # false_positive_strings=["You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"]
