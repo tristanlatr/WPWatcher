@@ -133,8 +133,13 @@ class WPScanJsonParser(Component):
         """Add false positives as infos with "[False positive]" prefix"""
         infos=[]
         for component in self.components:
-            cinfos=component.get_infos(verbose)
-            infos.extend(cinfos)
+            infos.extend(component.get_infos(verbose))
+
+            # If all vulns are ignored, add msg to infos
+            component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
+            if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
+                infos.extend(component_warnings)
+
             for alert in component.get_alerts(verbose)+component.get_warnings(verbose):
                 if self.is_false_positive(alert, self.false_positives_strings):
                     infos.append("[False positive]\n"+alert)
@@ -146,6 +151,7 @@ class WPScanJsonParser(Component):
         warnings=[]
         for component in self.components:
             component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
+            
             # Automatically remove special warning if all vuln are ignored
             if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
                 component_warnings=[]
