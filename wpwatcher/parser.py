@@ -135,7 +135,7 @@ class WPScanJsonParser(Component):
         for component in self.components:
             infos.extend(component.get_infos(verbose))
 
-            # If all vulns are ignored, add msg to infos
+            # If all vulns are ignored, add component message to infos
             component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
             if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
                 infos.extend(component_warnings)
@@ -390,12 +390,12 @@ class WPItem(Finding):
         warning+=self._get_infos(verbose)[0]
         # If vulns are found and the version is unrecognized
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
-            # Adds a special warning saying the version is unrecognized
-            warning+=", all known vulnerabilities are listed.\nAdd vulnerabilities titles to false positves strings to ignore these messages."
-        # If any issue
+            # Adds a special warning saying all vulns are listed
+            warning+="\nAll known vulnerabilities are listed."
+        # If vulns are found and the version is unrecognized or other issue like outdated version or directory listing enable
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
             warnings.append(warning)
-        # If potential vulns
+        # If vulns are found and the version is unrecognized : add Potential vulns
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
             warnings.extend(["Potential {}".format(warn) for warn in super().get_alerts(verbose)])
             warnings.extend(["Potential {}".format(warn) for warn in self.version.get_alerts(verbose)])
@@ -962,7 +962,7 @@ def parse_cli(wpscan_output, false_positives_strings):
             plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
             
             if len([v for v in vulnerabilities if not is_false_positive(v, false_positives_strings)])>0:
-                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed\nAdd vulnerabilities titles to false positves strings to ignore these messages")
+                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed")
             else:
                 messages.append(plugin_infos)
 
