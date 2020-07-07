@@ -133,8 +133,13 @@ class WPScanJsonParser(Component):
         """Add false positives as infos with "[False positive]" prefix"""
         infos=[]
         for component in self.components:
-            cinfos=component.get_infos(verbose)
-            infos.extend(cinfos)
+            infos.extend(component.get_infos(verbose))
+
+            # If all vulns are ignored, add component message to infos
+            component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
+            if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
+                infos.extend(component_warnings)
+
             for alert in component.get_alerts(verbose)+component.get_warnings(verbose):
                 if self.is_false_positive(alert, self.false_positives_strings):
                     infos.append("[False positive]\n"+alert)
@@ -145,8 +150,8 @@ class WPScanJsonParser(Component):
         """Igore false positives and automatically remove special warning if all vuln are ignored"""
         warnings=[]
         for component in self.components:
-            all_warnings=component.get_warnings(verbose)
-            component_warnings=self.ignore_false_positives(all_warnings, self.false_positives_strings)
+            component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
+            
             # Automatically remove special warning if all vuln are ignored
             if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
                 component_warnings=[]
@@ -159,16 +164,8 @@ class WPScanJsonParser(Component):
         """Igore false positives"""
         alerts=[]
         for component in self.components:
-            alerts.extend(self.ignore_false_positives(component.get_alerts(verbose), self.false_positives_strings))
+            alerts.extend([ alert for alert in component.get_alerts(verbose) if not self.is_false_positive(alert, self.false_positives_strings) ])
         return alerts
-
-    @staticmethod
-    def ignore_false_positives(messages, false_positives_strings):
-        """Process false positives"""
-        for alert in messages:
-            if WPScanJsonParser.is_false_positive(alert, false_positives_strings):
-                messages.remove(alert)
-        return messages
 
     @staticmethod
     def is_false_positive(string, false_positives_strings):
@@ -360,11 +357,11 @@ class WPItem(Finding):
         # Test if there is issues
         issue_data=""
         if self.outdated: 
-            issue_data+="\nWarning: The version is out of date\n"
+            issue_data+="\nWarning: The version is out of date"
         if self.directory_listing: 
-            issue_data+="\nWarning: Directory listing is enabled\n"
+            issue_data+="\nWarning: Directory listing is enabled"
         if self.error_log_url: 
-            issue_data+="\nWarning: An error log file has been found: {}\n".format(self.error_log_url)
+            issue_data+="\nWarning: An error log file has been found: {}".format(self.error_log_url)
 
         if not issue_data: 
             return [] # Return if no issues
@@ -388,16 +385,17 @@ class WPItem(Finding):
         warning=self.slug
         if self._get_warnings(verbose):
             warning+=self._get_warnings(verbose)[0]
+        warning+="\n"
         # Get generic infos
         warning+=self._get_infos(verbose)[0]
         # If vulns are found and the version is unrecognized
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
-            # Adds a special warning saying the version is unrecognized
-            warning+=", all known vulnerabilities are listed.\nAdd vulnerabilities titles to false positves strings to ignore these messages."
-        # If any issue
+            # Adds a special warning saying all vulns are listed
+            warning+="\nAll known vulnerabilities are listed."
+        # If vulns are found and the version is unrecognized or other issue like outdated version or directory listing enable
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
             warnings.append(warning)
-        # If potential vulns
+        # If vulns are found and the version is unrecognized : add Potential vulns
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
             warnings.extend(["Potential {}".format(warn) for warn in super().get_alerts(verbose)])
             warnings.extend(["Potential {}".format(warn) for warn in self.version.get_alerts(verbose)])
@@ -964,9 +962,9 @@ def parse_cli(wpscan_output, false_positives_strings):
             plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
             
             if len([v for v in vulnerabilities if not is_false_positive(v, false_positives_strings)])>0:
-                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed\nAdd vulnerabilities titles to false positves strings to ignore these messages")
+                warnings.append(plugin_infos+"\nAll known vulnerabilities are listed")
             else:
-                messages.append("[False positive]\n"+plugin_infos)
+                messages.append(plugin_infos)
 
             if alert_on: alerts.extend(vulnerabilities)
             elif warning_on: warnings.extend(vulnerabilities)
