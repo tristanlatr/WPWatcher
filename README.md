@@ -561,14 +561,14 @@ One report is generated per site and the reports are sent individually when fini
 
 Email notification can have 5 status: 
 - `ALERT`: You have a vulnerable Wordpress, theme or plugin
-- `WARNING`: You have an oudated Wordpress, theme or plugin
+- `WARNING`: You have an outdated Wordpress, theme or plugin
 - `FIXED`: All issues are fixed or ignored (warnings included if `send_warnings=Yes`) 
 - `INFO`: WPScan did not find any issues with your site
 - `ERROR`: WPScan failed
 
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
-Tip: set `--format cli` in  `wpscan_args` config option or arguments to parse complete WPScan output. Alerts, Warnings and Infos might differ whether you're using cli or json format (i.e. error log found will be considered as an Alert with CLI format instead of Warning.
+Tip: set `--format cli` in  `wpscan_args` config option or arguments to parse complete WPScan output. Alerts, Warnings and Infos might differ whether you're using cli or json format.
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
 
