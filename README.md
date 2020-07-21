@@ -710,4 +710,4 @@ python3 -m unittest tests.quick_test
 
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))
-- Tristan Landès
+- Tristan Landes
