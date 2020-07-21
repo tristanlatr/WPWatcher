@@ -72,7 +72,7 @@ class WPWatcherNotification():
         self.server.quit()
 
     # Send email report with status and timestamp
-    def send_report(self, wp_report, email_to) : #, send_infos=False, send_warnings=True, send_errors=False, attach_wpscan_output=False):
+    def send_report(self, wp_report, email_to) :
 
         # Building message
         message = MIMEMultipart("html")
@@ -186,8 +186,8 @@ class WPWatcherNotification():
 
         message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])
         message += WPWatcherNotification.format_issues('Alerts',wp_report['alerts'])
-        message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
         if warnings: message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
+        message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
         if infos: message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
                 
         message += "\n\n--"
