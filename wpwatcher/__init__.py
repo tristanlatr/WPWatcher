@@ -15,7 +15,7 @@ VERSION='2.2.2'
 # URL that will be displayed in help and other places
 GIT_URL="https://github.com/tristanlatr/WPWatcher"
 # Authors
-AUTHORS="Florian Roth, Tristan Landès"
+AUTHORS="Florian Roth, Tristan Landes"
 
 # Global variables ------------------
 # Global log handler
