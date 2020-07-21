@@ -113,9 +113,9 @@ class WPWatcherScanner():
         for last_alert in last_wp_report[issue_type] :
             if not is_false_positive(last_alert, self.false_positive_strings+wp_site['false_positive_strings']) :
                 if last_alert.splitlines()[0] not in [ a.splitlines()[0] for a in wp_report[issue_type] ]:
-                    issues.append('%s regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s\nIssue details:\n%s'%(
+                    issues.append('%s regarding component "%s" has been fixed since last report.\nLast report sent the %s'%(
                         'Alert' if issue_type=='alerts' else 'Issue', 
-                        last_alert.splitlines()[0], last_wp_report['last_email'], wp_report['datetime'], last_alert) )
+                        last_alert.splitlines()[0], last_wp_report['last_email']) )
         return issues
 
     def update_report(self, wp_report, last_wp_report, wp_site):
