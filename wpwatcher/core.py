@@ -162,8 +162,10 @@ class WPWatcher():
         # Launch scanner
         wp_report= self.scanner.scan_site(wp_site,  last_wp_report)
         # Save report in global instance database and to file when a site has been scanned
-        if wp_report: self.wp_reports.update_and_write_wp_reports([wp_report])
-        else: log.info("No report saved for site %s"%wp_site['url'])
+        if wp_report: 
+            self.wp_reports.update_and_write_wp_reports([wp_report])
+        else: 
+            log.info("No report saved for site %s"%wp_site['url'])
         # Print progress
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))     
         return(wp_report)
@@ -173,7 +175,8 @@ class WPWatcher():
         for wp_site in wp_sites:
             self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site, **kwargs))
         for f in self.futures:
-            try: self.new_reports.append(f.result())
+            try: 
+                self.new_reports.append(f.result())
             # Handle interruption from inside threads when using --ff
             except InterruptedError:
                 self.interrupt()

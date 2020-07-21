@@ -196,8 +196,6 @@ class WPWatcherScanner():
             if ( wp_site['url'] in p.args ) and not p.returncode:
                 log.info('Killing WPScan process %s'%(safe_log_wpscan_args(p.args)))
                 p.kill()
-        # Discard wpscan_output from report
-        if 'wpscan_output' in wp_report: del wp_report['wpscan_output']
 
     # Scan process
 
@@ -314,14 +312,14 @@ class WPWatcherScanner():
         try:
             # Abnormal failure exit codes not in 0-5
             if not self.wpscan_site(wp_site, wp_report): 
-                log.error("Abnormal failure scanning %s exit codes not 0 or 5"%(wp_site['url']))
+                log.error("Abnormal failure scanning %s exit code not 0 or 5"%(wp_site['url']))
                 return None
 
         except RuntimeError as err:
             # Try to handle error and return, recall scan_site()
             wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)                
             if handled:
-                wp_report.update(wp_report_new)
+                wp_report=wp_report_new
                 return wp_report
 
             elif not self.interrupting: 
@@ -358,12 +356,17 @@ class WPWatcherScanner():
                 wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
                 # Discard fixed items because infos have been sent
                 wp_report['fixed']=[]
+
         except RuntimeError: 
             # Fail fast
             self.check_fail_fast()
         
         # Save scanned site
         self.scanned_sites.append(wp_site['url'])
+
+        # Discard wpscan_output from report
+        if 'wpscan_output' in wp_report: 
+            del wp_report['wpscan_output']
 
         self.terminate_scan(wp_site, wp_report)
 
