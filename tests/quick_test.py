@@ -315,7 +315,7 @@ class WPWatcherTests(unittest.TestCase):
                     "alerts": [],
                     "fixed": [
                         "This issue was fixed",
-                        'Issue regarding component "%s" has been fixed since last report.\nLast report sent the %s.\nFix detected the %s\nIssue details:\n[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).\nblablabla\n'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'] ,new['datetime'])    
+                        'Issue regarding component "%s" has been fixed since last report.\nLast report sent the %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'])    
                     ],
                     "wpscan_output":""
                 }
