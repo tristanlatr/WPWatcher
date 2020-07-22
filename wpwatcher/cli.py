@@ -8,7 +8,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 # Main program, parse the args, read config and launch scans
 import argparse
 import shlex
-
+import sys
 from wpwatcher import VERSION, AUTHORS, GIT_URL, log, init_log
 from wpwatcher.utils import parse_timedelta, results_summary
 from wpwatcher.config import WPWatcherConfig
@@ -54,7 +54,8 @@ class WPWatcherCLI():
     def wprs(filepath=None, daemon=False):
         """Generate JSON file database summary"""
         db=WPWatcherDataBase(filepath, daemon=daemon)
-        print(results_summary(db._data))
+        sys.stdout.buffer.write(results_summary(db._data).encode('utf8'))
+        sys.stdout.flush()
         exit(0)
 
     @staticmethod
@@ -67,7 +68,8 @@ class WPWatcherCLI():
     @staticmethod
     def template_conf():
         """Print template configuration"""
-        print(WPWatcherConfig.TEMPLATE_FILE)
+        sys.stdout.buffer.write(WPWatcherConfig.TEMPLATE_FILE.encode('utf8'))
+        sys.stdout.flush()
         exit(0)
 
     @staticmethod
