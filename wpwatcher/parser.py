@@ -238,7 +238,7 @@ class Finding(Component):
         return alerts
 
     def get_infos(self, verbose=False):
-        """Return 1 info, Only interesting entries if not verbose"""
+        """Return 1 info, Only interesting entries if not verbose. Can return an empty info if no interesting entries"""
         info=""
         if self.found_by and verbose:
             info+="Found by: {} ".format(self.found_by)
@@ -391,7 +391,7 @@ class WPItem(Finding):
         # If vulns are found and the version is unrecognized
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
             # Adds a special warning saying all vulns are listed
-            warning+="\nAll known vulnerabilities are listed."
+            warning+="\nAll known vulnerabilities are listed"
         # If vulns are found and the version is unrecognized or other issue like outdated version or directory listing enable
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
             warnings.append(warning)
@@ -415,7 +415,10 @@ class WPItem(Finding):
         if verbose:
             info+="\n{}".format(super().get_infos(verbose)[0])
         if self.version.get_infos():
-            info += "\n{}".format(self.version.get_infos(verbose)[0])
+            if self.version.number == self.latest_version:
+                info += "\nThe version is up to date"
+            else:
+                info += "\n{}".format(self.version.get_infos(verbose)[0])
         else:
             info += "\nThe version could not be determined"
         
@@ -537,7 +540,7 @@ class Timthumb(Finding):
         if verbose:
             info+="\n{}".format(super().get_infos(verbose)[0])
         if self.version.get_infos():
-                info += "\n{}".format(self.version.get_infos(verbose)[0])
+            info += "\n{}".format(self.version.get_infos(verbose)[0])
         else:
             info += "\nThe version could not be determined"
         return [info]
@@ -758,7 +761,8 @@ class InterestingFinding(Finding):
             info+=self.type.title()
         if self.url:
             info+="\nURL: {}".format(self.url)
-        info+="\n{}".format(super().get_infos(verbose)[0])
+        if super().get_infos(verbose)[0].strip():
+            info+="\n{}".format(super().get_infos(verbose)[0])
         if self.references: 
             info+='\nReferences: '
             for ref in self.references:
@@ -785,13 +789,15 @@ class Banner(Component):
         self.description=data.get('description', None)
         self.version=data.get('version', None)
         self.authors=data.get('authors', None)
-        self.sponsored_by=data.get('sponsored_by', None)
+        self.sponsor=data.get('sponsor', None) or data.get('sponsored_by', None)
 
     def get_infos(self, verbose=False):
         info="Scanned with {}".format(self.description)
         info+='\nVersion: {}'.format(self.version)
-        info+='\nAuthors: {}'.format(self.authors)
-        info+='\nSponsored by: {}'.format(self.sponsored_by)
+        if verbose:
+            info+='\nAuthors: {}'.format(', '.join(self.authors))
+            if self.sponsor:
+                info+='\nSponsor: {}'.format(self.sponsor)
 
         return [info]
 
@@ -818,11 +824,14 @@ class ScanStarted(Component):
 
     def get_infos(self, verbose=False):
         """Return 1 Scan Scanned info"""
-        # info+='\nStart Time: {}'.format(self.start_time)
-        # info+='\nStart Memory: {}'.format(self.start_memory)
+        
         info='Target URL: {}'.format(self.target_url)
         info+='\nTarget IP: {}'.format(self.target_ip)
         info+='\nEffective URL: {}'.format(self.effective_url)
+
+        if verbose:
+            info+='\nStart Time: {}'.format(self.start_time)
+            info+='\nStart Memory: {}'.format(self.start_memory)
 
         return [info]
 
