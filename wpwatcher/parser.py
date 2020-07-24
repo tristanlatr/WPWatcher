@@ -980,7 +980,8 @@ def parse_cli(wpscan_output, false_positives_strings):
             # Add the plugin infos to warnings or false positive if every vulnerabilities are ignore
             plugin_infos='\n'.join([ m for m in messages_separated if '| [!] Title' not in m.splitlines()[0] ])
             
-            if len([v for v in vulnerabilities if not is_false_positive(v, false_positives_strings)])>0:
+            if ( len([v for v in vulnerabilities if not is_false_positive(v, false_positives_strings)])>0 and 
+                "The version could not be determined" in plugin_infos) :
                 warnings.append(plugin_infos+"\nAll known vulnerabilities are listed")
             else:
                 messages.append(plugin_infos)
