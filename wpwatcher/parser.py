@@ -266,6 +266,47 @@ class Finding(Component):
                     info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
         return [info]
 
+class InterestingFinding(Finding):
+    
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb"""
+        if not data: data={}
+        super().__init__(data)
+        self.url=data.get('url', None)
+        self.to_s=data.get('to_s', None)
+        self.type=data.get('type', None)
+        self.references=data.get('references', None)
+
+    def get_infos(self, verbose=False):
+        """Return 1 info. First line of info string is the to_s string or the finding type"""
+        info=""
+        if self.to_s != self.url:
+            info+=self.to_s
+        elif self.type:
+            info+=self.type.title()
+        if self.url:
+            info+="\nURL: {}".format(self.url)
+        if super().get_infos(verbose)[0].strip():
+            info+="\n{}".format(super().get_infos(verbose)[0])
+        if self.references: 
+            info+='\nReferences: '
+            for ref in self.references:
+                for link in self.references[ref]:
+                    if ref == 'metasploit': 
+                        info+="\n- Metasploit: https://www.rapid7.com/db/modules/{}".format(link)
+                    else:
+                        info+="\n- {}: {}".format(ref.title(), link)
+
+        return [info]
+
+    def get_warnings(self, verbose=False):
+        """Return empty list"""
+        return []
+
+    def get_alerts(self, verbose=False):
+        """Return empty list"""
+        return []
+
 class WPVersion(Finding):
     
     def __init__(self, data): 
@@ -743,44 +784,6 @@ class VulnAPI(Component):
             return [warning]
         else:
             return []
-
-    def get_alerts(self, verbose=False):
-        """Return empty list"""
-        return []
-
-class InterestingFinding(Finding):
-
-    def __init__(self, data): 
-        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb"""
-        if not data: data={}
-        super().__init__(data)
-        self.url=data.get('url', None)
-        self.to_s=data.get('to_s', None)
-        self.type=data.get('type', None)
-        self.references=data.get('references', None)
-
-    def get_infos(self, verbose=False):
-        """Return 1 info. First line of info string is the to_s string or the finding type"""
-        info=""
-        if self.to_s != self.url:
-            info+=self.to_s
-        elif self.type:
-            info+=self.type.title()
-        if self.url:
-            info+="\nURL: {}".format(self.url)
-        if super().get_infos(verbose)[0].strip():
-            info+="\n{}".format(super().get_infos(verbose)[0])
-        if self.references: 
-            info+='\nReferences: '
-            for ref in self.references:
-                for link in self.references[ref]:
-                    info+="\n- {}: {}".format(ref.title(), link)
-
-        return [info]
-
-    def get_warnings(self, verbose=False):
-        """Return empty list"""
-        return []
 
     def get_alerts(self, verbose=False):
         """Return empty list"""
