@@ -137,7 +137,10 @@ class WPScanJsonParser(Component):
 
             # If all vulns are ignored, add component message to infos
             component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
-            if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
+            # Automatically add wp item infos if all vuln are ignored and component does not present another issue
+            if ( len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0] 
+                and not "Directory listing is enabled" in component_warnings[0] 
+                and not "An error log file has been found" in component_warnings[0] ) :
                 infos.extend(component_warnings)
 
             for alert in component.get_alerts(verbose)+component.get_warnings(verbose):
@@ -150,10 +153,12 @@ class WPScanJsonParser(Component):
         """Igore false positives and automatically remove special warning if all vuln are ignored"""
         warnings=[]
         for component in self.components:
+            # Ignore false positives warnings
             component_warnings=[ warning for warning in component.get_warnings(verbose) if not self.is_false_positive(warning, self.false_positives_strings) ]
-            
-            # Automatically remove special warning if all vuln are ignored
-            if len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0]:
+            # Automatically remove wp item warning if all vuln are ignored and component does not present another issue
+            if ( len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0] 
+                and not "Directory listing is enabled" in component_warnings[0] 
+                and not "An error log file has been found" in component_warnings[0] ) :
                 component_warnings=[]
 
             warnings.extend(component_warnings)
@@ -204,6 +209,9 @@ class Vulnerability(Component):
                 elif ref == 'wpvulndb': 
                     for wpvulndb in self.references[ref]:
                         alert+="\n- WPVulnDB: https://wpvulndb.com/vulnerabilities/{}".format(wpvulndb)
+                elif ref == 'metasploit': 
+                    for metasploit in self.references[ref]:
+                        alert+="\n- Metasploit: https://www.rapid7.com/db/modules/{}".format(metasploit)
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {}: {}".format(ref.title(), link)
@@ -238,7 +246,7 @@ class Finding(Component):
         return alerts
 
     def get_infos(self, verbose=False):
-        """Return 1 info, Only interesting entries if not verbose. Can return an empty info if no interesting entries"""
+        """Return 1 info, Only interesting entries by default. Can return an empty info if no interesting entries"""
         info=""
         if self.found_by and verbose:
             info+="Found by: {} ".format(self.found_by)
@@ -379,7 +387,7 @@ class WPItem(Finding):
     def get_warnings(self, verbose=False):
         """Return plugin or theme warnings, if oudated plugin, directory listing, accessible error log and 
         for all know vulnerabilities if plugin version could not be recognized.
-        Adds a special warning saying the version is unrecognized if that's the case"""
+        Adds a special text saying the version is unrecognized if that's the case"""
         warnings=[]
         # Get oudated theme warning
         warning=self.slug
@@ -390,7 +398,7 @@ class WPItem(Finding):
         warning+=self._get_infos(verbose)[0]
         # If vulns are found and the version is unrecognized
         if not self.version.get_infos(verbose) and super().get_alerts(verbose):
-            # Adds a special warning saying all vulns are listed
+            # Adds a special text saying all vulns are listed
             warning+="\nAll known vulnerabilities are listed"
         # If vulns are found and the version is unrecognized or other issue like outdated version or directory listing enable
         if (not self.version.get_infos(verbose) and super().get_alerts(verbose)) or self._get_warnings(verbose):
@@ -406,7 +414,7 @@ class WPItem(Finding):
         info=""
         if self.location: 
             info += "Location: {}".format(self.location)
-        if self.latest_version:
+        if self.latest_version and self.version.number != self.latest_version:
             info += "\nLatest Version: {}".format(self.latest_version)
         if self.last_updated and verbose:
             info += "\nLast Updated: {}".format(self.last_updated)
@@ -415,10 +423,9 @@ class WPItem(Finding):
         if verbose:
             info+="\n{}".format(super().get_infos(verbose)[0])
         if self.version.get_infos():
+            info += "\n{}".format(self.version.get_infos(verbose)[0])
             if self.version.number == self.latest_version:
                 info += "\nThe version is up to date"
-            else:
-                info += "\n{}".format(self.version.get_infos(verbose)[0])
         else:
             info += "\nThe version could not be determined"
         
