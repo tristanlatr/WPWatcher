@@ -78,6 +78,8 @@ wpwatcher --urls sites.txt \
         --api_limit_wait
 ```
 
+**[Review the Wiki](https://github.com/tristanlatr/WPWatcher/wiki)** for more documentation, anyone can edit Wiki pages, please feel free to add any useful documentation, exemples or tips !
+
 #### Notes on script behaviours
 - The script will automatically try to delete all temp `wpscan` files in `/tmp/wpscan` before starting scans. You might run into file not found error (#13), please consider adding `--cache-ttl 0` to WPScan arguments.
 - You might want to use `--ff` (fail fast) when you're setting up and configuring the script. Abort scans when WPScan fails, useful to troubleshoot.
