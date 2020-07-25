@@ -91,7 +91,8 @@ wpwatcher --urls sites.txt \
 
 ## Configuration
 
-WPWatcher must read a configuration file to send mail reports. See [Wiki](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports) for more informations.
+WPWatcher must read a configuration file to send mail reports.  
+**See [Wiki](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports) for more informations**.
 
 Select config file with `--conf File path`. You can specify multiple files. Will overwrites the keys with each successive file. If not specified, it will try to load config from files `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`, in this order.
 
@@ -102,7 +103,7 @@ wpwatcher --template_conf > ./wpwatcher.conf
 vim ./wpwatcher.conf
 ```
 
-See complete list of options in the [Wiki](https://github.com/tristanlatr/WPWatcher/wiki/All-configuration-options).
+See **complete list of options [here](https://github.com/tristanlatr/WPWatcher/wiki/All-configuration-options)**.
 
 ### Notes about WPScan API token
 
@@ -112,7 +113,7 @@ Please make sure you respect the [WPScan license](https://github.com/wpscanteam/
 
 ### Configuration exemple
 
-Simple configuration file with SMTP authentication 
+Simple configuration file with SMTP authentication, full featured `wp_sites` entry and WPScan arguments. 
 
 ```ini
 [wpwatcher]
@@ -146,8 +147,8 @@ Run `wpwatcher --help` to see options configurable with CLI.
 
 ## Email reports
 
-One report is generated per site and the reports are sent individually when finished scanning a website.
-See [Wiki](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports) for more informations.
+One report is generated per site and the reports are sent individually when finished scanning a website.  
+**See [Wiki](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports) for more informations**.
 
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
