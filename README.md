@@ -115,11 +115,10 @@ Please make sure you respect the [WPScan license](https://github.com/wpscanteam/
 
 ### Configuration exemple
 
-Simple configuration file with SMTP authentication, full featured `wp_sites` entry and WPScan arguments. 
+Sample configuration file with full featured `wp_sites` entry, custom WPScan path and arguments, vuln DB api limit handling and email reporting
 
 ```ini
 [wpwatcher]
-wpscan_path=wpscan
 wp_sites=   [ {   
                 "url":"exemple.com",
                 "email_to":["site_owner@domain.com"],
@@ -129,11 +128,13 @@ wp_sites=   [ {
                 "wpscan_args":["--stealthy"]
               },
               { "url":"exemple2.com"  }  ]
+wpscan_path=/usr/local/rvm/gems/default/wrappers/wpscan
 wpscan_args=[   "--format", "json",
                 "--no-banner",
                 "--random-user-agent", 
                 "--disable-tls-checks",
                 "--api-token", "YOUR_API_TOKEN" ]
+api_limit_wait=Yes
 send_email_report=Yes
 email_to=["me@gmail.com"]
 from_email=me@gmail.com
