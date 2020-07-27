@@ -469,6 +469,8 @@ class WPItem(Finding):
             elif self.latest_version:
                 info += "\nThe latest version is {}".format(self.latest_version)
         else:
+            if self.latest_version:
+                info += "\nThe latest version is {}".format(self.latest_version)
             info += "\nThe version could not be determined"
         
         return [info]
