@@ -199,7 +199,7 @@ class Vulnerability(Component):
         if self.fixed_in: 
             alert+='\nFixed in: {}'.format(self.fixed_in)
         else:
-            alert+='\nNot fixed yet'
+            alert+='\nNo known fix'
         if self.references: 
             alert+='\nReferences: '
             for ref in self.references:
@@ -324,6 +324,8 @@ class WPVersion(Finding):
         """Return 1 info"""
         if self.number:
             info="Wordpress Version: {}".format(self.number)
+            if self.status=="latest":
+                info+=" (up to date)"
             if self.release_date:
                 info+="\nRelease Date: {}".format(self.release_date)
             # if self.status:
@@ -379,7 +381,7 @@ class WPItemVersion(Finding):
     def get_infos(self):
         """Return 0 or 1 info. No infos if version cound not be recognized"""
         if self.number:
-            info="Version: {} ".format(self.number)
+            info="Version: {}".format(self.number)
             # If finding infos are present, add them
             # if super().get_infos()[0]:
             #     info+="\n{}".format(super().get_infos()[0])
@@ -412,6 +414,7 @@ class WPItem(Finding):
             issue_data+="\nThe version is out of date"
         if self.directory_listing: 
             issue_data+="\nDirectory listing is enabled"
+            issue_data += "\nLocation: {}".format(self.location)
         if self.error_log_url: 
             issue_data+="\nAn error log file has been found: {}".format(self.error_log_url)
 
@@ -456,25 +459,25 @@ class WPItem(Finding):
     def _get_infos(self):
         """Return 1 info"""
         info=""
-        if self.location: 
-            info += "Location: {}".format(self.location)
+        # if self.location : 
+        #     info += "Location: {}".format(self.location)
         # if self.last_updated:
         #     info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
-            info += "\nReadme: {}".format(self.readme_url)
+            info += "Readme: {}\n".format(self.readme_url)
         # If finding infos are present, add them
         # if super().get_infos()[0]:
         #     info+="\n{}".format(super().get_infos()[0])
         if self.version.get_infos():
-            info += "\n{}".format(self.version.get_infos()[0])
+            info += self.version.get_infos()[0]
             if self.version.number == self.latest_version:
-                info += "\nThe version is up to date"
+                info += " (up to date)"
             elif self.latest_version:
-                info += "\nThe latest version is {}".format(self.latest_version)
+                info += " (latest is {})".format(self.latest_version)
         else:
+            info += "The version could not be determined"
             if self.latest_version:
-                info += "\nThe latest version is {}".format(self.latest_version)
-            info += "\nThe version could not be determined"
+                info += " (latest is {})".format(self.latest_version)
         
         return [info]
     
@@ -525,18 +528,18 @@ class Theme(WPItem):
         info=super()._get_infos()[0]
 
         if self.style_url:
-            info+="\nStyle URL: {}".format(self.style_url)
-        if self.style_name:
-            info+="\nStyle Name: {}".format(self.style_name)
+            info+="\nStyle CSS: {}".format(self.style_url)
+        # if self.style_name:
+        #     info+="\nStyle Name: {}".format(self.style_name)
         if self.style_uri:
             info+="\nStyle URI: {}".format(self.style_uri)
         # if self.description:
         #     info+="\nDescription: {}".format(self.description)
         if self.author:
             info+="\nAuthor: {}".format(self.author)
-        if self.author_uri:
-            info+="\nAuthor URI: {}".format(self.author_uri)
-        # if self.template:
+            if self.author_uri:
+                info+=" - {}".format(self.author_uri)
+        # if self.template: 
         #     info+="\nTemplate: {}".format(self.template)
         # if self.license:
         #     info+="\nLicense: {}".format(self.license)
@@ -779,10 +782,9 @@ class VulnAPI(Component):
 
     def get_infos(self):
         """Return 1 WPVulnDB info"""
-        info="WPVulnDB API Infos"
+        info="WPVulnDB API"
         info+="\nPlan: {}".format(self.plan)
-        info+="\nRequests Done During Scan: {}".format(self.requests_done_during_scan)
-        info+="\nRequests Remaining: {}".format(self.requests_remaining)
+        info+="\nRequests: {} done during scan, {} remaining".format(self.requests_done_during_scan, self.requests_remaining)
         return [info]
     
     def get_warnings(self):
@@ -880,7 +882,7 @@ class ScanFinished(Component):
     def get_infos(self):
         """Return 1 Scan Finished info"""
         # info+='\nStop Time: {}'.format(self.stop_time)
-        info='Enlapsed: {} seconds'.format(self.elapsed)
+        info='Scan duration: {} seconds'.format(self.elapsed)
         # info+='\nRequests Done: {}'.format(self.requests_done)
         # info+='\nCached Requests: {}'.format(self.cached_requests)
         # info+='\nData Sent: {}'.format(self.data_sent_humanised)
