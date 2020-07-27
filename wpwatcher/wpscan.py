@@ -15,7 +15,7 @@ from datetime import datetime
 from wpwatcher import log
 from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
 
-UPDATE_DB_INTERVAL=parse_timedelta('4h')
+UPDATE_DB_INTERVAL=parse_timedelta('1h')
 init_lock=threading.Lock()
 
 # WPScan helper class -----------
@@ -29,7 +29,7 @@ class WPScanWrapper():
 
     def _lazy_init(self):
         # Check if WPScan exists
-        exit_code, version_info = self._wpscan("--version", "--format", "json")
+        exit_code, version_info = self._wpscan("--version", "--format", "json", "--no-banner")
         if exit_code!=0:
             log.error("There is an issue with your WPScan installation or WPScan not installed. Make sure wpscan in you PATH or configure full path to executable in config files. If you're using RVM, the path should point to the WPScan wrapper like /usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan. Fix wpscan on your system. See https://wpscan.org for installation steps.")
             exit(-1)
@@ -42,7 +42,7 @@ class WPScanWrapper():
     def update_wpscan(self):
         # Update wpscan database
         log.info("Updating WPScan")
-        exit_code, _ = self._wpscan("--update")
+        exit_code, _ = self._wpscan("--update", "--format", "json", "--no-banner")
         if exit_code!=0: 
             log.error("Error updating WPScan")
             exit(-1)
