@@ -323,7 +323,7 @@ class WPVersion(Finding):
             info="Wordpress Version: {}".format(self.number)
             if self.release_date:
                 info+="\nRelease Date: {}".format(self.release_date)
-            if self.status:
+            if self.status and verbose:
                 info+="\nStatus: {}".format(self.status.title())  
         else:
             info="The WordPress version could not be detected"
@@ -345,14 +345,14 @@ class WPVersion(Finding):
        
         if self.status=="insecure":
             warning=self._get_infos(verbose)[0]
-            warning+="\nWarning: Outdated WordPress version"
+            warning="\nWarning: Insecure WordPress version"
             return [warning]
         else:
             return []
 
     def get_alerts(self, verbose=False):
         """Return Wordpress Version vulnerabilities"""
-        return [ "Vulnerable Wordpress: {}".format(alert) for alert in super().get_alerts(verbose) ]
+        return [ "Wordpress {}".format(alert) for alert in super().get_alerts(verbose) ]
 
 class WPItemVersion(Finding):
     
@@ -377,7 +377,7 @@ class WPItemVersion(Finding):
     def get_infos(self, verbose=False):
         """Return 0 or 1 info. No infos if version cound not be recognized"""
         if self.number:
-            info="Current Version: {} ".format(self.number)
+            info="Version: {} ".format(self.number)
             if verbose:
                 info+="\n{}".format(super().get_infos(verbose)[0])
             return [info]
@@ -455,8 +455,6 @@ class WPItem(Finding):
         info=""
         if self.location: 
             info += "Location: {}".format(self.location)
-        if self.latest_version and self.version.number != self.latest_version:
-            info += "\nLatest Version: {}".format(self.latest_version)
         if self.last_updated and verbose:
             info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
@@ -467,6 +465,8 @@ class WPItem(Finding):
             info += "\n{}".format(self.version.get_infos(verbose)[0])
             if self.version.number == self.latest_version:
                 info += "\nThe version is up to date"
+            elif self.latest_version:
+                info += "\nThe latest version is {}".format(self.latest_version)
         else:
             info += "\nThe version could not be determined"
         
