@@ -191,7 +191,7 @@ class Vulnerability(Component):
         self.references=data.get('references', None)
 
     def get_alerts(self):
-        """Return 1 alert. First line of alert string contain the vulnerability title. Process CVE, WPVulnDB and Metasploit references to add links"""
+        """Return 1 alert. First line of alert string contain the vulnerability title. Process CVE, WPVulnDB, ExploitDB and Metasploit references to add links"""
         alert="Vulnerability: {}".format(self.title)
 
         if self.cvss: 
@@ -212,6 +212,9 @@ class Vulnerability(Component):
                 elif ref == 'metasploit': 
                     for metasploit in self.references[ref]:
                         alert+="\n- Metasploit: https://www.rapid7.com/db/modules/{}".format(metasploit)
+                elif ref == 'exploitdb': 
+                    for exploitdb in self.references[ref]:
+                        alert+="\n- ExploitDB: https://www.exploit-db.com/exploits/{}".format(exploitdb)
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {}: {}".format(ref.title(), link)
