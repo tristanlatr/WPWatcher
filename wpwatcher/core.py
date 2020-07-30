@@ -16,7 +16,6 @@ import signal
 from urllib.parse import urlparse
 
 from wpwatcher import log, init_log
-from wpwatcher.config import WPWatcherConfig
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, results_summary, timeout
@@ -26,7 +25,26 @@ DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher():
+    '''WPWacther object  
 
+    Arguments:
+    - `conf`: the configuration dict. Leave `None` to find default config file
+
+    Usage:
+
+        from wpwatcher.config import WPWatcherConfig
+        from wpwatcher.core import WPWatcher
+        config, files = WPWatcherConfig().build_config()
+        config.update({ 'send_infos':   True,
+                        'wp_sites':     [   {'url':'exemple1.com'},
+                                            {'url':'exemple2.com'}  ],
+                        'wpscan_args': ['--format', 'json', '--stealthy']
+                    })
+        w=WPWatcher(config)
+        exit_code, reports = w.run_scans_and_notify()
+        for r in reports:
+            print("%s\t\t%s"%( r['site'], r['status'] ))
+    '''
     # WPWatcher must use a configuration dict
     def __init__(self, conf):
         # (Re)init logger with config
@@ -63,7 +81,7 @@ class WPWatcher():
 
     @staticmethod
     def delete_tmp_wpscan_files():
-        
+        '''Delete temp wpcan files'''
         # Try delete temp files.
         if os.path.isdir('/tmp/wpscan'):
             try: 
@@ -74,7 +92,7 @@ class WPWatcher():
     
     @staticmethod
     def dump_config(conf):
-        
+        '''Print the config without passwords'''
         dump_conf=copy.deepcopy(conf)
         string=''
         for k in dump_conf:
@@ -88,20 +106,14 @@ class WPWatcher():
             else: v=str(v)
             string+=("\n{:<25}\t=\t{}".format(k,v))
         return(string)
-    
-    # def wait_all_wpscan_process(self):
-        
-    #     while len(self.scanner.wpscan.processes)>0:
-    #         time.sleep(0.05)
 
     def tear_down_jobs(self):
         # Cancel all jobs
         for f in self.futures:
             if not f.done(): f.cancel()
         
-    
     def interrupt(self, sig=None, frame=None):
-        # Lock for interrupting
+        '''Interrupt sequence'''
         log.error("Interrupting...")
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread): raise InterruptedError()
@@ -122,6 +134,7 @@ class WPWatcher():
         exit(-1)
 
     def print_scanned_sites_results(self, new_reports):
+        '''Print the result summary for the scanned sites'''
         new_reports = [n for n in new_reports if n]
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
@@ -132,15 +145,13 @@ class WPWatcher():
     
     @staticmethod
     def format_site(wp_site):
-        
+        '''Make sure the site structure is correct, parse url, init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.'''
         if 'url' not in wp_site :
             log.error("Invalid site %s"%wp_site)
             wp_site={'url':''}
         else:
-
             #Strip URL string
             wp_site['url']=wp_site['url'].strip()
-
             # Format sites with scheme indication
             p_url=list(urlparse(wp_site['url']))
             if p_url[0]=="": 
@@ -152,12 +163,20 @@ class WPWatcher():
        
         return wp_site
 
-    # Orchestrate the scanning of a site
+    #TODO Move api token argument managment in more cohesive place with the rest of the logic in the scanner object
     def scan_site_wrapper(self, wp_site, with_api_token=False):
+        """Helper method to wrap the raw scanning process that offer WPWatcherScanner.scan_site() and add the following:  
+        - Handle site structure formatting  
+        - Find the last report in the database, update it after scan.   
+        - Also add explicit api token argument if with_api_token  
+        This function can be called asynchronously.  
+        Return one report"""
         
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
-        if with_api_token: wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
+
+        if with_api_token:
+            wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
 
         # Launch scanner
         wp_report= self.scanner.scan_site(wp_site,  last_wp_report)
@@ -171,6 +190,12 @@ class WPWatcher():
         return(wp_report)
 
     def run_scans_wrapper(self, wp_sites, **kwargs):
+        """Helper method to deal with : 
+        - executor, concurent futures
+        - Trigger self.interrupt() on InterruptedError (raised if fail fast enabled)
+        
+        Pass `kwargs` arguments to scan_site_wrapper() """
+
         log.info("Starting scans on %s configured sites"%(len(wp_sites)))
         for wp_site in wp_sites:
             self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site, **kwargs))
@@ -185,8 +210,9 @@ class WPWatcher():
         self.tear_down_jobs()
         return self.new_reports
 
-    # Run WPScan on defined websites
     def run_scans_and_notify(self):
+        """Run WPScan on defined websites and send notifications.  
+        Returns a `tuple (exit code, reports)`"""
         
         # Check sites are in the config
         if len(self.wp_sites)==0:
@@ -210,6 +236,7 @@ class WPWatcher():
             return((-1, new_reports))
 
     def re_run_scans(self, wp_sites):
+        """Used to re run scans explicitly with the stored api token"""
         self.scanner.scanned_sites=[]
         self.futures=[]
         self.wp_sites=wp_sites
