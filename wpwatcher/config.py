@@ -12,8 +12,26 @@ from wpwatcher.utils import parse_timedelta
 
 # Configuration handling -------------------------------------------------------
 class WPWatcherConfig():
+    '''Init WPWatcherConfig from file or string.  
+    Arguments:  
+    - `files`: List of filenames. Exemple: ["/home/user/Documents/wpwatcher.conf"]
+    - `string`: Complete configuration string, will not read `files` argument. Passed as docstring would be more redable like :
+
+            conf = WPWatcherConfig(string="""
+                    wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
+                    send_email_report=No
+                    email_to=["you@domain"]
+                    from_email=WordPressWatcher@domain.com
+                    smtp_server=mailserver.de:587
+                    smtp_auth=Yes
+                    smtp_user=me@domain
+                    smtp_pass=P@assw0rd
+                    smtp_ssl=Yes
+            """)
+    '''
 
     def __init__(self, files=None, string=None):
+
         self.files=files if files else []
         # Init config parser
         self.parser=configparser.ConfigParser()
@@ -22,23 +40,23 @@ class WPWatcherConfig():
 
         if string: 
             self.parser.read_string(string)
-        elif not self.files or len(self.files)==0 :
-            self.files=self.find_config_files()
-            if not self.files: log.info("Could not find default config: `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
-        if self.files:
-            for f in self.files:
-                try :
-                    with open(f,'r') as fp:
-                        self.parser.read_file(fp)
-                except (OSError):
-                    log.error("Could not read config %s. Make sure the file exists and you have correct access right."%(f))
-                    raise
+        else:
+            if not self.files:
+                self.files=self.find_config_files()
+                if not self.files:
+                    log.info("Could not find default config: `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`")
+            else:
+                for f in self.files:
+                    try :
+                        with open(f,'r') as fp:
+                            self.parser.read_file(fp)
+                    except (OSError):
+                        log.error("Could not read config %s. Make sure the file exists and you have correct access right."%(f))
+                        raise
 
-        # No config file notice
-        else :
-            log.info("No config file loaded")
-    
+            
     def build_config(self):
+        '''Parse the config file'''
         config_dict={}
         try:
             # Saving config file in right dict format - no 'wpwatcher' section, just config options
@@ -82,6 +100,26 @@ class WPWatcherConfig():
         except Exception as err: 
             log.error("Could not read config " + str(self.files) + ". Error: "+str(err))
             raise
+    
+    @staticmethod
+    def getjson(conf, key):
+        '''Return json loaded structure'''
+        string_val=conf.get('wpwatcher', key)
+        try:
+            loaded=json.loads(string_val)
+            return loaded if loaded else []
+        except Exception as err:
+            log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, conf.get('wpwatcher',key), str(err)))
+            raise
+    @staticmethod
+    def getbool(conf, key):
+        '''Return bool value'''
+        try:
+            return conf.getboolean('wpwatcher', key)
+        except Exception as err:
+            log.error("Could not read boolean value in config for: '{}' and string '{}'. Must be Yes/No. Error: {}".format(key, conf.get('wpwatcher',key), str(err)))
+            raise
+
 
     # Configuration template -------------------------
     TEMPLATE_FILE="""[wpwatcher]
@@ -138,10 +176,10 @@ smtp_ssl=Yes
 # Exit if any errors (--ff)
 # fail_fast=Yes 
 
-# Number of asynchronous WPScan executions
+# Number of asynchronous WPScan executions (--workers)
 # asynch_workers=5
 
-# Follow main redirection when WPScan failed
+# Follow main redirection when WPScan fails (--follow)
 # follow_redirect=Yes
 
 # Prescan with API token then use API on warning sites
@@ -187,24 +225,15 @@ smtp_ssl=Yes
     }
 
     @staticmethod
-    def getjson(conf, key):
-        string_val=conf.get('wpwatcher', key)
-        try:
-            loaded=json.loads(string_val)
-            return loaded if loaded else []
-        except Exception as err:
-            log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, conf.get('wpwatcher',key), str(err)))
-            raise
-    @staticmethod
-    def getbool(conf, key):
-        try:
-            return conf.getboolean('wpwatcher', key)
-        except Exception as err:
-            log.error("Could not read boolean value in config for: '{}' and string '{}'. Must be Yes/No. Error: {}".format(key, conf.get('wpwatcher',key), str(err)))
-            raise
-
-    @staticmethod
     def find_files(env_location, potential_files, default_content="", create=False):
+        '''Find existent files based on folders name and file names.  
+
+        Arguments:  
+        - `env_location`: list of environment variable to use as a base path. Exemple: ['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']  
+        - `potential_files`: list of filenames. Exemple: ['.wpwatcher/wpwatcher.conf', 'wpwatcher.conf']  
+        - `default_content`: Write default content if the file does not exist  
+        - `create`: Create the file in the first existing env_location with default content if the file does not exist  
+        '''
         potential_paths=[]
         existent_files=[]
         # build potential_paths of config file
