@@ -18,7 +18,7 @@ DEFAULT_REPORTS_DAEMON='.wpwatcher/wp_reports.daemon.json'
 wp_report_lock = threading.Lock()
 
 class WPWatcherDataBase():
-
+    '''Interface to JSON database file. Work to write all reports to file in a thread safe way'''
     def __init__(self, wp_reports_filepath="", daemon=False):
         
         self.no_local_storage=wp_reports_filepath=='null'
@@ -39,6 +39,7 @@ class WPWatcherDataBase():
 
     # Read wp_reports database
     def build_wp_reports(self, filepath):
+        '''Load reports database and retuen the complete structure'''
         wp_reports=[]
         if self.no_local_storage: return wp_reports
 
@@ -55,8 +56,9 @@ class WPWatcherDataBase():
         return wp_reports
 
     def update_and_write_wp_reports(self, new_wp_report_list=None):
-        # Update the sites that have been scanned, keep others
-        # Keep same report order add append new sites at the bottom
+        '''Update the sites that have been scanned based on the report list.  
+        Keep same report order add append new sites at the bottom.  
+        Return None if wp_reports is null'''
         if not new_wp_report_list: return
         
         for newr in new_wp_report_list:
@@ -79,7 +81,8 @@ class WPWatcherDataBase():
                 wp_report_lock.release()
 
     def find_last_wp_report(self, wp_report):
-        # Find last site result if any
+        '''Find last site result if any.  
+        Return last_wp_report or None'''
         last_wp_report=[r for r in self._data if r['site']==wp_report['site']]
         if len(last_wp_report)>0: 
             last_wp_report=last_wp_report[0]

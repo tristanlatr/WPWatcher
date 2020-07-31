@@ -28,9 +28,9 @@ class WPWatcher():
     '''WPWacther object  
 
     Arguments:
-    - `conf`: the configuration dict. Leave `None` to find default config file
+    - `conf`: the configuration dict. Required
 
-    Usage:
+    Usage exemple:
 
         from wpwatcher.config import WPWatcherConfig
         from wpwatcher.core import WPWatcher
@@ -107,20 +107,22 @@ class WPWatcher():
             string+=("\n{:<25}\t=\t{}".format(k,v))
         return(string)
 
-    def tear_down_jobs(self):
-        # Cancel all jobs
+    def cancel_pending_futures(self):
+        '''Cancel all asynchronous jobs'''
         for f in self.futures:
-            if not f.done(): f.cancel()
+            if not f.done(): 
+                f.cancel()
         
     def interrupt(self, sig=None, frame=None):
         '''Interrupt sequence'''
         log.error("Interrupting...")
         # If called inside ThreadPoolExecutor, raise Exeception
-        if not isinstance(threading.current_thread(), threading._MainThread): raise InterruptedError()
+        if not isinstance(threading.current_thread(), threading._MainThread): 
+            raise InterruptedError()
         # Cancel all scans
         self.scanner.cancel_scans()
         # Wait all scans finished, print results and quit
-        self.tear_down_jobs()
+        self.cancel_pending_futures()
         # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try: timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
@@ -145,12 +147,12 @@ class WPWatcher():
     
     @staticmethod
     def format_site(wp_site):
-        '''Make sure the site structure is correct, parse url, init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.'''
+        '''Make sure the site structure is correct, parse 'url', init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.
+        Raise ValueError if url key is not present'''
         if 'url' not in wp_site :
-            log.error("Invalid site %s"%wp_site)
-            wp_site={'url':''}
+            raise ValueError("Invalid site %s\nMust contain 'url' key"%wp_site)
         else:
-            #Strip URL string
+            # Strip URL string
             wp_site['url']=wp_site['url'].strip()
             # Format sites with scheme indication
             p_url=list(urlparse(wp_site['url']))
@@ -163,20 +165,17 @@ class WPWatcher():
        
         return wp_site
 
-    #TODO Move api token argument managment in more cohesive place with the rest of the logic in the scanner object
-    def scan_site_wrapper(self, wp_site, with_api_token=False):
+    def scan_site_wrapper(self, wp_site):
         """Helper method to wrap the raw scanning process that offer WPWatcherScanner.scan_site() and add the following:  
         - Handle site structure formatting  
-        - Find the last report in the database, update it after scan.   
-        - Also add explicit api token argument if with_api_token  
-        This function can be called asynchronously.  
+        - Find the last report in the database and launch the scan
+        - Write it in DB after scan.   
+        - Print progress bar  
+        This function will be called asynchronously.  
         Return one report"""
         
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
-
-        if with_api_token:
-            wp_site['wpscan_args'].extend([ "--api-token", self.scanner.api_token ])
 
         # Launch scanner
         wp_report= self.scanner.scan_site(wp_site,  last_wp_report)
@@ -189,7 +188,7 @@ class WPWatcher():
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))     
         return(wp_report)
 
-    def run_scans_wrapper(self, wp_sites, **kwargs):
+    def run_scans_wrapper(self, wp_sites):
         """Helper method to deal with : 
         - executor, concurent futures
         - Trigger self.interrupt() on InterruptedError (raised if fail fast enabled)
@@ -198,7 +197,7 @@ class WPWatcher():
 
         log.info("Starting scans on %s configured sites"%(len(wp_sites)))
         for wp_site in wp_sites:
-            self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site, **kwargs))
+            self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site))
         for f in self.futures:
             try: 
                 self.new_reports.append(f.result())
@@ -207,11 +206,12 @@ class WPWatcher():
                 self.interrupt()
             except concurrent.futures.CancelledError: pass
         # Ensure everything is down
-        self.tear_down_jobs()
+        self.cancel_pending_futures()
         return self.new_reports
 
     def run_scans_and_notify(self):
-        """Run WPScan on defined websites and send notifications.  
+        """
+        Run WPScan on defined websites and send notifications.  
         Returns a `tuple (exit code, reports)`"""
         
         # Check sites are in the config
@@ -223,22 +223,12 @@ class WPWatcher():
         # Print results and finish
         self.print_scanned_sites_results(new_reports)
 
-        # Second scans if needed
-        if len(self.scanner.prescanned_sites_warn)>0:
-            new_reports+=self.re_run_scans(self.scanner.prescanned_sites_warn)
-            self.print_scanned_sites_results(new_reports)
-
         if not any ([r['status']=='ERROR' for r in new_reports if r]):
             log.info("Scans finished successfully.")
             return((0, new_reports))
         else:
             log.info("Scans finished with errors.") 
             return((-1, new_reports))
+        
 
-    def re_run_scans(self, wp_sites):
-        """Used to re run scans explicitly with the stored api token"""
-        self.scanner.scanned_sites=[]
-        self.futures=[]
-        self.wp_sites=wp_sites
-        return self.run_scans_wrapper(wp_sites, with_api_token=True)
         

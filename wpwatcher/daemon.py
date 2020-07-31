@@ -8,7 +8,6 @@ import time
 from wpwatcher import log
 from wpwatcher.core import WPWatcher
 
-# WPWatcher class ---------------------------------------------------------------------
 class WPWatcherDaemon():
     def __init__(self, conf):
         log.info("Daemon mode selected, looping for ever...")

@@ -47,29 +47,33 @@ def timeout(timeout, func, args=(), kwargs={}):
         except queue.Empty: return it.result
         else: raise it.err.with_traceback(exc_trace)
 
-# Replace --api-token param with *** for safe logging
 def safe_log_wpscan_args(wpscan_args):
+    '''Replace --api-token param with *** for safe logging'''
     logged_cmd=copy.deepcopy(wpscan_args)
     if "--api-token" in "".join(logged_cmd) :
         logged_cmd=[ val.strip() for val in logged_cmd ]
         logged_cmd[logged_cmd.index("--api-token")+1]="***"
     return logged_cmd
 
-# Helper method that transform multiline string to one line for grepable output
 def oneline(string):
+    '''Helper method that transform multiline string to one line for grepable output'''
     return( " ".join(line.strip() for line in string.splitlines()) )
 
-# Return the given string converted to a string that can be used for a clean filename
 def get_valid_filename(s):
+    '''Return the given string converted to a string that can be used for a clean filename.  Stolen from Django I think'''
     s = str(s).strip().replace(' ', '_')
     return re.sub(r'(?u)[^-\w.]', '', s)
 
 def print_progress_bar(count,total):
+    """Helper method to print progress bar.  Stolen on the web"""
     size=0.3 #size of progress bar
     percent = int(float(count)/float(total)*100)
     log.info( "Progress - [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
 def results_summary(results):
+    '''Print the summary table of all sites.  
+    Columns : "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
+    '''
     string='Results summary\n'
     header = ("Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)")
     sites_w=20
@@ -93,7 +97,7 @@ def results_summary(results):
 
 def parse_timedelta(time_str):
     """
-    Parse a time string e.g. (2h13m) into a timedelta object.
+    Parse a time string e.g. (2h13m) into a timedelta object.  Stolen on the web
     """
     regex = re.compile(r'^((?P<days>[\.\d]+?)d)?((?P<hours>[\.\d]+?)h)?((?P<minutes>[\.\d]+?)m)?((?P<seconds>[\.\d]+?)s)?$')
     time_str=replace(time_str,{
@@ -114,11 +118,9 @@ def parse_timedelta(time_str):
     return timedelta(**time_params)
 
 def replace(text, conditions):
-    # rep = {"condition1": "", "condition2": "text"} # define desired replacements here
+    '''Multiple replacements helper method.  Stolen on the web'''
     rep=conditions
-    # use these three lines to do the replacement
     rep = dict((re.escape(k), rep[k]) for k in rep ) 
-    #Python 3 renamed dict.iteritems to dict.items so use rep.items() for latest versions
     pattern = re.compile("|".join(rep.keys()))
     text = pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
     return text

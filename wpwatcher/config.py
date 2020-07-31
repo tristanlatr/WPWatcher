@@ -56,7 +56,10 @@ class WPWatcherConfig():
 
             
     def build_config(self):
-        '''Parse the config file'''
+        '''Parse the config file(s) and return WPWatcher config.  
+        Return a tuple (config dict, read files list).  
+        The dict returned contain all possible config values. Default values are applied if not specified in the file(s) or string.
+        '''
         config_dict={}
         try:
             # Saving config file in right dict format - no 'wpwatcher' section, just config options
@@ -81,7 +84,6 @@ class WPWatcherConfig():
                 'follow_redirect':self.getbool(self.parser, 'follow_redirect'),
                 'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
                 'wpscan_args':self.getjson(self.parser,'wpscan_args'),
-                'prescan_without_api_token':self.getbool(self.parser, 'prescan_without_api_token'),
                 'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
                 'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
                 # Not configurable with cli arguments
@@ -103,7 +105,11 @@ class WPWatcherConfig():
     
     @staticmethod
     def getjson(conf, key):
-        '''Return json loaded structure'''
+        '''Return json loaded structure from a configparser object.  
+        Arguments:  
+        - `conf`: configparser object  
+        - `key`: wpwatcher config key
+        '''
         string_val=conf.get('wpwatcher', key)
         try:
             loaded=json.loads(string_val)
@@ -111,9 +117,14 @@ class WPWatcherConfig():
         except Exception as err:
             log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, conf.get('wpwatcher',key), str(err)))
             raise
+
     @staticmethod
     def getbool(conf, key):
-        '''Return bool value'''
+        '''Return bool value from a configparser object.  
+        Arguments:  
+        - `conf`: configparser object  
+        - `key`: wpwatcher config key
+        '''
         try:
             return conf.getboolean('wpwatcher', key)
         except Exception as err:
@@ -182,9 +193,6 @@ smtp_ssl=Yes
 # Follow main redirection when WPScan fails (--follow)
 # follow_redirect=Yes
 
-# Prescan with API token then use API on warning sites
-# prescan_without_api_token=Yes
-
 # Scan timeout
 # scan_timeout=5m
 """%(GIT_URL)
@@ -220,7 +228,6 @@ smtp_ssl=Yes
         'asynch_workers':'1',
         'follow_redirect':'No',
         'wpscan_output_folder':'',
-        'prescan_without_api_token':'No',
         'scan_timeout':'15m'
     }
 

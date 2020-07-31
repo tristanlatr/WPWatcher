@@ -55,7 +55,7 @@ import linecache
 
 
 # Constants
-NUMBER_OF_CONFIG_VALUES=31
+NUMBER_OF_CONFIG_VALUES=30
 
 # Read URLS file
 # URLS="./wpwatcher-test-sites.txt.conf"

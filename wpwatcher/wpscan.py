@@ -59,7 +59,6 @@ class WPScanWrapper():
 
     # Helper method: actually wraps wpscan
     def _wpscan(self, *args):
-        (exit_code, output)=(0,"")
         # WPScan arguments
         cmd= self.wpscan_executable + list(args)
         # Log wpscan command without api token

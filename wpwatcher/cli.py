@@ -34,15 +34,12 @@ class WPWatcherCLI():
         if args.version: self.verion()
         # Init WPWatcher obhect and dump reports
         if args.wprs!=False: self.wprs(args.wprs, args.daemon)
-        
         # Read config
         configuration=self.build_config_cli(args)
-        
         # If daemon lopping
         if configuration['daemon']: 
             # Run 4 ever
             WPWatcherDaemon(configuration)
-           
         else:
             # Run scans and quit
             # Create main object
@@ -96,21 +93,19 @@ class WPWatcherCLI():
         parser.add_argument('--fail_fast', '--ff', help="Interrupt scans if any WPScan or sendmail failure", action='store_true')
         parser.add_argument('--api_limit_wait', '--wait', help="Sleep 24h if API limit reached", action='store_true')
         parser.add_argument('--daemon',  help="Loop and scan for ever", action='store_true')
-        parser.add_argument('--daemon_loop_sleep','--loop', metavar='Time string', help="Time interval to sleep in daemon loop")
+        parser.add_argument('--daemon_loop_sleep','--loop', metavar='Time string', help="Time interval to sleep in daemon loop", default=None)
         parser.add_argument('--wp_reports', '--reports', metavar="Path", help="Database Json file", default=None)
-        parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Minimum time interval to resend email report with same status")
-        parser.add_argument('--asynch_workers','--workers', metavar="Number", help="Number of asynchronous workers", type=int)
-        parser.add_argument('--log_file','--log', metavar="Path", help="Logfile replicates all output with timestamps")
+        parser.add_argument('--resend_emails_after','--resend', metavar="Time string", help="Minimum time interval to resend email report with same status", default=None)
+        parser.add_argument('--asynch_workers','--workers', metavar="Number", help="Number of asynchronous workers", type=int, default=None)
+        parser.add_argument('--log_file','--log', metavar="Path", help="Logfile replicates all output with timestamps", default=None)
         parser.add_argument('--follow_redirect','--follow',  help="Follow site redirection if causes WPscan failure", action='store_true')
-        parser.add_argument('--wpscan_output_folder','--wpout', metavar="Path", help="Write all WPScan results in sub directories 'info', 'warning', 'alert' and 'error'")
-        parser.add_argument('--wpscan_args','--wpargs', metavar='Arguments', help="WPScan arguments as string. See 'wpscan --help' for more infos")
+        parser.add_argument('--wpscan_output_folder','--wpout', metavar="Path", help="Write all WPScan results in sub directories 'info', 'warning', 'alert' and 'error'", default=None)
+        parser.add_argument('--wpscan_args','--wpargs', metavar='Arguments', help="WPScan arguments as string. See 'wpscan --help' for more infos", default=None)
         parser.add_argument('--false_positive_strings','--fpstr', metavar='String', help='False positive strings, you can pass multiple values', nargs='+', default=None)
-        parser.add_argument('--prescan_without_api_token','--prescan', help='Scan without API token first and use API token on sites that triggered warnings', action='store_true')
         parser.add_argument('--verbose', '-v', help="Verbose output, print WPScan raw output and parsed WPScan results.", action='store_true')
         parser.add_argument('--quiet', '-q', help="Print only errors and WPScan ALERTS", action='store_true')
-
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
-        parser.add_argument('--wprs', metavar="Path", help="Print database (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
+        parser.add_argument('--wprs', metavar="Path", help="Print database summary table (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
 
         args = parser.parse_args()
         return(args)
