@@ -932,9 +932,12 @@ def parse_cli_toogle(line, warning_on, alert_on):
     elif "[!]" in line :
         alert_on = True
     # Both method with color and no color apply supplementary proccessing 
-    # Warning for insecure Wordpress
-    if 'Insecure' in line: 
+    # Warning for insecure Wordpress and based on interesting findings strings
+    if any(string in line for string in ['Insecure']+InterestingFinding.INTERESTING_FINDING_WARNING_STRINGS ): 
         warning_on = True
+    # Trigger alert based on interesting finding alert strings
+    if any(string in line for string in InterestingFinding.INTERESTING_FINDING_ALERT_STRINGS ):
+        alert_on=True
     # Lower voice of Vulnerabilities found but not plugin version
     if 'The version could not be determined' in line and alert_on:
         alert_on = False  
@@ -942,15 +945,15 @@ def parse_cli_toogle(line, warning_on, alert_on):
     return ((warning_on, alert_on))
 
 def ignore_false_positives(infos, warnings, alerts, false_positives_strings):
-        """Process false positives"""
-        for alert in warnings+alerts:
-            if is_false_positive(alert, false_positives_strings):
-                try: alerts.remove(alert)
-                except ValueError:
-                    warnings.remove(alert)
-                infos.append("[False positive]\n{}".format(alert))
+    """Process false positives"""
+    for alert in warnings+alerts:
+        if is_false_positive(alert, false_positives_strings):
+            try: alerts.remove(alert)
+            except ValueError:
+                warnings.remove(alert)
+            infos.append("[False positive]\n{}".format(alert))
 
-        return infos, warnings, alerts
+    return infos, warnings, alerts
 
 def is_false_positive(string, false_positives_strings):
     """False Positive Detection"""
