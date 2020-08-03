@@ -179,29 +179,51 @@ class WPScanJsonParser(Component):
             if fp_string in string:
                 return True
 
-class Vulnerability(Component):
+class Finding(Component):
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
         if not data: data={}
         super().__init__(data)
 
-        self.title=data.get('title', None)
-        self.cvss=data.get('cvss', None)
-        self.fixed_in=data.get('fixed_in', None)
-        self.references=data.get('references', None)
+        self.found_by=data.get("found_by", None)
+        self.confidence=data.get("confidence", None)
+        self.interesting_entries=data.get("interesting_entries", None)
+        self.confirmed_by=data.get("confirmed_by", None)
+        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get("vulnerabilities", [])]
+        self.references=data.get("references", None)
 
     def get_alerts(self):
-        """Return 1 alert. First line of alert string contain the vulnerability title. Process CVE, WPVulnDB, ExploitDB and Metasploit references to add links"""
-        alert="Vulnerability: {}".format(self.title)
+        """Return list of vulnerabilities"""
+        alerts=[]
+        for v in self.vulnerabilities:
+            alerts.extend(v.get_alerts())
+        return alerts
 
-        if self.cvss: 
-            alert+='\nCVSS: {}'.format(self.cvss)
-        if self.fixed_in: 
-            alert+='\nFixed in: {}'.format(self.fixed_in)
-        else:
-            alert+='\nNo known fix'
+    def get_infos(self):
+        """Return 1 info, only interesting entries. If no interesting entries: return an empty info string (to avoid errors)"""
+        info=""
+        if self.interesting_entries: 
+            info+="Interesting entries: \n- {}".format('\n- '.join(self.interesting_entries))
+                            # if self.found_by: 
+                            #     info+="Found by: {} ".format(self.found_by)
+                            # if self.confidence: 
+                            #     info+="(confidence: {})".format(self.confidence)
+                            # info+="\n"
+                            # if self.confirmed_by: 
+                            #     info+="\nConfirmed by: "
+                            #     for entry in self.confirmed_by:
+                            #         info+="\n- {} ".format(entry)
+                            #         if self.confirmed_by[entry].get('confidence', None): 
+                            #             info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
+                            #         if self.confirmed_by.get("interesting_entries", None):
+                            #             info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
+        return [info]
+
+    def get_references_str(self):
+        """Process CVE, WPVulnDB, ExploitDB and Metasploit references to add links"""
+        alert=""
         if self.references: 
-            alert+='\nReferences: '
+            alert+='References: '
             for ref in self.references:
                 if ref == 'cve':
                     for cve in self.references[ref]: 
@@ -218,7 +240,30 @@ class Vulnerability(Component):
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {}: {}".format(ref.title(), link)
+        return alert
 
+class Vulnerability(Finding):
+    def __init__(self, data): 
+        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
+        if not data: data={}
+        super().__init__(data)
+
+        self.title=data.get('title', None)
+        self.cvss=data.get('cvss', None)
+        self.fixed_in=data.get('fixed_in', None)
+
+    def get_alerts(self):
+        """Return 1 alert. First line of alert string contain the vulnerability title. Process CVE, WPVulnDB, ExploitDB and Metasploit references to add links"""
+        alert="Vulnerability: {}".format(self.title)
+
+        if self.cvss: 
+            alert+='\nCVSS: {}'.format(self.cvss)
+        if self.fixed_in: 
+            alert+='\nFixed in: {}'.format(self.fixed_in)
+        else:
+            alert+='\nNo known fix'
+        if self.references: 
+            alert+='\n{}'.format(self.get_references_str())
         return([alert])
 
     def get_warnings(self):
@@ -229,86 +274,57 @@ class Vulnerability(Component):
         """Return empty list"""
         return []
 
-class Finding(Component):
-    def __init__(self, data): 
-        """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/finding.erb"""
-        if not data: data={}
-        super().__init__(data)
-
-        self.found_by=data.get("found_by", None)
-        self.confidence=data.get("confidence", None)
-        self.interesting_entries=data.get("interesting_entries", None)
-        self.confirmed_by=data.get("confirmed_by", None)
-        self.vulnerabilities=[Vulnerability(vuln) for vuln in data.get("vulnerabilities", [])]
-
-    def get_alerts(self):
-        """Return list of vulnerabilities"""
-        alerts=[]
-        for v in self.vulnerabilities:
-            alerts.extend(v.get_alerts())
-        return alerts
-
-    def get_infos(self):
-        """Return 1 info, only interesting entries. Return an empty info string if no interesting entries"""
-        info=""
-        # if self.found_by:
-        #     info+="Found by: {} ".format(self.found_by)
-        # if self.confidence: 
-        #     info+="(confidence: {})".format(self.confidence)
-        # info+="\n"
-        if self.interesting_entries: 
-            info+="Interesting entries: \n- {}".format('\n- '.join(self.interesting_entries))
-        # if self.confirmed_by: 
-        #     info+="\nConfirmed by: "
-        #     for entry in self.confirmed_by:
-        #         info+="\n- {} ".format(entry)
-        #         if self.confirmed_by[entry].get('confidence', None): 
-        #             info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
-        #         if self.confirmed_by.get("interesting_entries", None):
-        #             info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
-        return [info]
-
 class InterestingFinding(Finding):
+
+    INTERESTING_FINDING_WARNING_STRINGS=[ "The external WP-Cron seems to be enabled",
+        "Upload directory has listing enabled",
+        "ThemeMakers migration file found",
+        "Registration is enabled",
+        "Debug Log found" ]
+
+    INTERESTING_FINDING_ALERT_STRINGS=[ "SQL Dump found", 
+        "Full Path Disclosure found", 
+        "https://codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
+        "https://www.exploit-db.com/ghdb/3981/",
+        "A backup directory has been found" ]
     
     def __init__(self, data): 
-        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb"""
+        """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb  
+        Warnings and Alerts strings are from https://github.com/wpscanteam/wpscan/blob/master/app/models/interesting_finding.rb
+        """
         if not data: data={}
         super().__init__(data)
         self.url=data.get('url', None)
         self.to_s=data.get('to_s', None)
         self.type=data.get('type', None)
-        self.references=data.get('references', None)
 
-    def get_infos(self):
-        """Return 1 info. First line of info string is the to_s string or the finding type. Complete metasploit links too."""
+    def _get_infos(self):
+        """Return 1 info. First line of info string is the to_s string or the finding type. Complete references links too."""
         info=""
         if self.to_s != self.url:
             info+=self.to_s
         elif self.type:
             info+=self.type.title()
-        if self.url:
+        if self.url and self.url not in self.to_s:
             info+="\nURL: {}".format(self.url)
         # If finding infos are present, add them
         if super().get_infos()[0]:
             info+="\n{}".format(super().get_infos()[0])
         if self.references: 
-            info+='\nReferences: '
-            for ref in self.references:
-                for link in self.references[ref]:
-                    if ref == 'metasploit': 
-                        info+="\n- Metasploit: https://www.rapid7.com/db/modules/{}".format(link)
-                    else:
-                        info+="\n- {}: {}".format(ref.title(), link)
-
+            info+='\n{}'.format(self.get_references_str())
         return [info]
+
+    def get_infos(self):
+        """Return 1 info or 0 if finding is a warning or an alert"""
+        return [ info for info in self._get_infos() if not any([string in info for string in self.INTERESTING_FINDING_WARNING_STRINGS+self.INTERESTING_FINDING_ALERT_STRINGS]) ]
 
     def get_warnings(self):
         """Return empty list"""
-        return []
+        return [ info for info in self._get_infos() if any([string in info for string in self.INTERESTING_FINDING_WARNING_STRINGS]) ]
 
     def get_alerts(self):
         """Return empty list"""
-        return []
+        return [ info for info in self._get_infos() if any([string in info for string in self.INTERESTING_FINDING_ALERT_STRINGS]) ]
 
 class WPVersion(Finding):
     
