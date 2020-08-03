@@ -50,9 +50,9 @@ class WPWatcherConfig():
                     try :
                         with open(f,'r') as fp:
                             self.parser.read_file(fp)
-                    except (OSError):
-                        log.error("Could not read config %s. Make sure the file exists and you have correct access right."%(f))
-                        raise
+                    except (FileNotFoundError, OSError) as err :
+                       raise ValueError("Could not read config %s. Make sure the file exists and you have correct access right."%(f)) from err
+ 
 
             
     def build_config(self):
@@ -60,63 +60,55 @@ class WPWatcherConfig():
         Return a tuple (config dict, read files list).  
         The dict returned contain all possible config values. Default values are applied if not specified in the file(s) or string.
         '''
-        config_dict={}
-        try:
-            # Saving config file in right dict format - no 'wpwatcher' section, just config options
-            config_dict = {
-                # Configurable witg cli arguments
-                'wp_sites' :self.getjson(self.parser,'wp_sites'),
-                'send_email_report':self.getbool(self.parser, 'send_email_report'),
-                'send_errors':self.getbool(self.parser, 'send_errors'),
-                'email_to':self.getjson(self.parser,'email_to'),
-                'send_infos':self.getbool(self.parser, 'send_infos'),
-                'quiet':self.getbool(self.parser, 'quiet'),
-                'verbose':self.getbool(self.parser, 'verbose'),
-                'attach_wpscan_output':self.getbool(self.parser, 'attach_wpscan_output'),
-                'fail_fast':self.getbool(self.parser, 'fail_fast'),
-                'api_limit_wait':self.getbool(self.parser, 'api_limit_wait'),
-                'daemon':self.getbool(self.parser, 'daemon'),
-                'daemon_loop_sleep':parse_timedelta(self.parser.get('wpwatcher','daemon_loop_sleep')),
-                'resend_emails_after':parse_timedelta(self.parser.get('wpwatcher','resend_emails_after')),
-                'wp_reports':self.parser.get('wpwatcher','wp_reports'),
-                'asynch_workers':self.parser.getint('wpwatcher','asynch_workers'),
-                'log_file':self.parser.get('wpwatcher','log_file'),
-                'follow_redirect':self.getbool(self.parser, 'follow_redirect'),
-                'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
-                'wpscan_args':self.getjson(self.parser,'wpscan_args'),
-                'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
-                'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
-                # Not configurable with cli arguments
-                'send_warnings':self.getbool(self.parser, 'send_warnings'),
-                'email_errors_to':self.getjson(self.parser,'email_errors_to'),
-                'wpscan_path':self.parser.get('wpwatcher','wpscan_path'),
-                'smtp_server':self.parser.get('wpwatcher','smtp_server'),
-                'smtp_auth':self.getbool(self.parser, 'smtp_auth'),
-                'smtp_user':self.parser.get('wpwatcher','smtp_user'),
-                'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
-                'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
-                'from_email':self.parser.get('wpwatcher','from_email')
-            }
-            return ((config_dict, self.files))
-
-        except Exception as err: 
-            log.error("Could not read config " + str(self.files) + ". Error: "+str(err))
-            raise
+        # Saving config file in right dict format - no 'wpwatcher' section, just config options
+        config_dict = {
+            # Configurable witg cli arguments
+            'wp_sites' :self.getjson(self.parser,'wp_sites'),
+            'send_email_report':self.getbool(self.parser, 'send_email_report'),
+            'send_errors':self.getbool(self.parser, 'send_errors'),
+            'email_to':self.getjson(self.parser,'email_to'),
+            'send_infos':self.getbool(self.parser, 'send_infos'),
+            'quiet':self.getbool(self.parser, 'quiet'),
+            'verbose':self.getbool(self.parser, 'verbose'),
+            'attach_wpscan_output':self.getbool(self.parser, 'attach_wpscan_output'),
+            'fail_fast':self.getbool(self.parser, 'fail_fast'),
+            'api_limit_wait':self.getbool(self.parser, 'api_limit_wait'),
+            'daemon':self.getbool(self.parser, 'daemon'),
+            'daemon_loop_sleep':parse_timedelta(self.parser.get('wpwatcher','daemon_loop_sleep')),
+            'resend_emails_after':parse_timedelta(self.parser.get('wpwatcher','resend_emails_after')),
+            'wp_reports':self.parser.get('wpwatcher','wp_reports'),
+            'asynch_workers':self.parser.getint('wpwatcher','asynch_workers'),
+            'log_file':self.parser.get('wpwatcher','log_file'),
+            'follow_redirect':self.getbool(self.parser, 'follow_redirect'),
+            'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
+            'wpscan_args':self.getjson(self.parser,'wpscan_args'),
+            'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
+            'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
+            # Not configurable with cli arguments
+            'send_warnings':self.getbool(self.parser, 'send_warnings'),
+            'email_errors_to':self.getjson(self.parser,'email_errors_to'),
+            'wpscan_path':self.parser.get('wpwatcher','wpscan_path'),
+            'smtp_server':self.parser.get('wpwatcher','smtp_server'),
+            'smtp_auth':self.getbool(self.parser, 'smtp_auth'),
+            'smtp_user':self.parser.get('wpwatcher','smtp_user'),
+            'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
+            'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
+            'from_email':self.parser.get('wpwatcher','from_email')
+        }
+        return ((config_dict, self.files))
     
     @staticmethod
     def getjson(conf, key):
-        '''Return json loaded structure from a configparser object.  
+        '''Return json loaded structure from a configparser object. Empty list if the loaded value is null.   
         Arguments:  
         - `conf`: configparser object  
         - `key`: wpwatcher config key
         '''
-        string_val=conf.get('wpwatcher', key)
         try:
-            loaded=json.loads(string_val)
+            loaded=json.loads(conf.get('wpwatcher', key))
             return loaded if loaded else []
-        except Exception as err:
-            log.error("Could not read config JSON value for: '%s' and string: '%s'. Error: %s" % (key, conf.get('wpwatcher',key), str(err)))
-            raise
+        except ValueError as err:
+            raise ValueError("Could not read JSON value in config file for key '{}' and string: '{}'".format(key, conf.get('wpwatcher',key))) from err
 
     @staticmethod
     def getbool(conf, key):
@@ -127,10 +119,8 @@ class WPWatcherConfig():
         '''
         try:
             return conf.getboolean('wpwatcher', key)
-        except Exception as err:
-            log.error("Could not read boolean value in config for: '{}' and string '{}'. Must be Yes/No. Error: {}".format(key, conf.get('wpwatcher',key), str(err)))
-            raise
-
+        except ValueError as err:
+            raise ValueError("Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(key, conf.get('wpwatcher',key))) from err
 
     # Configuration template -------------------------
     TEMPLATE_FILE="""[wpwatcher]
@@ -264,7 +254,7 @@ smtp_ssl=Yes
     @staticmethod
     def find_config_files(create=False):
         '''
-        Returns the location of existing `wpwatcher.conf` and `wp_reports.json` files at ./wpwatcher.conf and/or ~/wpwatcher.conf or under ~/.wpwatcher/ folder
+        Returns the location of existing `wpwatcher.conf` file at `./wpwatcher.conf` and/or `~/wpwatcher.conf` or under `~/.wpwatcher/` folder
         '''
         files=['.wpwatcher/wpwatcher.conf', 'wpwatcher.conf']
         env=['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
