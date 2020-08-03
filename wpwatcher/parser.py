@@ -323,7 +323,7 @@ class WPVersion(Finding):
     def _get_infos(self):
         """Return 1 info"""
         if self.number:
-            info="Wordpress Version: {}".format(self.number)
+            info="Wordpress version: {}".format(self.number)
             if self.status=="latest":
                 info+=" (up to date)"
             if self.release_date:
@@ -348,7 +348,7 @@ class WPVersion(Finding):
         """Return 0 or 1 warning"""
        
         if self.status=="insecure":
-            warning="Insecure WordPress version\n"
+            warning="Insecure "
             warning+=self._get_infos()[0]
             return [warning]
         else:
