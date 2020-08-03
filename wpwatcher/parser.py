@@ -280,13 +280,15 @@ class InterestingFinding(Finding):
         "Upload directory has listing enabled",
         "ThemeMakers migration file found",
         "Registration is enabled",
-        "Debug Log found" ]
+        "Debug Log found",
+        "Fantastico list found" ]
 
     INTERESTING_FINDING_ALERT_STRINGS=[ "SQL Dump found", 
         "Full Path Disclosure found", 
         "https://codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
         "https://www.exploit-db.com/ghdb/3981/",
-        "A backup directory has been found" ]
+        "A backup directory has been found",
+        "Search Replace DB script found" ]
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb  
