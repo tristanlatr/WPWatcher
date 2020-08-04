@@ -48,7 +48,7 @@ jobs:
       run: git clone https://github.com/wpscanteam/VulnerableWordpress
 
     - name: Build vulnerable Wordpress image 
-      uses: docker/build-action@v1
+      # uses: docker/build-action@v1
       runs:
         using: 'docker'
         image: 'VulnerableWordpress/Dockerfile'
