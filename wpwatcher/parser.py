@@ -282,18 +282,18 @@ class InterestingFinding(Finding):
 
     INTERESTING_FINDING_WARNING_STRINGS=[ 
         "Upload directory has listing enabled",
-        "ThemeMakers migration file found",             "packetstormsecurity.com/files/131957",
         "Registration is enabled",
         "Debug Log found",                              "codex.wordpress.org/Debugging_in_WordPress",
         "Fantastico list found",                        "www.acunetix.com/vulnerabilities/fantastico-fileslist/" ]
 
     INTERESTING_FINDING_ALERT_STRINGS=[
         "SQL Dump found", 
-        "Full Path Disclosure found",       "www.owasp.org/index.php/Full_Path_Disclosure",
-                                            "codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
-                                            "www.exploit-db.com/ghdb/3981/",
-        "A backup directory has been found", "github.com/wpscanteam/wpscan/issues/422",
-        "Search Replace DB script found", "interconnectit.com/products/search-and-replace-for-wordpress-databases/" ]
+        "Full Path Disclosure found",                   "www.owasp.org/index.php/Full_Path_Disclosure",
+                                                        "codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
+                                                        "www.exploit-db.com/ghdb/3981/",
+        "A backup directory has been found",            "github.com/wpscanteam/wpscan/issues/422",
+        "ThemeMakers migration file found",             "packetstormsecurity.com/files/131957",
+        "Search Replace DB script found",               "interconnectit.com/products/search-and-replace-for-wordpress-databases/" ]
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb  
