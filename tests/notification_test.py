@@ -58,7 +58,7 @@ class T(unittest.TestCase):
             # self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             # self.assertNotEqual(report['last_email'], None)
 
-    def test_notify_wpwatcher_init(self):
+    def test_should_notify(self):
         # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
         # Init WPWatcher
         CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
