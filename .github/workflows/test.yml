@@ -44,19 +44,12 @@ jobs:
         pip install codecov
         pip install pytest-cov
 
-    - name: Clone vulnerable Wordpress image
-      run: git clone https://github.com/wpscanteam/VulnerableWordpress
-
-    - name: Build vulnerable Wordpress image 
-      # uses: docker/build-action@v1
-      runs:
-        using: 'docker'
-        image: 'VulnerableWordpress/Dockerfile'
-        args:
-        - --rm -t wpscan/vulnerablewordpress .
-    
-    - name: Run vulnerable Wordpress image 
-      run: docker run --name vulnerablewordpress -d -p 80:80 -p 3306:3306 wpscan/vulnerablewordpress &
+    - name: Build and run vulnerable Wordpress image 
+      run: |
+        git clone https://github.com/wpscanteam/VulnerableWordpress
+        cd VulnerableWordpress
+        docker build --rm -t wpscan/vulnerablewordpress .
+        docker run --name vulnerablewordpress -d -p 80:80 -p 3306:3306 wpscan/vulnerablewordpress &
 
     - name: Test with pytest
       run: pytest --cov=./ --cov-report=xml
