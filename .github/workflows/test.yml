@@ -50,7 +50,11 @@ jobs:
         cd VulnerableWordpress
         docker build --rm -t wpscan/vulnerablewordpress .
         docker run --name vulnerablewordpress -d -p 80:80 -p 3306:3306 wpscan/vulnerablewordpress &
-
+        cd ..
+    
+    - name: Run WPScan on vulnerable testing host
+      run: wpscan --url localhost
+      
     - name: Test with pytest
       run: pytest --cov=./ --cov-report=xml
     
