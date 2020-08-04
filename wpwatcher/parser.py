@@ -280,14 +280,15 @@ class Vulnerability(Finding):
 
 class InterestingFinding(Finding):
 
-    INTERESTING_FINDING_WARNING_STRINGS=[ "The external WP-Cron seems to be enabled", "www.iplocation.net/defend-wordpress-from-ddos",
+    INTERESTING_FINDING_WARNING_STRINGS=[ 
         "Upload directory has listing enabled",
         "ThemeMakers migration file found",             "packetstormsecurity.com/files/131957",
         "Registration is enabled",
         "Debug Log found",                              "codex.wordpress.org/Debugging_in_WordPress",
         "Fantastico list found",                        "www.acunetix.com/vulnerabilities/fantastico-fileslist/" ]
 
-    INTERESTING_FINDING_ALERT_STRINGS=[ "SQL Dump found", 
+    INTERESTING_FINDING_ALERT_STRINGS=[
+        "SQL Dump found", 
         "Full Path Disclosure found",       "www.owasp.org/index.php/Full_Path_Disclosure",
                                             "codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
                                             "www.exploit-db.com/ghdb/3981/",
