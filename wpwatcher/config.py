@@ -53,8 +53,6 @@ class WPWatcherConfig():
                     except (FileNotFoundError, OSError) as err :
                        raise ValueError("Could not read config %s. Make sure the file exists and you have correct access right."%(f)) from err
  
-
-            
     def build_config(self):
         '''Parse the config file(s) and return WPWatcher config.  
         Return a tuple (config dict, read files list).  
