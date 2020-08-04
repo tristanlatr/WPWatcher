@@ -53,7 +53,7 @@ jobs:
         cd ..
     
     - name: Run WPScan on vulnerable testing host
-      run: wpscan --url 127.0.0.1:80
+      run: wpscan --url http://localhost:80
 
     - name: Test with pytest
       run: pytest --cov=./ --cov-report=xml
