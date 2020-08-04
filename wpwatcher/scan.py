@@ -242,9 +242,9 @@ class WPWatcherScanner():
             return None
 
         # Other errors codes : 127, etc, simply raise error
-        err_str="WPScan failed with exit code %s. \nWPScan arguments: %s. \nWPScan output: \n%s"%((wpscan_exit_code, 
+        err_str="WPScan failed with exit code %s. \nArguments: %s. \nOutput: \n%s"%((wpscan_exit_code, 
             safe_log_wpscan_args(wpscan_arguments), 
-            wp_report['wpscan_output']))
+            re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output']) ))
         raise RuntimeError(err_str)
     
     def wpscan_site(self, wp_site, wp_report):

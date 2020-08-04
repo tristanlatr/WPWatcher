@@ -34,7 +34,7 @@ class WPScanWrapper():
         except FileNotFoundError as err:
             raise FileNotFoundError("Could not find WPScan executale. Make sure wpscan in you PATH or configure full path to executable in config file. If you're using RVM, the path should point to the WPScan wrapper like '/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan'") from err
         if exit_code!=0:
-            raise Exception("There is an issue with your WPScan installation. See https://wpscan.org for installation steps. Output : {}".fornat(version_info))
+            raise Exception("There is an issue with your WPScan installation. See https://wpscan.org for installation steps.\nOutput:\n{}".fornat(version_info))
 
         version_info=json.loads(version_info)
         if not version_info['last_db_update'] or datetime.now() - datetime.strptime(version_info['last_db_update'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > UPDATE_DB_INTERVAL:
@@ -47,7 +47,7 @@ class WPScanWrapper():
         log.info("Updating WPScan")
         exit_code, out = self._wpscan("--update", "--format", "json", "--no-banner")
         if exit_code!=0: 
-            raise Exception("Error updating WPScan. Output: {}".format(out))
+            raise Exception("Error updating WPScan.\nOutput:\n{}".format(out))
     
     # Wrapper for lazy initiation
     def wpscan(self, *args):
