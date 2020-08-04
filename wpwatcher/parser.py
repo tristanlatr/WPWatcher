@@ -237,6 +237,10 @@ class Finding(Component):
                 elif ref == 'exploitdb': 
                     for exploitdb in self.references[ref]:
                         alert+="\n- ExploitDB: https://www.exploit-db.com/exploits/{}".format(exploitdb)
+                elif ref == 'packetstorm': 
+                    for packetstorm in self.references[ref]:
+                        alert+="\n- Packetstorm: https://packetstormsecurity.com/files/{}".format(packetstorm)
+                
                 else:
                     for link in self.references[ref]:
                         alert+="\n- {}: {}".format(ref.title(), link)
@@ -276,19 +280,19 @@ class Vulnerability(Finding):
 
 class InterestingFinding(Finding):
 
-    INTERESTING_FINDING_WARNING_STRINGS=[ "The external WP-Cron seems to be enabled",
+    INTERESTING_FINDING_WARNING_STRINGS=[ "The external WP-Cron seems to be enabled", "www.iplocation.net/defend-wordpress-from-ddos",
         "Upload directory has listing enabled",
-        "ThemeMakers migration file found",
+        "ThemeMakers migration file found",             "packetstormsecurity.com/files/131957",
         "Registration is enabled",
-        "Debug Log found",
-        "Fantastico list found" ]
+        "Debug Log found",                              "codex.wordpress.org/Debugging_in_WordPress",
+        "Fantastico list found",                        "www.acunetix.com/vulnerabilities/fantastico-fileslist/" ]
 
     INTERESTING_FINDING_ALERT_STRINGS=[ "SQL Dump found", 
-        "Full Path Disclosure found", 
-        "https://codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
-        "https://www.exploit-db.com/ghdb/3981/",
-        "A backup directory has been found",
-        "Search Replace DB script found" ]
+        "Full Path Disclosure found",       "www.owasp.org/index.php/Full_Path_Disclosure",
+                                            "codex.wordpress.org/Resetting_Your_Password#Using_the_Emergency_Password_Reset_Script",
+                                            "www.exploit-db.com/ghdb/3981/",
+        "A backup directory has been found", "github.com/wpscanteam/wpscan/issues/422",
+        "Search Replace DB script found", "interconnectit.com/products/search-and-replace-for-wordpress-databases/" ]
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/CMSScanner/blob/master/app/views/json/interesting_findings/findings.erb  
