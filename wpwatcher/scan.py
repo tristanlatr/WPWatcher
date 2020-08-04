@@ -123,7 +123,7 @@ class WPWatcherScanner():
             wpscan_results_file=os.path.join(self.wpscan_output_folder, folder , 
                 get_valid_filename('WPScan_output_%s_%s.txt' % (wp_report['site'], wp_report['datetime'])))
             with open(wpscan_results_file, 'w') as wpout:
-                wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output'].encode('utf-8')))
+                wpout.write(re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output']))
         return(wpscan_results_file)
 
     def get_fixed_issues(self, wp_report, last_wp_report, wp_site, issue_type='alerts'):
