@@ -98,12 +98,7 @@ class T(unittest.TestCase):
                 self.assertEqual(out.read(), "This is real%s"%(s))
         shutil.rmtree(RESULTS_FOLDER)
 
-    def test_wpscan(self):
-        wpscan=WPScanWrapper('wpscan')
-        ex,_=wpscan.wpscan("--url","wp.exemple.com")
-        self.assertEqual(ex,4,"Scanning wp.exemple.com successful, that's weird !")
-        ex,_=wpscan.wpscan("--version")
-        self.assertEqual(ex,0,"WPScan failed when printing version")
+
 
     def test_handle_wpscan_err(self):
             # test API wait, test Follow redirect
