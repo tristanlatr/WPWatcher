@@ -376,7 +376,7 @@ class WPWatcherScanner():
                 filename=wpscan_results_file=os.path.join("/tmp/",
                     get_valid_filename('WPScan_output_%s_%s.json' % (wp_report['site'], wp_report['datetime'])))
                 self._write_wpscan_output(wp_report, filename)
-                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("-f", filename))
+                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("-f", filename)).replace("(B[m", "")
                 if vuln_summary_table:
                     if wp_report['status']=='ALERT':
                         wp_report['alerts'].insert(0, vuln_summary_table)
