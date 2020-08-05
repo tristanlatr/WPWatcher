@@ -91,7 +91,8 @@ class WPWatcherConfig():
             'smtp_user':self.parser.get('wpwatcher','smtp_user'),
             'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
             'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
-            'from_email':self.parser.get('wpwatcher','from_email')
+            'from_email':self.parser.get('wpwatcher','from_email'),
+            'wpscan_analyze_path':self.parser.get('wpwatcher','wpscan_analyze_path')
         }
         return ((config_dict, self.files))
     
@@ -183,6 +184,9 @@ smtp_ssl=Yes
 
 # Scan timeout
 # scan_timeout=5m
+
+# WPScan JSON analyzer to compute table of issues
+# wpscan_analyze_path=/usr/local/bin/wpscan-analyzer
 """%(GIT_URL)
 
     # Config default values
@@ -216,7 +220,8 @@ smtp_ssl=Yes
         'asynch_workers':'1',
         'follow_redirect':'No',
         'wpscan_output_folder':'',
-        'scan_timeout':'15m'
+        'scan_timeout':'15m',
+        'wpscan_analyze_path':''
     }
 
     @staticmethod

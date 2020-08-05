@@ -135,6 +135,8 @@ One report is generated per site and the reports are sent individually when fini
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
 
+Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include table summary of all plugins and versions.  
+
 ## Questions ?
 If you have any questions, please create a new issue.
 

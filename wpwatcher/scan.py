@@ -9,6 +9,9 @@ import re
 import os
 import time
 import signal
+import shlex
+import subprocess
+import shutil
 import traceback
 import multiprocessing
 import multiprocessing.pool
@@ -58,6 +61,14 @@ class WPWatcherScanner():
         # Scan timeout
         self.scan_timeout=conf['scan_timeout']
 
+        # wpscan-analyze
+        if conf['wpscan_analyze_path']: 
+            self.wpscan_analyze_path=conf['wpscan_analyze_path']
+        elif shutil.which('wpscan-analyze'):
+            self.wpscan_analyze_path=shutil.which('wpscan-analyze')
+        else:
+            self.wpscan_analyze_path=None
+
         # Init wpscan output folder
         if self.wpscan_output_folder : 
             os.makedirs(self.wpscan_output_folder, exist_ok=True)
@@ -97,6 +108,33 @@ class WPWatcherScanner():
         
     # Scan process
 
+    # Helper method: wraps wpscan-analyze
+    def wpscan_analyze(self, *args):
+        # wpscan-analyze arguments
+        cmd= shlex.split(self.wpscan_analyze_path) + list(args)
+        # Log wpscan-analyze command
+        log.debug("Running wpscan-analyze command: %s" % ' '.join(cmd) )
+        # Run wpscan-analyze
+        try:
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            output, stderr  = process.communicate()
+            try: 
+                output=output.decode("utf-8")
+                stderr=stderr.decode('utf-8')
+            except UnicodeDecodeError: 
+                output=output.decode("latin1")
+                stderr=stderr.decode('latin1')
+            if process.returncode!=0:
+                err="There is an issue with wpscan-analyze. Output: \n"+output+"\n"+stderr
+                log.error(err)
+                raise RuntimeError(err)
+                
+        except FileNotFoundError:
+            log.info("Could not find wpscan-analyze executale. Make sure wpscan-analyze is in your PATH or configure full path to executable in config file.")
+            return None
+        # Return wpscan-analyze output
+        return(output)
+
     def update_report(self, wp_report, last_wp_report, wp_site):
         '''Update new report considering last report:  
         - Save already fixed issues but not reported yet
@@ -112,6 +150,14 @@ class WPWatcherScanner():
             if last_wp_report['last_email']:
                 wp_report['last_email']=last_wp_report['last_email']
     
+    @staticmethod
+    def _write_wpscan_output(wp_report, filename):
+        '''Helper method to write output to file'''
+        nocolor_output=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output'])
+        with open(filename, 'wb') as wpout:
+            try: wpout.write(nocolor_output.encode('utf-8'))
+            except UnicodeEncodeError: wpout.write(nocolor_output.encode('latin1'))
+
     def write_wpscan_output(self, wp_report):
         '''Write WPScan output to configured place with `wpscan_output_folder` or return None
         '''
@@ -122,10 +168,7 @@ class WPWatcherScanner():
         if self.wpscan_output_folder :
             wpscan_results_file=os.path.join(self.wpscan_output_folder, folder , 
                 get_valid_filename('WPScan_output_%s_%s.txt' % (wp_report['site'], wp_report['datetime'])))
-            with open(wpscan_results_file, 'wb') as wpout:
-                nocolor_output=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output'])
-                try: wpout.write(nocolor_output.encode('utf-8'))
-                except UnicodeEncodeError: wpout.write(nocolor_output.encode('latin1'))
+            self._write_wpscan_output(wp_report, wpscan_results_file)
         return(wpscan_results_file)
 
     def get_fixed_issues(self, wp_report, last_wp_report, wp_site, issue_type='alerts'):
@@ -322,6 +365,24 @@ class WPWatcherScanner():
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
+
+        # Run wpscan-analyze
+        if self.wpscan_analyze_path and "json" in self.wpscan_args:
+            try:
+                filename=wpscan_results_file=os.path.join("/tmp/",
+                    get_valid_filename('WPScan_output_%s_%s.json' % (wp_report['site'], wp_report['datetime'])))
+                self._write_wpscan_output(wp_report, filename)
+                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("-f", filename))
+                if vuln_summary_table:
+                    if wp_report['status']=='ALERT':
+                        wp_report['alerts'].append(vuln_summary_table)
+                    elif wp_report['status']=='WARNING':
+                        wp_report['warnings'].append(vuln_summary_table)
+                    else:
+                        wp_report['infos'].append(vuln_summary_table)
+                os.remove(filename)
+            except RuntimeError:
+                self.check_fail_fast()
 
         # Notify recepients if match triggers
         try:
