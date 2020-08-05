@@ -154,7 +154,7 @@ If you like the project and think you could help with making it better, there ar
 
 ## Running tests
 ```
-python3 -m unittest tests.quick_test
+pytest
 ```
 
 ## Authors
