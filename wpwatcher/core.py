@@ -60,11 +60,14 @@ class WPWatcher():
         # Update config before passing it to WPWatcherScanner
         conf.update({'wp_reports':self.wp_reports.filepath})
 
-        # Dump config
-        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
-
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
+
+        # Update config before printing it
+        conf.update({'wpscan_analyze_path':self.scanner.wpscan_analyze_path})
+
+        # Dump config
+        log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Save sites
         self.wp_sites=conf['wp_sites']

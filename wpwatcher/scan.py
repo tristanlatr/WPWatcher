@@ -128,7 +128,7 @@ class WPWatcherScanner():
                 except UnicodeDecodeError: 
                     output=output.decode("latin1")
                     stderr=stderr.decode('latin1')
-            if 'Error' in stderr:
+            if not process.returncode in [0, 11, 12, 13]:
                 err="There is an issue with wpscan-analyze. Output: \n"+output+"\n"+stderr
                 log.error(err)
                 raise RuntimeError(err)
