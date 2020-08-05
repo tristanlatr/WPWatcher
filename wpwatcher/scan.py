@@ -124,7 +124,7 @@ class WPWatcherScanner():
             except UnicodeDecodeError: 
                 output=output.decode("latin1")
                 stderr=stderr.decode('latin1')
-            if process.returncode!=0:
+            if 'Error' in stderr:
                 err="There is an issue with wpscan-analyze. Output: \n"+output+"\n"+stderr
                 log.error(err)
                 raise RuntimeError(err)
@@ -375,11 +375,11 @@ class WPWatcherScanner():
                 vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("-f", filename))
                 if vuln_summary_table:
                     if wp_report['status']=='ALERT':
-                        wp_report['alerts'].append(vuln_summary_table)
+                        wp_report['alerts'].insert(0, vuln_summary_table)
                     elif wp_report['status']=='WARNING':
-                        wp_report['warnings'].append(vuln_summary_table)
+                        wp_report['warnings'].insert(0, vuln_summary_table)
                     else:
-                        wp_report['infos'].append(vuln_summary_table)
+                        wp_report['infos'].insert(0, vuln_summary_table)
                 os.remove(filename)
             except RuntimeError:
                 self.check_fail_fast()
