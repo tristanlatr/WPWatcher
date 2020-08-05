@@ -42,7 +42,7 @@
 python3 -m pip install wpwatcher
 ```
 **NEW**  
-Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include a table summary of all plugins, versions and potential vulnerabilities in emails 
+Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include a table summary of all plugins, versions and potential vulnerabilities in emails. 
 
 #####  Update
 ```bash
