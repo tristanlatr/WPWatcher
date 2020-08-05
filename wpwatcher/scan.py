@@ -118,12 +118,16 @@ class WPWatcherScanner():
         try:
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             output, stderr  = process.communicate()
-            try: 
-                output=output.decode("utf-8")
-                stderr=stderr.decode('utf-8')
+            try:
+                output=output.decode("ascii")
+                stderr=stderr.decode('ascii')
             except UnicodeDecodeError: 
-                output=output.decode("latin1")
-                stderr=stderr.decode('latin1')
+                try: 
+                    output=output.decode("utf-8")
+                    stderr=stderr.decode('utf-8')
+                except UnicodeDecodeError: 
+                    output=output.decode("latin1")
+                    stderr=stderr.decode('latin1')
             if 'Error' in stderr:
                 err="There is an issue with wpscan-analyze. Output: \n"+output+"\n"+stderr
                 log.error(err)
@@ -367,7 +371,7 @@ class WPWatcherScanner():
         self.update_report(wp_report, last_wp_report, wp_site)
 
         # Run wpscan-analyze
-        if self.wpscan_analyze_path and "json" in self.wpscan_args:
+        if self.wpscan_analyze_path and "json" in self.wpscan_args and wp_report['status']!='ERROR':
             try:
                 filename=wpscan_results_file=os.path.join("/tmp/",
                     get_valid_filename('WPScan_output_%s_%s.json' % (wp_report['site'], wp_report['datetime'])))
