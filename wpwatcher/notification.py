@@ -93,7 +93,7 @@ class WPWatcherNotification():
             infos=self.send_infos )
         
         if self.use_monospace_font:    
-            body = '<b><font face="Courier New, Courier, monospace">'+replace(body, {'\n':'\n<br/>', '\t':'\t&nbsp;&nbsp;&nbsp;&nbsp;', ' ':'&nbsp;'})+'</font></b>'
+            body = '<b><font face="Courier New, Courier, monospace" size="-1">'+replace(body, {'\n':'\n<br/>', '\t':'\t&nbsp;&nbsp;&nbsp;&nbsp;', ' ':'&nbsp;'})+'</font></b>'
 
         message.attach(MIMEText(body, 'html' if self.use_monospace_font else 'text'))
         
