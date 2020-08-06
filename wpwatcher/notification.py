@@ -195,6 +195,9 @@ class WPWatcherNotification():
         elif wp_report['warnings']: message += "\nIssues have been detected by WPScan."
         if wp_report['fixed']: message += "\nSome issues have been fixed since last scan."
 
+        if wp_report['summary']:
+            message += WPWatcherNotification.format_issues('Summary',[wp_report['summary']])
+
         message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])
         message += WPWatcherNotification.format_issues('Alerts',wp_report['alerts'])
         if warnings: message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])

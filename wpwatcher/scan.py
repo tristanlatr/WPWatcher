@@ -330,6 +330,7 @@ class WPWatcherScanner():
             "warnings":[],
             "alerts":[],
             "fixed":[],
+            "summary":None,
             "wpscan_output":"" # will be deleted
         }
 
@@ -376,14 +377,9 @@ class WPWatcherScanner():
                 filename=wpscan_results_file=os.path.join("/tmp/",
                     get_valid_filename('WPScan_output_%s_%s.json' % (wp_report['site'], wp_report['datetime'])))
                 self._write_wpscan_output(wp_report, filename)
-                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("-f", filename)).replace("(B[m", "")
+                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("--output-detail", "all", "-f", filename)).replace("(B[m", "")
                 if vuln_summary_table:
-                    if wp_report['status']=='ALERT':
-                        wp_report['alerts'].insert(0, vuln_summary_table)
-                    elif wp_report['status']=='WARNING':
-                        wp_report['warnings'].insert(0, vuln_summary_table)
-                    else:
-                        wp_report['infos'].insert(0, vuln_summary_table)
+                    wp_report['summary']=vuln_summary_table
                 os.remove(filename)
             except RuntimeError:
                 self.check_fail_fast()
