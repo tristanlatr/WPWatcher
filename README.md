@@ -42,7 +42,7 @@
 python3 -m pip install wpwatcher
 ```
 **NEW**  
-Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include a table summary of all plugins, versions and potential vulnerabilities in emails. 
+**Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include a table summary of all plugins versions and vulnerabilities in emails.**
 
 #####  Update
 ```bash
@@ -128,7 +128,6 @@ smtp_auth=Yes
 smtp_pass=P@assW0rd
 ```
 
-
 ### Email reports
 
 One report is generated per site and the reports are sent individually when finished scanning a website.  
@@ -136,8 +135,6 @@ One report is generated per site and the reports are sent individually when fini
 ![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
 
 ![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
-
-Thanks to [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze), emails now include table summary of all plugins, versions and potential vulnerabilities.  
 
 ## Questions ?
 If you have any questions, please create a new issue.
