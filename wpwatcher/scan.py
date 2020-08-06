@@ -137,7 +137,7 @@ class WPWatcherScanner():
             log.info("Could not find wpscan-analyze executale. Make sure wpscan-analyze is in your PATH or configure full path to executable in config file.")
             return None
         # Return wpscan-analyze output
-        return(output)
+        return(output.strip())
 
     def update_report(self, wp_report, last_wp_report, wp_site):
         '''Update new report considering last report:  

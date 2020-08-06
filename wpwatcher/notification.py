@@ -17,7 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from wpwatcher import log, VERSION
-from wpwatcher.utils import get_valid_filename
+from wpwatcher.utils import get_valid_filename, replace
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
@@ -49,6 +49,8 @@ class WPWatcherNotification():
 
         # mail server, will be created when sending mails
         self.server=None
+
+        self.use_monospace_font=conf['use_monospace_font']
 
     def notify(self, wp_site, wp_report, last_wp_report):
         '''Notify recipients if match conditions
@@ -89,8 +91,11 @@ class WPWatcherNotification():
         body=self.build_message(wp_report, 
             warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
             infos=self.send_infos )
+        
+        if self.use_monospace_font:    
+            body = '<b><font face="Courier New, Courier, monospace">'+replace(body, {'\n':'\n<br/>', '\t':'\t&nbsp;&nbsp;&nbsp;&nbsp;', ' ':'&nbsp;'})+'</font></b>'
 
-        message.attach(MIMEText(body))
+        message.attach(MIMEText(body, 'html' if self.use_monospace_font else 'text'))
         
         # Attachment log if attach_wpscan_output
         if self.attach_wpscan_output:
