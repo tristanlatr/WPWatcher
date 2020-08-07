@@ -1,11 +1,33 @@
 import unittest
 import os
 import shutil
+import http.server
+import concurrent.futures
+from wpwatcher.core import WPWatcher
 from wpwatcher.scan import WPWatcherScanner, WPWatcherConfig, WPScanWrapper
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
+executor=None
+server=None
 class T(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        # Launch SMPT debbug server
+        global executor
+        global server
+        server=http.server.HTTPServer(('localhost',8080), http.server.BaseHTTPRequestHandler )
+        executor=concurrent.futures.ThreadPoolExecutor(1)
+        executor.submit(server.serve_forever)
+
+    @classmethod
+    def tearDownClass(cls):
+        # Close mail server
+        global executor
+        global server
+        server.shutdown()
+        executor.shutdown()
     
     def test_update_report(self):
         # Init Scanner
@@ -25,6 +47,7 @@ class T(unittest.TestCase):
                     ],
                     "alerts": [],
                     "fixed": ["This issue was fixed"],
+                    "summary":None,
                     "wpscan_output":""
                 }
 
@@ -41,6 +64,7 @@ class T(unittest.TestCase):
                     ],
                     "alerts": [],
                     "fixed": [],
+                    "summary":None,
                     "wpscan_output":""
                 }
 
@@ -60,6 +84,7 @@ class T(unittest.TestCase):
                         "This issue was fixed",
                         'Issue regarding component "%s" has been fixed since last report.\nLast report sent the %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'])    
                     ],
+                    "summary":None,
                     "wpscan_output":""
                 }
             
@@ -88,6 +113,7 @@ class T(unittest.TestCase):
                 ],
                 "alerts": [],
                 "fixed": [],
+                "summary":None,
                 "wpscan_output":"This is real%s"%(s)
             }
             f=scanner.write_wpscan_output(report)
@@ -101,10 +127,13 @@ class T(unittest.TestCase):
 
 
     def test_handle_wpscan_err(self):
-            # test API wait, test Follow redirect
+        # test API wait, test Follow redirect
         # TODO
         pass
 
-    def test_scan_site(self):
+    def test_scan_localhost_error_not_wordpress(self):
         # test info, warnings and alerts
-        pass
+        scanner=WPWatcherScanner(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        report=scanner.scan_site(WPWatcher.format_site({'url':'http://localhost:8080'}))
+        self.assertEqual(report['status'], 'ERROR')
+        self.assertRegex(report['errors'][0], 'does not seem to be running WordPress')
