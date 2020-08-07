@@ -19,28 +19,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Set up Ruby
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: '2.6'
-    
-    - name: Display Python version
-      run: python --version
-      
-    - name: Display Ruby version
-      run: ruby --version
-      
-    - name: Install WPScan
-      run: gem install wpscan
 
     - name: Install wpscan-analyze
       run: |
-        apt install wget
+        echo "PATH $PATH"
         version="v`curl --silent "https://api.github.com/repos/lukaspustina/wpscan-analyze/releases/latest" | grep tag_name | sed -E 's/.*"v(.*)",/\1/'`"
         filename=""
         if [ "$(uname)" = Linux ]; then
@@ -65,6 +47,26 @@ jobs:
         cp "${filename}" "${binary_file}"
         # Make the file executable
         chmod +x ${binary_file}
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Set up Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: '2.6'
+    
+    - name: Display Python version
+      run: python --version
+      
+    - name: Display Ruby version
+      run: ruby --version
+      
+    - name: Install WPScan
+      run: gem install wpscan
+
 
     - name: wpscan-analyze Version
       run: wpscan-analyze --version
