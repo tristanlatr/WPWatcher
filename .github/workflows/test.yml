@@ -37,6 +37,37 @@ jobs:
       
     - name: Install WPScan
       run: gem install wpscan
+
+    - name: Install wpscan-analyze
+      run: |
+        apt install wget
+        version="v`curl --silent "https://api.github.com/repos/lukaspustina/wpscan-analyze/releases/latest" | grep tag_name | sed -E 's/.*"v(.*)",/\1/'`"
+        filename=""
+        if [ "$(uname)" = Linux ]; then
+            filename="wpscan-analyze-${version}-x86_64-unknown-linux-gnu"
+        else
+            if [ "$(uname)" = Darwin ]; then
+                filename="wpscan-analyze-${version}-x86_64-apple-darwin"
+            else
+                echo "[ERROR] Unsupported operating system, please install Rust environment and build wpscan-analayze from source. Visit https://github.com/lukaspustina/wpscan-analyze for more infos."
+                exit 1
+            fi
+        fi
+        # Download
+        echo "[INFO] Downloading wpscan-analyze ${version} $(uname -m) $(uname) binary"
+        # Get binary file
+        wget --quiet "https://github.com/lukaspustina/wpscan-analyze/releases/download/${version}/${filename}.gz"
+        # Unzip it
+        gzip -d "${filename}.gz"
+        binary_file="/usr/local/bin/wpscan-analyze"
+        # Copy file
+        echo "[INFO] Copying binary from $(pwd)/${filename} to ${binary_file}"
+        cp "${filename}" "${binary_file}"
+        # Make the file executable
+        chmod +x ${binary_file}
+
+    - name: wpscan-analyze Version
+      run: wpscan-analyze --version
     
     - name: Install test dependencies
       run: |        
@@ -44,19 +75,19 @@ jobs:
         pip install codecov
         pip install pytest-cov
 
-    # testing against real WP instance seem very complicated, WIP
+    # testing against real WP instance WIP
     
-    - name: Build and run vulnerable Wordpress image 
-      run: |
-        git clone https://github.com/wpscanteam/VulnerableWordpress
-        cd VulnerableWordpress
-        docker build --rm -t wpscan/vulnerablewordpress .
-        docker run --name vulnerablewordpress -d -p 8080:8080 -p 3306:3306 wpscan/vulnerablewordpress
-        sleep 300
-        cd ..
+    # - name: Build and run vulnerable Wordpress image 
+    #   run: |
+    #     git clone https://github.com/wpscanteam/VulnerableWordpress
+    #     cd VulnerableWordpress
+    #     docker build --rm -t wpscan/vulnerablewordpress .
+    #     docker run --name vulnerablewordpress -d -p 8080:8080 -p 3306:3306 wpscan/vulnerablewordpress
+    #     sleep 300
+    #     cd ..
     
-    - name: Run WPScan on vulnerable testing host
-      run: wpscan --url http://localhost:8080
+    # - name: Run WPScan on vulnerable testing host
+    #   run: wpscan --url http://localhost:8080
 
     - name: Test with pytest
       run: pytest --cov=./ --cov-report=xml
