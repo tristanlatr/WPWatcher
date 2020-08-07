@@ -47,6 +47,7 @@ class T(unittest.TestCase):
                 ],
                 "alerts": [],
                 "fixed": ["This issue was fixed"],
+                "summary":None,
                 "wpscan_output":"This is real%s"%(s)
             }
 
