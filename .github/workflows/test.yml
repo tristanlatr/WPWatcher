@@ -22,7 +22,8 @@ jobs:
 
     - name: Install wpscan-analyze
       run: |
-        echo "PATH $PATH"
+        mkdir -p bin
+        cd bin
         version="v`curl --silent "https://api.github.com/repos/lukaspustina/wpscan-analyze/releases/latest" | grep tag_name | sed -E 's/.*"v(.*)",/\1/'`"
         filename=""
         if [ "$(uname)" = Linux ]; then
@@ -41,12 +42,19 @@ jobs:
         wget --quiet "https://github.com/lukaspustina/wpscan-analyze/releases/download/${version}/${filename}.gz"
         # Unzip it
         gzip -d "${filename}.gz"
-        binary_file="/usr/local/bin/wpscan-analyze"
+
+        # Add PWD to PATH
+        PATH="$PATH:$(pwd)"
+        echo 'export PATH="$PATH:$(pwd)"' >> ~/.bash_profile
+        echo "PATH $PATH"
+        binary_file="$(pwd)/wpscan-analyze"
         # Copy file
         echo "[INFO] Copying binary from $(pwd)/${filename} to ${binary_file}"
         cp "${filename}" "${binary_file}"
+        
         # Make the file executable
         chmod +x ${binary_file}
+        source ~/.bash_profile
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
