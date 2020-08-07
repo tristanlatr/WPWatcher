@@ -19,6 +19,7 @@
 ## Features
   - Scan multiple sites with WPScan
   - Parse WPScan output and divide the results in "Alerts", "Warnings", "Informations" and eventually "Errors"
+  - Additionnal alerts depending of finding type (SQL dump, etc.)  
   - Keep track of fixed issues
   - Handled VulnDB API limit
   - Define reporting emails addresses for every configured site individually and globally
@@ -41,7 +42,7 @@
 ```bash
 python3 -m pip install wpwatcher
 ```
-**NEW**  
+**NEW** 🔥  
 **Install [wpscan-analyze](https://github.com/lukaspustina/wpscan-analyze) to include a table summary of all plugins versions and vulnerabilities in emails.**
 
 #####  Update

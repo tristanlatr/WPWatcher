@@ -13,6 +13,7 @@ import shlex
 import subprocess
 import shutil
 import traceback
+import tempfile
 import multiprocessing
 import multiprocessing.pool
 from datetime import timedelta, datetime
@@ -129,7 +130,7 @@ class WPWatcherScanner():
                     output=output.decode("latin1")
                     stderr=stderr.decode('latin1')
             if not process.returncode in [0, 11, 12, 13]:
-                err="There is an issue with wpscan-analyze. Output: \n"+output+"\n"+stderr
+                err="There is an issue with wpscan-analyze (Exit code not in [0, 11, 12, 13]). Output: \n"+output+"\n"+stderr
                 log.error(err)
                 raise RuntimeError(err)
                 
@@ -138,6 +139,22 @@ class WPWatcherScanner():
             return None
         # Return wpscan-analyze output
         return(output.strip())
+    
+    # Run wpscan-analyze
+    def get_wpscan_analyze_table(self, wp_report):
+        vuln_summary_table=None
+        if self.wpscan_analyze_path and "json" in self.wpscan_args and wp_report['status']!='ERROR':
+            try:
+                with tempfile.NamedTemporaryFile('wb') as write_tmp_scan :
+                    filename=write_tmp_scan.name
+                    self._write_wpscan_output(wp_report, write_tmp_scan)
+                    analyzer_table=self.wpscan_analyze("--output-detail", "all", "-f", filename)
+                    vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', analyzer_table).replace("(B[m", "")
+                
+                return vuln_summary_table if vuln_summary_table else None
+            except RuntimeError:
+                self.check_fail_fast()
+        return None
 
     def update_report(self, wp_report, last_wp_report, wp_site):
         '''Update new report considering last report:  
@@ -155,12 +172,11 @@ class WPWatcherScanner():
                 wp_report['last_email']=last_wp_report['last_email']
     
     @staticmethod
-    def _write_wpscan_output(wp_report, filename):
+    def _write_wpscan_output(wp_report, fpwpout):
         '''Helper method to write output to file'''
         nocolor_output=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output'])
-        with open(filename, 'wb') as wpout:
-            try: wpout.write(nocolor_output.encode('utf-8'))
-            except UnicodeEncodeError: wpout.write(nocolor_output.encode('latin1'))
+        try: fpwpout.write(nocolor_output.encode('utf-8'))
+        except UnicodeEncodeError: fpwpout.write(nocolor_output.encode('latin1'))
 
     def write_wpscan_output(self, wp_report):
         '''Write WPScan output to configured place with `wpscan_output_folder` or return None
@@ -172,7 +188,8 @@ class WPWatcherScanner():
         if self.wpscan_output_folder :
             wpscan_results_file=os.path.join(self.wpscan_output_folder, folder , 
                 get_valid_filename('WPScan_output_%s_%s.txt' % (wp_report['site'], wp_report['datetime'])))
-            self._write_wpscan_output(wp_report, wpscan_results_file)
+            with open(wpscan_results_file, 'wb') as wpout:
+                self._write_wpscan_output(wp_report, wpout)
         return(wpscan_results_file)
 
     def get_fixed_issues(self, wp_report, last_wp_report, wp_site, issue_type='alerts'):
@@ -370,20 +387,9 @@ class WPWatcherScanner():
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
-
-        # Run wpscan-analyze
-        if self.wpscan_analyze_path and "json" in self.wpscan_args and wp_report['status']!='ERROR':
-            try:
-                filename=wpscan_results_file=os.path.join("/tmp/",
-                    get_valid_filename('WPScan_output_%s_%s.json' % (wp_report['site'], wp_report['datetime'])))
-                self._write_wpscan_output(wp_report, filename)
-                vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', self.wpscan_analyze("--output-detail", "all", "-f", filename)).replace("(B[m", "")
-                if vuln_summary_table:
-                    wp_report['summary']=vuln_summary_table
-                os.remove(filename)
-            except RuntimeError:
-                self.check_fail_fast()
-
+        
+        # Get wpscan-analyze table
+        wp_report['summary']=self.get_wpscan_analyze_table(wp_report)
         # Notify recepients if match triggers
         try:
             if self.mail.notify(wp_site, wp_report, last_wp_report):
