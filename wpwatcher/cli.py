@@ -90,6 +90,7 @@ class WPWatcherCLI():
         parser.add_argument('--send_infos', '--infos', help="Email INFO reports", action='store_true')
         parser.add_argument('--send_errors', '--errors', help="Email ERROR reports", action='store_true')
         parser.add_argument('--attach_wpscan_output', '--attach', help="Attach WPScan output to emails", action='store_true')
+        parser.add_argument('--use_monospace_font','--monospace',  help="Use Courrier New monospaced font in emails", action='store_true')
         parser.add_argument('--fail_fast', '--ff', help="Interrupt scans if any WPScan or sendmail failure", action='store_true')
         parser.add_argument('--api_limit_wait', '--wait', help="Sleep 24h if API limit reached", action='store_true')
         parser.add_argument('--daemon',  help="Loop and scan for ever", action='store_true')
