@@ -149,6 +149,7 @@ email_to=["you@domain"]
 # attach_wpscan_output=Yes
 # resend_emails_after=5d
 # email_errors_to=["admins@domain"]
+# use_monospace_font=Yes
 
 # Email server settings
 from_email=WordPressWatcher@domain.com
@@ -157,7 +158,6 @@ smtp_auth=Yes
 smtp_user=me@domain
 smtp_pass=P@assw0rd
 smtp_ssl=Yes
-use_monospace_font=Yes
 
 # Sleep when API limit reached (--wait)
 # api_limit_wait=Yes
@@ -224,7 +224,7 @@ use_monospace_font=Yes
         'wpscan_output_folder':'',
         'scan_timeout':'15m',
         'wpscan_analyze_path':'',
-        'use_monospace_font':'Yes'
+        'use_monospace_font':'No'
     }
 
     @staticmethod
