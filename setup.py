@@ -6,10 +6,7 @@ if sys.version_info[0] < 3:
     raise EnvironmentError("Sorry, you must use Python 3")
 # The directory containing this file
 import pathlib
-import urllib
-import tempfile
 import os
-import stat
 HERE = pathlib.Path(__file__).parent
 # Helper method that will parse wpwatcher.py to extract config setup values
 def parse_setup(key):
