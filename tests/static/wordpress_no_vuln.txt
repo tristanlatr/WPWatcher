@@ -1,0 +1,85 @@
+[+] URL: http://wp.exemple.com [68.66.248.36]
+[+] Effective URL: https://wp.exemple.com
+[+] Started: Wed Apr 22 14:57:54 2020
+
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entries:
+ |  - Server: Apache
+ |  - X-Powered-By: PHP/5.6.40
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: https://wp.exemple.comxmlrpc.php
+ | Found By: Link Tag (Passive Detection)
+ | Confidence: 30%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access
+
+[+] WordPress version 5.2.5 identified (Latest, released on 2019-12-12).
+ | Found By: Rss Generator (Passive Detection)
+ |  - https://wp.exemple.comfeed/, <generator>https://wordpress.org/?v=5.2.5</generator>
+ |  - https://wp.exemple.comcomments/feed/, <generator>https://wordpress.org/?v=5.2.5</generator>
+
+[+] WordPress theme in use: xtreme
+ | Location: http://wp.exemple.comwp-content/themes/xtreme/
+ | Style URL: http://wp.exemple.comwp-content/themes/xtreme/style.css
+ | Style Name: Xtreme
+ | Author: Guru
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | Version: 1.0.1 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://wp.exemple.comwp-content/themes/xtreme/style.css, Match: 'Version: 1.0.1'
+
+[+] Enumerating All Plugins (via Passive Methods)
+[+] Checking Plugin Versions (via Passive Methods)
+
+[i] Plugin(s) Identified:
+
+[+] revslider
+ | Location: http://wp.exemple.comwp-content/plugins/revslider/
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By:
+ |  Urls In 404 Page (Passive Detection)
+ |  Meta Generator (Passive Detection)
+ |
+ | Version: 5.1.5 (90% confidence)
+ | Found By: Meta Generator (Passive Detection)
+ |  - https://wp.exemple.com, Match: 'Powered by Slider Revolution 5.1.5'
+ | Confirmed By: Query Parameter (Passive Detection)
+ |  - https://wp.exemple.comwp-content/plugins/revslider/public/assets/css/settings.css?ver=5.1.5
+ |  - https://wp.exemple.comwp-content/plugins/revslider/public/assets/js/jquery.themepunch.tools.min.js?ver=5.1.5
+ |  - https://wp.exemple.comwp-content/plugins/revslider/public/assets/js/jquery.themepunch.revolution.min.js?ver=5.1.5
+
+[+] wordpress-seo-premium
+ | Location: http://wp.exemple.comwp-content/plugins/wordpress-seo-premium/
+ |
+ | Found By: Comment (Passive Detection)
+ |
+ | Version: 4.7 (60% confidence)
+ | Found By: Comment (Passive Detection)
+ |  - https://wp.exemple.com, Match: 'optimized with the Yoast SEO Premium plugin v4.7 -'
+
+[+] Enumerating Config Backups (via Passive Methods)
+
+[i] No Config Backups Found.
+
+[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.
+[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+
+[+] Finished: Wed Apr 22 14:58:24 2020
+[+] Requests Done: 8
+[+] Cached Requests: 3
+[+] Data Sent: 2.686 KB
+[+] Data Received: 215.532 KB
+[+] Memory used: 198.023 MB
+[+] Elapsed time: 00:00:29

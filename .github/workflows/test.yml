@@ -1,0 +1,83 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: test
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    # - name: Setup Rust environment
+    #   uses: raftario/setup-rust-action@v1.0.0
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Set up Ruby
+      uses: actions/setup-ruby@v1
+      with:
+        ruby-version: '2.6'
+    
+    - name: Display Python version
+      run: python --version
+      
+    - name: Display Ruby version
+      run: ruby --version
+    
+    # - name: Install wpscan-analyze
+    #   run: |
+    #     git clone https://github.com/lukaspustina/wpscan-analyze.git
+    #     cd wpscan-analyze
+    #     cargo install --path .
+    #     cd ..
+    #     wpscan-analyze --version
+
+    - name: Install WPScan
+      run: gem install wpscan
+    
+    - name: Install test dependencies
+      run: |        
+        pip install pytest
+        pip install codecov
+        pip install pytest-cov
+
+    # testing against real WP instance WIP
+    
+    # - name: Build and run vulnerable Wordpress image 
+    #   run: |
+    #     git clone https://github.com/wpscanteam/VulnerableWordpress
+    #     cd VulnerableWordpress
+    #     docker build --rm -t wpscan/vulnerablewordpress .
+    #     docker run --name vulnerablewordpress -d -p 8080:8080 -p 3306:3306 wpscan/vulnerablewordpress
+    #     sleep 300
+    #     cd ..
+    
+    # - name: Run WPScan on vulnerable testing host
+    #   run: wpscan --url http://localhost:8080
+
+    - name: Test with pytest
+      run: pytest --cov=./ --cov-report=xml
+    
+    - name: Upload code coverage
+      uses: codecov/codecov-action@v1
+      with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          name: wpwatcher-code-coverage
+          yml: ./codecov.yml 
+          fail_ci_if_error: true
