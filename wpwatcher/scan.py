@@ -335,7 +335,7 @@ class WPWatcherScanner():
         self.update_report(wp_report, last_wp_report, wp_site)
         
         # Get table if JSON
-        if 'json' in self.wpscan_args:
+        if 'json' in self.wpscan_args and wp_report['status']!='ERROR':
             try:
                 json_parser=WPScanJsonParser(json.loads(wp_report['wpscan_output']))
                 wp_report['summary']=json_parser.get_summary_html()
