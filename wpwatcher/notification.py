@@ -90,7 +90,7 @@ class WPWatcherNotification():
         # Email body
         body=self.build_message(wp_report, 
             warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
-            infos=self.send_infos, html=True )
+            infos=self.send_infos)
         body = replace(body, {'\n':'\n<br/>', '\t':'\t&nbsp;&nbsp;&nbsp;&nbsp;', ' ':'&nbsp;'})
         if self.use_monospace_font:    
             body = '<b><font face="Courier New, Courier, monospace" size="-1">'+body+'</font></b>'
@@ -184,7 +184,7 @@ class WPWatcherNotification():
 
 
     @staticmethod
-    def build_message(wp_report, warnings=True, infos=False, html=False):
+    def build_message(wp_report, warnings=True, infos=False):
         '''Build mail message text base on report and warnngs and info switch'''
         
         message="WordPress security scan report for site: %s\n" % (wp_report['site'])
@@ -195,9 +195,7 @@ class WPWatcherNotification():
         elif wp_report['warnings']: message += "\nIssues have been detected by WPScan."
         if wp_report['fixed']: message += "\nSome issues have been fixed since last scan."
 
-        if wp_report['summary_html'] and html:
-            message += WPWatcherNotification.format_issues('Summary',[wp_report['summary_html']])
-        elif wp_report['summary']:
+        if wp_report['summary']:
             message += WPWatcherNotification.format_issues('Summary',[wp_report['summary']])
 
         message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])

@@ -338,8 +338,7 @@ class WPWatcherScanner():
         if 'json' in self.wpscan_args:
             try:
                 json_parser=WPScanJsonParser(json.loads(wp_report['wpscan_output']))
-                wp_report['summary']=json_parser.get_summary_ascii_table()
-                wp_report['summary_html']=json_parser.get_summary_html()
+                wp_report['summary']=json_parser.get_summary_html()
             except Exception as err:
                 log.error(err)
                 self.check_fail_fast()
