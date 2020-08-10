@@ -345,6 +345,8 @@ class WPWatcherScanner():
 
         # Notify recepients if match triggers
         try:
+            # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
+            log.debug("%s\n"%(WPWatcherNotification.build_message(wp_report, warnings=True, infos=True)))
             if self.mail.notify(wp_site, wp_report, last_wp_report):
                 # Store report time
                 wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
