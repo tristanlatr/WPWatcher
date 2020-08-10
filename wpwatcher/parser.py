@@ -121,7 +121,7 @@ class CoreFinding(ABC):
         except AttributeError:
             return None
 
-class SimpleFinding(CoreFinding):
+class CoreFindingNoVersion(CoreFinding):
     def get_version(self):
         return "N/A"
     def get_version_status(self):
@@ -826,7 +826,7 @@ class Timthumb(Finding, CoreFinding):
     def should_display_in_summary(self):
         return True
 
-class DBExport(Finding, SimpleFinding):
+class DBExport(Finding, CoreFindingNoVersion):
     
     def __init__(self, url, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb"""
@@ -892,7 +892,7 @@ class User(Finding):
         else:
             return []
 
-class PasswordAttack(Component, SimpleFinding):
+class PasswordAttack(Component, CoreFindingNoVersion):
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb"""
@@ -926,7 +926,7 @@ class PasswordAttack(Component, SimpleFinding):
     def should_display_in_summary(self):
         return True if self.get_alerts() else False if not self.show_all_details else True
 
-class NotFullyConfigured(Component, SimpleFinding):
+class NotFullyConfigured(Component, CoreFindingNoVersion):
 
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/not_fully_configured.erb"""
@@ -976,7 +976,7 @@ class Media(Finding):
         """Return empty list"""
         return []
 
-class ConfigBackup(Finding, SimpleFinding):
+class ConfigBackup(Finding, CoreFindingNoVersion):
 
     def __init__(self, url, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/config_backups.erb"""
