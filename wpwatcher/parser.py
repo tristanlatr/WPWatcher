@@ -284,7 +284,7 @@ class WPScanJsonParser(Component):
         table_rows=""
         for row in self.get_summary_list():
             table_rows+=copy.deepcopy(row_fmt).format(row['Component'], row['Version'], row['Version State'], row['Vulnerabilities'], row['Status'])
-        return ('''<table><tr><th>Component</th><th>Version</th><th>Version State</th><th>Vulnerabilities</th><th>Status</th></tr>{}</table>'''.format(table_rows))
+        return ('''<table><tr><th>Component</th><th>Version</th><th>Version State</th><th>Vulnerabilities</th><th>Status</th></tr>{}</table><br/>{}'''.format(table_rows, self.get_summary_string()))
 
 class Finding(Component):
     def __init__(self, data): 
