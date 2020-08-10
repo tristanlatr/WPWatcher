@@ -14,12 +14,13 @@ import subprocess
 import shutil
 import traceback
 import tempfile
+import json
 import multiprocessing
 import multiprocessing.pool
 from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
-from wpwatcher.parser import parse_results, is_false_positive
+from wpwatcher.parser import parse_results, is_false_positive, WPScanJsonParser
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.config import WPWatcherConfig
@@ -108,53 +109,6 @@ class WPWatcherScanner():
             time.sleep(0.05)
         
     # Scan process
-
-    # Helper method: wraps wpscan-analyze
-    def wpscan_analyze(self, *args):
-        # wpscan-analyze arguments
-        cmd= shlex.split(self.wpscan_analyze_path) + list(args)
-        # Log wpscan-analyze command
-        log.debug("Running wpscan-analyze command: %s" % ' '.join(cmd) )
-        # Run wpscan-analyze
-        try:
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            output, stderr  = process.communicate()
-            try:
-                output=output.decode("ascii")
-                stderr=stderr.decode('ascii')
-            except UnicodeDecodeError: 
-                try: 
-                    output=output.decode("utf-8")
-                    stderr=stderr.decode('utf-8')
-                except UnicodeDecodeError: 
-                    output=output.decode("latin1")
-                    stderr=stderr.decode('latin1')
-            if not process.returncode in [0, 11, 12, 13]:
-                err="There is an issue with wpscan-analyze (Exit code not in [0, 11, 12, 13]). Output: \n"+output+"\n"+stderr
-                log.error(err)
-                raise RuntimeError(err)
-                
-        except FileNotFoundError:
-            log.info("Could not find wpscan-analyze executale. Make sure wpscan-analyze is in your PATH or configure full path to executable in config file.")
-            return None
-        # Return wpscan-analyze output
-        return(output.strip())
-    
-    # Run wpscan-analyze
-    def get_wpscan_analyze_table(self, wp_report):
-        vuln_summary_table=None
-        if self.wpscan_analyze_path and "json" in self.wpscan_args and wp_report['status']!='ERROR':
-            try:
-                with tempfile.NamedTemporaryFile('wb') as write_tmp_scan :
-                    filename=write_tmp_scan.name
-                    self._write_wpscan_output(wp_report, write_tmp_scan)
-                    analyzer_table=self.wpscan_analyze("--output-detail", "all", "-f", filename)
-                    vuln_summary_table=re.sub(r'(\x1b|\[[0-9][0-9]?m)','', analyzer_table).replace("(B[m", "")
-                
-                return vuln_summary_table if vuln_summary_table else None
-            except RuntimeError:
-                self.check_fail_fast()
-        return None
 
     def update_report(self, wp_report, last_wp_report, wp_site):
         '''Update new report considering last report:  
@@ -388,8 +342,15 @@ class WPWatcherScanner():
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
         
-        # Get wpscan-analyze table
-        wp_report['summary']=self.get_wpscan_analyze_table(wp_report)
+        # Get table if JSON
+        if 'json' in self.wpscan_args:
+            try:
+                json_parser=WPScanJsonParser(json.loads(wp_report['wpscan_output']))
+                wp_report['summary']=json_parser.get_summary_acsii_table()
+            except Exception as err:
+                log.error(err)
+                self.check_fail_fast()
+
         # Notify recepients if match triggers
         try:
             if self.mail.notify(wp_site, wp_report, last_wp_report):

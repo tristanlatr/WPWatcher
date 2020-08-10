@@ -22,7 +22,7 @@ class PostInstallCommand(install):
     def run(self):
         install.run(self)
         # PUT YOUR POST-INSTALL SCRIPT HERE or CALL A FUNCTION
-        os.system('sh -c "$(curl -sSL https://raw.githubusercontent.com/lukaspustina/wpscan-analyze/master/install.sh)"')
+        # os.system('sh -c "$(curl -sSL https://raw.githubusercontent.com/lukaspustina/wpscan-analyze/master/install.sh)"')
         print()
         print("Done installing WPWatcher")
 

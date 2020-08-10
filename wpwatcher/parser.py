@@ -41,6 +41,7 @@ Ressource PArsing CLI output:
 
 import json
 import re
+import copy
 from abc import ABC, abstractmethod
 
 def parse_results(wpscan_output, false_positives_strings=[]):
@@ -58,15 +59,31 @@ def parse_results(wpscan_output, false_positives_strings=[]):
         (messages, warnings, alerts)=parse_cli(wpscan_output, false_positives_strings)
     return (messages, warnings, alerts) 
 
-
 ########################  JSON PARSING ######################
 
-
 class Component(ABC):
-    def __init__(self, data): 
+
+    false_positives_strings=None
+    show_all_details=False
+
+    def __init__(self, data, false_positives_strings=None, show_all_details=False): 
         """Base abstract class for all WPScan JSON components"""
         if not data: data={}
         self.data=data
+        if false_positives_strings:
+            self.false_positives_strings=false_positives_strings
+        if show_all_details:
+            self.show_all_details=True
+
+    @classmethod
+    def is_false_positive(cls, string):
+        """False Positive Detection"""
+        if not cls.false_positives_strings:
+            return False
+        for fp_string in cls.false_positives_strings:
+            if fp_string in string:
+                return True
+        return False
 
     @abstractmethod
     def get_infos(self):
@@ -80,54 +97,94 @@ class Component(ABC):
     def get_alerts(self):
         pass
 
+class CoreFinding(ABC):
+    @abstractmethod
+    def get_version(self):
+        pass
+    @abstractmethod
+    def get_version_status(self):
+        pass
+    @abstractmethod
+    def get_vulnerabilities_string(self):
+        pass
+
+    @abstractmethod
+    def get_name(self):
+        pass
+    @abstractmethod
+    def should_display_in_summary(self):
+        pass
+
+    def get_status(self):
+        try:
+            return 'Alert' if self.get_alerts() else 'Warning' if self.get_warnings() else 'Ok'
+        except AttributeError:
+            return None
+
+class SimpleFinding(CoreFinding):
+    def get_version(self):
+        return "N/A"
+    def get_version_status(self):
+        return "N/A"
+    def get_vulnerabilities_string(self):
+        return ''
+
 class WPScanJsonParser(Component):
     
-    def __init__(self, data, false_positives_strings=None):
+    def __init__(self, data, false_positives_strings=None, show_all_details=False):
         """Main interface to parse WPScan JSON data"""
         if not data: data={}
-        super().__init__(data)
-
-        self.false_positives_strings=false_positives_strings if false_positives_strings else []
+        super().__init__(data, false_positives_strings, show_all_details)
         self.components=[]
-        # Add WPVersion
-        if data.get('version', None):
-            self.components.append(WPVersion(data.get('version')))
+        # Add WordPressVersion
+        self.version=WordPressVersion(data.get('version', None))
         # Add MainTheme
-        main_theme=None
-        if data.get('main_theme', None):
-            main_theme=MainTheme(data.get('main_theme'))
-            self.components.append(main_theme)
+        self.main_theme=MainTheme(data.get('main_theme', None))
         # Add Plugins
-        self.components.extend([Plugin(data.get('plugins').get(slug)) for slug in data.get('plugins', {})])
+        self.plugins=[Plugin(data.get('plugins').get(slug)) for slug in data.get('plugins', {})]
         # Add Themes ; Make sure the main theme is not displayed twice
-        self.components.extend([Theme(data.get('themes').get(slug)) for slug in data.get('themes', {}) if not main_theme or slug!=main_theme.slug])
+        self.themes=[Theme(data.get('themes').get(slug)) for slug in data.get('themes', {}) if not self.main_theme or slug!=self.main_theme.slug]
         # Add Interesting findings
-        self.components.extend([InterestingFinding(finding) for finding in data.get('interesting_findings', [])])
+        self.interesting_finding=[InterestingFinding(finding) for finding in data.get('interesting_findings', [])]
         # Add Timthumbs
-        self.components.extend([Timthumb(url, data.get('timthumbs').get(url)) for url in data.get('timthumbs', {})])
+        self.timthumbs=[Timthumb(url, data.get('timthumbs').get(url)) for url in data.get('timthumbs', {})]
         # Add DBExport
-        self.components.extend([DBExport(url, data.get('db_exports').get(url)) for url in data.get('db_exports', {})])
+        self.db_exports=[DBExport(url, data.get('db_exports').get(url)) for url in data.get('db_exports', {})]
         # Add Users
-        self.components.extend([User(url, data.get('users').get(url)) for url in data.get('users', {})])
+        self.users=[User(url, data.get('users').get(url)) for url in data.get('users', {})]
+        # Add Medias
+        self.medias=[Media(url, data.get('medias').get(url)) for url in data.get('medias', {})]
+        # Add Config backups
+        self.config_backups=[ConfigBackup(url, data.get('config_backups').get(url)) for url in data.get('config_backups', {})]
+        # Add VulnAPI 
+        self.vuln_api=VulnAPI(data.get('vuln_api', {}))
         # Add Password attack
         if data.get('password_attack', None):
-            self.components.append(PasswordAttack(data.get('password_attack')))
+            self.password_attack=PasswordAttack(data.get('password_attack'))
+        else: 
+            self.password_attack=None
         # Add Not fully configured
         if data.get('not_fully_configured', None):
-            self.components.append(NotFullyConfigured(data.get('not_fully_configured')))
-        # Add Medias
-        self.components.extend([Media(url, data.get('medias').get(url)) for url in data.get('medias', {})])
-        # Add Config backups
-        self.components.extend([ConfigBackup(url, data.get('config_backups').get(url)) for url in data.get('config_backups', {})])
-        # Add VulnAPI 
-        self.components.append(VulnAPI(data.get('vuln_api', {})))
+            self.not_fully_configured=NotFullyConfigured(data.get('not_fully_configured'))
+        else:
+            self.not_fully_configured=None
         # Add 
         if data.get('banner', None):
-            self.components.append(Banner(data.get('banner')))
+            self.banner=Banner(data.get('banner'))
+        else:
+            self.banner=None
         # Add ScanStarted
-        self.components.append(ScanStarted(data))
+        self.scan_started=ScanStarted(data)
         # Add ScanFinished
-        self.components.append(ScanFinished(data))
+        self.scan_finished=ScanFinished(data)
+
+        # All all components to list
+        self.components = [ c for c in [self.version, self.main_theme] + \
+                            self.plugins + self.themes + \
+                            self.interesting_finding + [self.password_attack, self.not_fully_configured] + \
+                            self.timthumbs + self.db_exports + \
+                            self.users + self.medias + \
+                            self.config_backups + [self.vuln_api, self.banner, self.scan_started, self.scan_finished] if c ]
 
     def get_infos(self):
         """Add false positives as infos with "[False positive]" prefix"""
@@ -136,7 +193,7 @@ class WPScanJsonParser(Component):
             infos.extend(component.get_infos())
 
             # If all vulns are ignored, add component message to infos
-            component_warnings=[ warning for warning in component.get_warnings() if not self.is_false_positive(warning, self.false_positives_strings) ]
+            component_warnings=[ warning for warning in component.get_warnings() if not self.is_false_positive(warning) ]
             # Automatically add wp item infos if all vuln are ignored and component does not present another issue
             if ( len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0] 
                 and not "Directory listing is enabled" in component_warnings[0] 
@@ -144,7 +201,7 @@ class WPScanJsonParser(Component):
                 infos.extend(component_warnings)
 
             for alert in component.get_alerts()+component.get_warnings():
-                if self.is_false_positive(alert, self.false_positives_strings):
+                if self.is_false_positive(alert):
                     infos.append("[False positive]\n"+alert)
 
         return infos
@@ -154,7 +211,7 @@ class WPScanJsonParser(Component):
         warnings=[]
         for component in self.components:
             # Ignore false positives warnings
-            component_warnings=[ warning for warning in component.get_warnings() if not self.is_false_positive(warning, self.false_positives_strings) ]
+            component_warnings=[ warning for warning in component.get_warnings() if not self.is_false_positive(warning) ]
             # Automatically remove wp item warning if all vuln are ignored and component does not present another issue
             if ( len(component_warnings)==1 and 'The version could not be determined' in component_warnings[0] 
                 and not "Directory listing is enabled" in component_warnings[0] 
@@ -169,15 +226,83 @@ class WPScanJsonParser(Component):
         """Igore false positives"""
         alerts=[]
         for component in self.components:
-            alerts.extend([ alert for alert in component.get_alerts() if not self.is_false_positive(alert, self.false_positives_strings) ])
+            alerts.extend([ alert for alert in component.get_alerts() if not self.is_false_positive(alert) ])
         return alerts
 
-    @staticmethod
-    def is_false_positive(string, false_positives_strings):
-        """False Positive Detection"""
-        for fp_string in false_positives_strings:
-            if fp_string in string:
-                return True
+    def get_core_components(self):
+        core=[]
+        for component in self.components:
+            if isinstance(component, CoreFinding):
+                core.append(component)
+        return core
+
+    def get_summary_list(self):
+        """Return a nice list of dict with all plugins, vuls, and statuses"""
+        summary=[]
+        for component in self.get_core_components():
+            row={
+                'Component': component.get_name(),
+                'Version': component.get_version(),
+                'Version State': component.get_version_status(),
+                'Vulnerabilities': component.get_vulnerabilities_string(),
+                'Status': component.get_status()
+            }
+            summary.append(row)
+        return summary
+
+    def get_summary_ascii_table(self):
+        """ Pretty print a list of dictionaries (myDict) as a dynamically sized table.
+        If column names (colList) aren't specified, they will show in random order.
+        Author: Thierry Husson - Use it as you want but don't blame me.
+        """
+        myDict=self.get_summary_list()
+        colList = ['Component', 'Version', 'Version State', 'Vulnerabilities', 'Status']
+        myList = [colList] # 1st row = header
+        for item in myDict: myList.append([str(item[col] if item[col] is not None else '') for col in colList])
+        colSize = [max(map(len,col)) for col in zip(*myList)]
+        formatStr = ' | '.join(["{{:<{}}}".format(i) for i in colSize])
+        myList.insert(1, ['-' * i for i in colSize]) # Seperating line
+        string='\n'.join(formatStr.format(*item) for item in myList)
+        return string+'\n\n'+self.get_summary_string()
+
+    def get_summary_string(self):
+        """Return the summary string in one line"""
+        nb_alerts=0
+        nb_warnings=0
+        nb_ok=0
+        for c in self.get_core_components():
+            if c.get_alerts():
+                nb_alerts+=len(c.get_alerts())
+            elif c.get_warnings():
+                nb_warnings+=len(c.get_warnings())
+            else:
+                nb_ok+=1
+        return 'WPScan result summary: alerts={}, warnings={}, ok={}'.format(nb_alerts, nb_warnings, nb_ok)
+
+    def get_summary_html(self):
+        row_fmt  = '''
+        <tr>
+            <td>{}</td>
+            <td>{}</td>
+            <td>{}</td>
+            <td>{}</td>
+            <td>{}</td>
+        </tr>'''
+
+        table_rows=""
+        for row in self.get_summary_list():
+            table_rows+=copy.deepcopy(row_fmt).format(row['Component'], row['Version'], row['Version State'], row['Vulnerabilities'], row['Status'])
+
+        return ('''<table> 
+            <tr>
+                <th>Component</th>
+                <th>Version</th> 
+                <th>Version State</th>
+                <th>Vulnerabilities</th>
+                <th>Status</th>
+            </tr>
+            {}
+        </table>'''.format(table_rows))
 
 class Finding(Component):
     def __init__(self, data): 
@@ -204,19 +329,20 @@ class Finding(Component):
         info=""
         if self.interesting_entries: 
             info+="Interesting entries: \n- {}".format('\n- '.join(self.interesting_entries))
-                            # if self.found_by: 
-                            #     info+="Found by: {} ".format(self.found_by)
-                            # if self.confidence: 
-                            #     info+="(confidence: {})".format(self.confidence)
-                            # info+="\n"
-                            # if self.confirmed_by: 
-                            #     info+="\nConfirmed by: "
-                            #     for entry in self.confirmed_by:
-                            #         info+="\n- {} ".format(entry)
-                            #         if self.confirmed_by[entry].get('confidence', None): 
-                            #             info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
-                            #         if self.confirmed_by.get("interesting_entries", None):
-                            #             info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
+        if self.show_all_details:
+            if self.found_by: 
+                info+="Found by: {} ".format(self.found_by)
+            if self.confidence: 
+                info+="(confidence: {})".format(self.confidence)
+            info+="\n"
+            if self.confirmed_by: 
+                info+="\nConfirmed by: "
+                for entry in self.confirmed_by:
+                    info+="\n- {} ".format(entry)
+                    if self.confirmed_by[entry].get('confidence', None): 
+                        info+="(confidence: {})".format(self.confirmed_by[entry]['confidence'])
+                    if self.confirmed_by.get("interesting_entries", None):
+                        info+="\n  Interesting entries: \n  - {}".format('\n  - '.join(self.confirmed_by.get("interesting_entries")))
         return [info]
 
     def get_references_str(self):
@@ -326,14 +452,14 @@ class InterestingFinding(Finding):
         return [ info for info in self._get_infos() if not any([string in info for string in self.INTERESTING_FINDING_WARNING_STRINGS+self.INTERESTING_FINDING_ALERT_STRINGS]) ]
 
     def get_warnings(self):
-        """Return empty list"""
+        """Return list of warnings if finding match warning string"""
         return [ info for info in self._get_infos() if any([string in info for string in self.INTERESTING_FINDING_WARNING_STRINGS]) ]
 
     def get_alerts(self):
-        """Return empty list"""
+        """Return list of alerts if finding match ALERT string"""
         return [ info for info in self._get_infos() if any([string in info for string in self.INTERESTING_FINDING_ALERT_STRINGS]) ]
 
-class WPVersion(Finding):
+class WordPressVersion(Finding, CoreFinding):
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_version/version.erb"""
@@ -351,17 +477,18 @@ class WPVersion(Finding):
                 info+=" (up to date)"
             if self.release_date:
                 info+="\nRelease Date: {}".format(self.release_date)
+            # Not showing "Status: "
             # if self.status:
             #     info+="\nStatus: {}".format(self.status.title())  
         else:
             info="The WordPress version could not be detected"
-        # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        # If finding infos are present and show_all_details, add them
+        if super().get_infos()[0] and self.show_all_details:
+            info+="\n{}".format(super().get_infos()[0])
         return [info]
 
     def get_infos(self):
-        """Return 0 or 1 info, no infos if WPVersion triggedred warning, use get_warnings()"""
+        """Return 0 or 1 info, no infos if WordPressVersion triggedred warning, use get_warnings()"""
         if not self.get_warnings():
             return self._get_infos() 
         else:
@@ -371,7 +498,7 @@ class WPVersion(Finding):
         """Return 0 or 1 warning"""
        
         if self.status=="insecure":
-            warning="Insecure "
+            warning="Outdated "
             warning+=self._get_infos()[0]
             return [warning]
         else:
@@ -380,6 +507,30 @@ class WPVersion(Finding):
     def get_alerts(self):
         """Return Wordpress Version vulnerabilities"""
         return [ "Wordpress {}".format(alert) for alert in super().get_alerts() ]
+    
+    def get_version(self):
+        """Return the version string or 'Unknown'"""
+        return self.number if self.number else 'Unknown'
+
+    def get_version_status(self):
+        if self.number:
+            if self.status=="insecure":
+                return "Outdated"
+            elif self.status=="latest":
+                return "Latest"
+            else:
+                return 'Unknown'
+        else:
+            return 'N/A'
+
+    def get_vulnerabilities_string(self):
+        return '{}'.format(len(self.vulnerabilities) if self.get_version()!='Unknown' else 'N/A')
+
+    def get_name(self):
+        return 'WordPress {} {}'.format(self.get_version(), '({})'.format(self.release_date) if self.show_all_details and self.release_date and self.number else '' )
+
+    def should_display_in_summary(self):
+        return True
 
 class WPItemVersion(Finding):
     
@@ -402,7 +553,7 @@ class WPItemVersion(Finding):
         return []
 
     def get_infos(self):
-        """Return 0 or 1 info. No infos if version cound not be recognized"""
+        """Return 0 or 1 info. No infos if version could not be recognized"""
         if self.number:
             info="Version: {}".format(self.number)
             # If finding infos are present, add them
@@ -412,7 +563,13 @@ class WPItemVersion(Finding):
         else:
             return []
 
-class WPItem(Finding):
+    def get_version(self):
+        if self.get_infos():
+            return self.number
+        else:
+            return "Unknown"
+
+class WPItem(Finding, CoreFinding):
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/wp_item.erb"""
         if not data: data={}
@@ -482,15 +639,16 @@ class WPItem(Finding):
     def _get_infos(self):
         """Return 1 info"""
         info=""
-        # if self.location : 
-        #     info += "Location: {}".format(self.location)
-        # if self.last_updated:
-        #     info += "\nLast Updated: {}".format(self.last_updated)
+        if self.show_all_details:
+            if self.location : 
+                info += "Location: {}".format(self.location)
+            if self.last_updated:
+                info += "\nLast Updated: {}".format(self.last_updated)
         if self.readme_url:
             info += "Readme: {}\n".format(self.readme_url)
         # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        if super().get_infos()[0] and self.show_all_details:
+            info+="\n{}".format(super().get_infos()[0])
         if self.version.get_infos():
             info += self.version.get_infos()[0]
             if self.version.number == self.latest_version:
@@ -511,6 +669,26 @@ class WPItem(Finding):
         else:
             return []
 
+    def get_version(self):
+        return self.version.get_version()
+
+    def get_version_status(self):
+        if self.version.get_infos():
+            if self.outdated:
+                return "Outdated"
+            elif self.version.number == self.latest_version:
+                return "Latest"
+            else:
+                return 'Unknown'
+        else:
+            return 'N/A'
+
+    def get_vulnerabilities_string(self):
+        return '{}{}'.format(len(self.vulnerabilities),' (potential)' if not self.version.get_infos() and super().get_alerts() else '')
+
+    def should_display_in_summary(self):
+        return True
+
 class Plugin(WPItem):
     def __init__(self, data):
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/plugins.erb"""
@@ -526,6 +704,9 @@ class Plugin(WPItem):
         # Adds plugin prefix on all warnings except vulns
         return [ "{}{}".format('Plugin: ' if 'Vulnerability' not in warning.splitlines()[0] else '', warning) 
             for warning in super().get_warnings() ]
+    
+    def get_name(self):
+        return 'Plugin: {}'.format(self.slug)
 
 class Theme(WPItem):
     def __init__(self, data): 
@@ -552,28 +733,29 @@ class Theme(WPItem):
 
         if self.style_url:
             info+="\nStyle CSS: {}".format(self.style_url)
-        # if self.style_name:
-        #     info+="\nStyle Name: {}".format(self.style_name)
+        if self.style_name and self.show_all_details:
+            info+="\nStyle Name: {}".format(self.style_name)
         if self.style_uri:
             info+="\nStyle URI: {}".format(self.style_uri)
-        # if self.description:
-        #     info+="\nDescription: {}".format(self.description)
+        if self.description and self.show_all_details:
+            info+="\nDescription: {}".format(self.description)
         if self.author:
             info+="\nAuthor: {}".format(self.author)
             if self.author_uri:
                 info+=" - {}".format(self.author_uri)
-        # if self.template: 
-        #     info+="\nTemplate: {}".format(self.template)
-        # if self.license:
-        #     info+="\nLicense: {}".format(self.license)
-        # if self.license_uri:
-        #     info+="\nLicense URI: {}".format(self.license_uri)
-        # if self.tags:
-        #     info+="\nTags: {}".format(self.tags)
-        # if self.text_domain:
-        #     info+="\nDomain: {}".format(self.text_domain)
-        # if self.parents:
-        #     info+="\nParent Theme(s): {}".format(', '.join([p.slug for p in self.parents]))
+        if self.show_all_details:
+            if self.template: 
+                info+="\nTemplate: {}".format(self.template)
+            if self.license:
+                info+="\nLicense: {}".format(self.license)
+            if self.license_uri:
+                info+="\nLicense URI: {}".format(self.license_uri)
+            if self.tags:
+                info+="\nTags: {}".format(self.tags)
+            if self.text_domain:
+                info+="\nDomain: {}".format(self.text_domain)
+            if self.parents:
+                info+="\nParent Theme(s): {}".format(', '.join([p.slug for p in self.parents]))
         
         return [info]
 
@@ -587,6 +769,9 @@ class Theme(WPItem):
         """Return theme warnings"""
         return [ "{}{}".format('Theme: ' if 'Vulnerability' not in warning.splitlines()[0] else '', warning) 
             for warning in super().get_warnings() ]
+
+    def get_name(self):
+        return 'Theme: {}'.format(self.slug)
 
 class MainTheme(Theme): 
     
@@ -603,8 +788,11 @@ class MainTheme(Theme):
         """Return Main Theme warnings"""
         return [ "{}{}".format('Main Theme: ' if 'Vulnerability' not in warning.splitlines()[0] else '', warning) 
             for warning in super(Theme, self).get_warnings() ]
+    
+    def get_name(self):
+        return 'Main Theme: {}'.format(self.slug)
 
-class Timthumb(Finding):
+class Timthumb(Finding, CoreFinding):
     
     def __init__(self, url, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/timthumbs.erb"""
@@ -616,9 +804,9 @@ class Timthumb(Finding):
     def get_infos(self):
         """Return 1 info"""
         info="Timthumb: {}".format(self.url)
-        # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        # If finding infos are present and show_all_details, add them
+        if super().get_infos()[0] and self.show_all_details:
+            info+="\n{}".format(super().get_infos()[0])
         if self.version.get_infos():
             info += "\n{}".format(self.version.get_infos()[0])
         else:
@@ -633,7 +821,25 @@ class Timthumb(Finding):
         """Return timthumb vulnerabilities"""
         return [ "Timthumb {}".format(alert) for alert in super().get_alerts()+ self.version.get_alerts() ]
 
-class DBExport(Finding):
+    def get_version(self):
+        return self.version.get_version()
+
+    def get_version_status(self):
+        if self.version.get_infos():
+            return '?'
+        else:
+            return 'N/A'
+
+    def get_vulnerabilities_string(self):
+        return '{}{}'.format(len(self.vulnerabilities),' (potential)' if not self.version.get_infos() and super().get_alerts() else '')
+
+    def get_name(self):
+        return 'Timthumb'
+
+    def should_display_in_summary(self):
+        return True
+
+class DBExport(Finding, SimpleFinding):
     
     def __init__(self, url, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/db_exports.erb"""
@@ -645,8 +851,8 @@ class DBExport(Finding):
         """Return 1 DBExport alert"""
         alert="Database Export: {}".format(self.url)
         # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        if super().get_infos()[0] and self.show_all_details:
+            alert+="\n{}".format(super().get_infos()[0])
         return [alert]
     
     def get_warnings(self):
@@ -656,6 +862,12 @@ class DBExport(Finding):
     def get_infos(self):
         """Return empty list"""
         return []
+
+    def get_name(self):
+        return 'Database Export'
+
+    def should_display_in_summary(self):
+        return True
 
 class User(Finding):
     
@@ -676,8 +888,8 @@ class User(Finding):
         if self.id:
             info+="\nID: {}".format(self.id)
         # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        if super().get_infos()[0] and self.show_all_details:
+            info+="\n{}".format(super().get_infos()[0])
         return [info]
 
     def get_warnings(self):
@@ -693,7 +905,7 @@ class User(Finding):
         else:
             return []
 
-class PasswordAttack(Component):
+class PasswordAttack(Component, SimpleFinding):
     
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/password_attack/users.erb"""
@@ -721,7 +933,13 @@ class PasswordAttack(Component):
         """Return empty list"""
         return []
 
-class NotFullyConfigured(Component):
+    def get_name(self):
+        return 'Password Attack: {} found'.format(len(self.get_alerts()))
+
+    def should_display_in_summary(self):
+        return True if self.get_alerts() else False if not self.show_all_details else True
+
+class NotFullyConfigured(Component, SimpleFinding):
 
     def __init__(self, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/core/not_fully_configured.erb"""
@@ -741,6 +959,12 @@ class NotFullyConfigured(Component):
         """Return empty list"""
         return []
 
+    def get_name(self):
+        return 'Noy fully configured'
+
+    def should_display_in_summary(self):
+        return True
+
 class Media(Finding):
 
     def __init__(self, url, data): 
@@ -753,8 +977,8 @@ class Media(Finding):
         """Return 1 Media info"""
         alert="Media: {}".format(self.url)
         # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        if super().get_infos()[0] and self.show_all_details:
+            info+="\n{}".format(super().get_infos()[0])
         return [alert]
     
     def get_warnings(self):
@@ -765,7 +989,7 @@ class Media(Finding):
         """Return empty list"""
         return []
 
-class ConfigBackup(Finding):
+class ConfigBackup(Finding, SimpleFinding):
 
     def __init__(self, url, data): 
         """From https://github.com/wpscanteam/wpscan/blob/master/app/views/json/enumeration/config_backups.erb"""
@@ -777,8 +1001,8 @@ class ConfigBackup(Finding):
         """Return 1 Config Backup alert"""
         alert="Config Backup: {}".format(self.url)
         # If finding infos are present, add them
-        # if super().get_infos()[0]:
-        #     info+="\n{}".format(super().get_infos()[0])
+        if super().get_infos()[0] and self.show_all_details:
+            alert+="\n{}".format(super().get_infos()[0])
         return [alert]
     
     def get_warnings(self):
@@ -788,6 +1012,12 @@ class ConfigBackup(Finding):
     def get_infos(self):
         """Return empty list"""
         return []
+
+    def get_name(self):
+        return 'Config backup'
+
+    def should_display_in_summary(self):
+        return True
 
 class VulnAPI(Component):
     
@@ -841,9 +1071,10 @@ class Banner(Component):
     def get_infos(self):
         info="Scanned with {}".format(self.description)
         info+='\nVersion: {}'.format(self.version)
-        # info+='\nAuthors: {}'.format(', '.join(self.authors))
-        # if self.sponsor:
-        #     info+='\nSponsor: {}'.format(self.sponsor)
+        if self.show_all_details:
+            info+='\nAuthors: {}'.format(', '.join(self.authors))
+            if self.sponsor:
+                info+='\nSponsor: {}'.format(self.sponsor)
 
         return [info]
 
@@ -874,8 +1105,9 @@ class ScanStarted(Component):
         info='Target URL: {}'.format(self.target_url)
         info+='\nTarget IP: {}'.format(self.target_ip)
         info+='\nEffective URL: {}'.format(self.effective_url)
-        # info+='\nStart Time: {}'.format(self.start_time)
-        # info+='\nStart Memory: {}'.format(self.start_memory)
+        if self.show_all_details:
+            info+='\nStart Time: {}'.format(self.start_time)
+            info+='\nStart Memory: {}'.format(self.start_memory)
 
         return [info]
 
@@ -904,13 +1136,15 @@ class ScanFinished(Component):
 
     def get_infos(self):
         """Return 1 Scan Finished info"""
-        # info+='\nStop Time: {}'.format(self.stop_time)
+        
         info='Scan duration: {} seconds'.format(self.elapsed)
-        # info+='\nRequests Done: {}'.format(self.requests_done)
-        # info+='\nCached Requests: {}'.format(self.cached_requests)
-        # info+='\nData Sent: {}'.format(self.data_sent_humanised)
-        # info+='\nData Received: {}'.format(self.data_received_humanised)
-        # info+='\nUsed Memory: {}'.format(self.used_memory_humanised)
+        if self.show_all_details:
+            info+='\nStop Time: {}'.format(self.stop_time)
+            info+='\nRequests Done: {}'.format(self.requests_done)
+            info+='\nCached Requests: {}'.format(self.cached_requests)
+            info+='\nData Sent: {}'.format(self.data_sent_humanised)
+            info+='\nData Received: {}'.format(self.data_received_humanised)
+            info+='\nUsed Memory: {}'.format(self.used_memory_humanised)
 
         return [info]
 
