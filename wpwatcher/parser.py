@@ -35,7 +35,7 @@ Dradis ruby json Parser
     https://github.com/dradis/dradis-wpscan/blob/master/lib/dradis/plugins/wpscan/importer.rb : 
     No warnings neither but probably the clearest code
 
-Ressource PArsing CLI output:
+Ressource Parsing CLI output:
     List of all icons: https://github.com/wpscanteam/CMSScanner/blob/master/app/formatters/cli.rb
 """
 
@@ -280,29 +280,11 @@ class WPScanJsonParser(Component):
         return 'WPScan result summary: alerts={}, warnings={}, ok={}'.format(nb_alerts, nb_warnings, nb_ok)
 
     def get_summary_html(self):
-        row_fmt  = '''
-        <tr>
-            <td>{}</td>
-            <td>{}</td>
-            <td>{}</td>
-            <td>{}</td>
-            <td>{}</td>
-        </tr>'''
-
+        row_fmt  = '''<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'''
         table_rows=""
         for row in self.get_summary_list():
             table_rows+=copy.deepcopy(row_fmt).format(row['Component'], row['Version'], row['Version State'], row['Vulnerabilities'], row['Status'])
-
-        return ('''<table> 
-            <tr>
-                <th>Component</th>
-                <th>Version</th> 
-                <th>Version State</th>
-                <th>Vulnerabilities</th>
-                <th>Status</th>
-            </tr>
-            {}
-        </table>'''.format(table_rows))
+        return ('''<table><tr><th>Component</th><th>Version</th><th>Version State</th><th>Vulnerabilities</th><th>Status</th></tr>{}</table>'''.format(table_rows))
 
 class Finding(Component):
     def __init__(self, data): 

@@ -92,8 +92,7 @@ class WPWatcherConfig():
             'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
             'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
             'from_email':self.parser.get('wpwatcher','from_email'),
-            'use_monospace_font':self.getbool(self.parser, 'use_monospace_font'),
-            'wpscan_analyze_path':self.parser.get('wpwatcher','wpscan_analyze_path')
+            'use_monospace_font':self.getbool(self.parser, 'use_monospace_font')
         }
         return ((config_dict, self.files))
     
@@ -187,8 +186,6 @@ smtp_ssl=Yes
 # Scan timeout
 # scan_timeout=5m
 
-# WPScan JSON analyzer to compute table of issues
-# wpscan_analyze_path=/usr/local/bin/wpscan-analyzer
 """%(GIT_URL)
 
     # Config default values
@@ -223,7 +220,6 @@ smtp_ssl=Yes
         'follow_redirect':'No',
         'wpscan_output_folder':'',
         'scan_timeout':'15m',
-        'wpscan_analyze_path':'',
         'use_monospace_font':'No'
     }
 

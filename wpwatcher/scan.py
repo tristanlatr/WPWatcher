@@ -63,14 +63,6 @@ class WPWatcherScanner():
         # Scan timeout
         self.scan_timeout=conf['scan_timeout']
 
-        # wpscan-analyze
-        if conf['wpscan_analyze_path']: 
-            self.wpscan_analyze_path=conf['wpscan_analyze_path']
-        elif shutil.which('wpscan-analyze'):
-            self.wpscan_analyze_path=shutil.which('wpscan-analyze')
-        else:
-            self.wpscan_analyze_path=None
-
         # Init wpscan output folder
         if self.wpscan_output_folder : 
             os.makedirs(self.wpscan_output_folder, exist_ok=True)
@@ -347,6 +339,7 @@ class WPWatcherScanner():
             try:
                 json_parser=WPScanJsonParser(json.loads(wp_report['wpscan_output']))
                 wp_report['summary']=json_parser.get_summary_ascii_table()
+                wp_report['summary_html']=json_parser.get_summary_html()
             except Exception as err:
                 log.error(err)
                 self.check_fail_fast()

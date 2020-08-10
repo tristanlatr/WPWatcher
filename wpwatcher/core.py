@@ -63,9 +63,6 @@ class WPWatcher():
         # Init scanner
         self.scanner=WPWatcherScanner(conf)
 
-        # Update config before printing it
-        conf.update({'wpscan_analyze_path':self.scanner.wpscan_analyze_path})
-
         # Dump config
         log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
