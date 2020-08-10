@@ -283,7 +283,12 @@ class WPScanJsonParser(Component):
         row_fmt  = '''<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'''
         table_rows=""
         for row in self.get_summary_list():
-            table_rows+=copy.deepcopy(row_fmt).format(row['Component'], row['Version'], row['Version State'], row['Vulnerabilities'], row['Status'])
+            table_rows+=copy.deepcopy(row_fmt).format(
+                row['Component'],
+                row['Version'],
+                row['Version State'],
+                row['Vulnerabilities'],
+                '<b style="color:{color}">{status}</b>'.format(status=row['Status'], color='#8B0000' if row['Status']=='Alert' else '#FFD700' if row['Status'] == 'Warning' else '#228B22'))
         return ('''<table><tr><th>Component</th><th>Version</th><th>Version State</th><th>Vulnerabilities</th><th>Status</th></tr>{}</table><br/>{}'''.format(table_rows, self.get_summary_string()))
 
 class Finding(Component):
