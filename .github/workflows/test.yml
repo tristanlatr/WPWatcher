@@ -20,8 +20,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup Rust environment
-      uses: raftario/setup-rust-action@v1.0.0
+    # - name: Setup Rust environment
+    #   uses: raftario/setup-rust-action@v1.0.0
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
@@ -39,13 +39,13 @@ jobs:
     - name: Display Ruby version
       run: ruby --version
     
-    - name: Install wpscan-analyze
-      run: |
-        git clone https://github.com/lukaspustina/wpscan-analyze.git
-        cd wpscan-analyze
-        cargo install --path .
-        cd ..
-        wpscan-analyze --version
+    # - name: Install wpscan-analyze
+    #   run: |
+    #     git clone https://github.com/lukaspustina/wpscan-analyze.git
+    #     cd wpscan-analyze
+    #     cargo install --path .
+    #     cd ..
+    #     wpscan-analyze --version
 
     - name: Install WPScan
       run: gem install wpscan
