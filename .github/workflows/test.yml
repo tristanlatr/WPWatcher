@@ -50,6 +50,9 @@ jobs:
     - name: Install WPScan
       run: gem install wpscan
     
+    - name: Install WPWatcher
+      run: python3 setup.py install
+    
     - name: Install test dependencies
       run: |        
         pip install pytest
