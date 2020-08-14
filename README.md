@@ -34,14 +34,14 @@
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
-  - Python 3 (standard libraries)
-  - Tested on Linux and MacOS
+  - Python 3
 
 ## Install
 #### With PyPi (stable)
 ```bash
 python3 -m pip install wpwatcher
 ```
+Will install WPWatcher and [wpscan_out_parse](https://github.com/tristanlatr/wpscan_out_parse)  
 
 #####  Update
 ```bash

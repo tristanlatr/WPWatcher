@@ -20,7 +20,7 @@ import multiprocessing.pool
 from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
-from wpwatcher.parser import parse_results, is_false_positive, WPScanJsonParser
+from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser, Component
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.config import WPWatcherConfig
@@ -142,7 +142,7 @@ class WPWatcherScanner():
         """Return list of fixed issue texts to include in mails"""
         issues=[]
         for last_alert in last_wp_report[issue_type] :
-            if not is_false_positive(last_alert, self.false_positive_strings+wp_site['false_positive_strings']) :
+            if not WPScanJsonParser(None, self.false_positive_strings+wp_site['false_positive_strings']).is_false_positive(last_alert) :
                 if last_alert.splitlines()[0] not in [ a.splitlines()[0] for a in wp_report[issue_type] ]:
                     issues.append('%s regarding component "%s" has been fixed since last report.\nLast report sent the %s'%(
                         'Alert' if issue_type=='alerts' else 'Issue', 
@@ -236,8 +236,13 @@ class WPWatcherScanner():
             # Call parse_result from parser.py 
             log.debug("Parsing WPScan output")
             try:
-                wp_report['infos'], wp_report['warnings'] , wp_report['alerts']  = parse_results(wp_report['wpscan_output'] ,
+                results = parse_results_from_string(wp_report['wpscan_output'] ,
                     self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
+
+                wp_report['infos'], wp_report['warnings'] , wp_report['alerts'], wp_report['summary'] = results['infos'], results['warnings'], results['alerts'], results['summary']
+                if results['error']:
+                    wp_report['errors'].append(results['error'])
+
                 # Should not be useful
                 # wp_report['errors'] = [] # clear errors if any
             except Exception as err:
@@ -333,15 +338,6 @@ class WPWatcherScanner():
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
-        
-        # Get table if JSON
-        if 'json' in self.wpscan_args and wp_report['status']!='ERROR':
-            try:
-                json_parser=WPScanJsonParser(json.loads(wp_report['wpscan_output']))
-                wp_report['summary']=json_parser.get_summary_html()
-            except Exception as err:
-                log.error(err)
-                self.check_fail_fast()
 
         # Notify recepients if match triggers
         try:

@@ -15,7 +15,7 @@ from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+from wpscan_out_parse.formatter import format_results
 from wpwatcher import log, VERSION
 from wpwatcher.utils import get_valid_filename, replace
 
@@ -84,10 +84,7 @@ class WPWatcherNotification():
         message['To'] = email_to
 
         # Email body
-        body=self.build_message(wp_report, 
-            warnings=self.send_warnings or self.send_infos, # switches to include or not warnings and infos
-            infos=self.send_infos)
-        body = replace(body, {'\n':'\n<br/>', '\t':'\t&nbsp;&nbsp;&nbsp;&nbsp;'})
+        body=self.build_message(wp_report, warnings=self.send_warnings, infos=self.send_infos)
         if self.use_monospace_font:    
             body = '<font face="Courier New, Courier, monospace" size="-1">'+body+'</font>'
 
@@ -178,38 +175,18 @@ class WPWatcherNotification():
             wp_report['errors'].append("Unable to send mail report" + "\n" + traceback.format_exc())
             raise RuntimeError("Unable to send mail report") from err
 
-
     @staticmethod
     def build_message(wp_report, warnings=True, infos=False):
         '''Build mail message text base on report and warnngs and info switch'''
         
-        message="WordPress security scan report for site: %s\n" % (wp_report['site'])
-        message+="Scan datetime: %s\n" % (wp_report['datetime'])
+        message="<p>WordPress security scan report for site: %s<br />\n" % (wp_report['site'])
+        message+="Scan datetime: %s<br />\n<p>" % (wp_report['datetime'])
         
-        if wp_report['errors'] : message += "\nAn error occurred."
-        elif wp_report['alerts'] : message += "\nVulnerabilities have been detected by WPScan."
-        elif wp_report['warnings']: message += "\nIssues have been detected by WPScan."
-        if wp_report['fixed']: message += "\nSome issues have been fixed since last scan."
-
-        if wp_report['summary']:
-            message += WPWatcherNotification.format_issues('Summary',[wp_report['summary']])
-
-        message += WPWatcherNotification.format_issues('Errors',wp_report['errors'])
-        message += WPWatcherNotification.format_issues('Alerts',wp_report['alerts'])
-        if warnings: message += WPWatcherNotification.format_issues('Warnings',wp_report['warnings'])
-        message += WPWatcherNotification.format_issues('Fixed',wp_report['fixed'])
-        if infos: message += WPWatcherNotification.format_issues('Informations',wp_report['infos'])
-                
-        message += "\n\n--"
-        message += "\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
-        message += "\nServer: %s - Version: %s\n"%(socket.gethostname(),VERSION)
-        return message
-
-    
-    @staticmethod
-    def format_issues(title, issues):
-        '''Format one block of issues to text with the title'''
-        message=""
-        if issues:
-            message += "\n\n\t%s\n\t%s\n\n"%(title, '-'*len(title))+"\n\n".join(issues)
+        # Adjust wpscan_out_parse 'error' key in results 
+        wp_report['error']='\n'.join(wp_report['errors'])
+        message+=format_results(wp_report, format='html')
+            
+        message += "<br />\n<br />\n--"
+        message += "<br />\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
+        message += "<br />\nServer: %s - Version: %s<br />\n"%(socket.gethostname(),VERSION)
         return message
