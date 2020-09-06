@@ -6,15 +6,10 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import re
 import threading
-import copy
-import signal
-import time
 import sys
+import copy
 import threading
-import concurrent.futures
 import queue
-import traceback
-from contextlib import contextmanager
 from datetime import timedelta
 from wpwatcher import log
 

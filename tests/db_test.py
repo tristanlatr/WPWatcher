@@ -1,7 +1,6 @@
 import unittest
 import json
-from wpwatcher.scan import WPWatcherConfig
-from wpwatcher.utils import get_valid_filename
+from wpwatcher.config import WPWatcherConfig
 from wpwatcher.db import WPWatcherDataBase
 from . import WP_SITES, DEFAULT_CONFIG
 

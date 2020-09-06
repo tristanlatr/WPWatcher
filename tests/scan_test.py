@@ -4,7 +4,8 @@ import shutil
 import http.server
 import concurrent.futures
 from wpwatcher.core import WPWatcher
-from wpwatcher.scan import WPWatcherScanner, WPWatcherConfig, WPScanWrapper
+from wpwatcher.scan import WPWatcherScanner
+from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 

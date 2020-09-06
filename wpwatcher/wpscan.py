@@ -5,15 +5,13 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import shlex
-import os 
-import traceback
 import subprocess
 import json
 import time
 import threading
 from datetime import datetime
 from wpwatcher import log
-from wpwatcher.utils import safe_log_wpscan_args, oneline, parse_timedelta
+from wpwatcher.utils import safe_log_wpscan_args, parse_timedelta
 
 UPDATE_DB_INTERVAL=parse_timedelta('1h')
 init_lock=threading.Lock()

@@ -9,21 +9,13 @@ import re
 import os
 import time
 import signal
-import shlex
-import subprocess
-import shutil
 import traceback
-import tempfile
-import json
-import multiprocessing
-import multiprocessing.pool
 from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
-from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser, Component
+from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
-from wpwatcher.config import WPWatcherConfig
 
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
