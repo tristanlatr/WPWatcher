@@ -32,5 +32,5 @@ setup(
     license             =   'Apache License 2.0',
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
-    install_requires    =   ['wpscan-out-parse>=1.4']
+    install_requires    =   ['wpscan-out-parse>=1.5']
 )
