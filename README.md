@@ -131,9 +131,9 @@ smtp_pass=P@assW0rd
 
 One report is generated per site and the reports are sent individually when finished scanning a website.  
 
-![WPWatcher Report List](/screens/wpwatcher-report-list.png "WPWatcher Report")
+![WPWatcher Report List](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report-list.png "WPWatcher Report")
 
-![WPWatcher Report](/screens/wpwatcher-report.png "WPWatcher Report")
+![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report.png "WPWatcher Report")
 
 ## Questions ?
 If you have any questions, please create a new issue.
