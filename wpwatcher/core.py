@@ -12,6 +12,7 @@ import shutil
 import concurrent.futures
 import traceback
 import signal
+import sys
 from urllib.parse import urlparse
 
 from wpwatcher import log, init_log
@@ -122,20 +123,25 @@ class WPWatcher():
         if not isinstance(threading.current_thread(), threading._MainThread): 
             raise InterruptedError()
         # Cancel all scans
-        self.scanner.cancel_scans()
-        # Wait all scans finished, print results and quit
-        self.cancel_pending_futures()
+        self.cancel_pending_futures() # future scans
+        # Wait all scans finished
+        self.scanner.cancel_scans() # running scans
+        
         # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try: timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
         except TimeoutError : pass
+
+        # Recover reports from futures results
         new_reports=[]
         for f in self.futures:
              if f.done():
                 try: new_reports.append(f.result())
                 except Exception: pass
+
+        # Display results and quit
         self.print_scanned_sites_results(new_reports)
         log.info("Scans interrupted.")
-        exit(-1)
+        sys.exit(-1)
 
     def print_scanned_sites_results(self, new_reports):
         '''Print the result summary for the scanned sites'''
@@ -143,7 +149,7 @@ class WPWatcher():
         if len(new_reports)>0:
             log.info(results_summary(new_reports))
             if self.wp_reports.filepath != "null":
-                log.info("Updated %s reports in database: %s"%(len(new_reports),self.wp_reports.filepath))
+                log.info("Updated %s reports in database: %s"%(len(new_reports), self.wp_reports.filepath))
             else: 
                 log.info("No reports updated in local database")
     
