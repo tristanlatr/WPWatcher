@@ -14,6 +14,7 @@ from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
 from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
+from wpscan_out_parse.formatter import format_results
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 
@@ -62,6 +63,21 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(self.wpscan_output_folder,'alert/'), exist_ok=True)
             os.makedirs(os.path.join(self.wpscan_output_folder,'warning/'), exist_ok=True)
             os.makedirs(os.path.join(self.wpscan_output_folder,'info/'), exist_ok=True)
+
+        # Creating syslog object
+        self.syslog = None
+        if conf['syslog_server']:
+            import logging
+            from rfc5424logging import Rfc5424SysLogHandler
+            self.syslog = logging.getLogger('WPWatcher syslog')
+            self.syslog.setLevel(logging.INFO)
+            sh = Rfc5424SysLogHandler(
+                address=(conf['syslog_server'], conf['syslog_port']),
+                tls_enable=True if conf['syslog_tls_ca_bundle'] else False,
+                tls_verify=True if conf['syslog_tls_verify'] else False,
+                tls_ca_bundle=conf['syslog_tls_ca_bundle'] if conf['syslog_tls_ca_bundle'] else None
+            )
+            self.syslog.addHandler(sh)
 
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''
@@ -120,7 +136,7 @@ class WPWatcherScanner():
         '''Write WPScan output to configured place with `wpscan_output_folder` or return None
         '''
         # Subfolder
-        folder="%s/"%wp_report['status'].lower() if wp_report['status']!='FIXED' else 'info/'
+        folder="%s/"%wp_report['status'].lower()
         # Write wpscan output 
         wpscan_results_file=None
         if self.wpscan_output_folder :
@@ -153,7 +169,7 @@ class WPWatcherScanner():
     def log_report_results(self, wp_report):
         '''Print WPScan findings'''
         for info in wp_report['infos']: log.info(oneline("** WPScan INFO %s ** %s" % (wp_report['site'], info )))
-        for fix in wp_report['fixed']: log.info(oneline("** FIXED %s ** %s" % (wp_report['site'], fix )))
+        for fix in wp_report['fixed']: log.info(oneline("** FIXED Issue %s ** %s" % (wp_report['site'], fix )))
         for warning in wp_report['warnings']: log.warning(oneline("** WPScan WARNING %s ** %s" % (wp_report['site'], warning )))
         for alert in wp_report['alerts']: log.critical(oneline("** WPScan ALERT %s ** %s" % (wp_report['site'], alert )))
 
@@ -162,7 +178,6 @@ class WPWatcherScanner():
         if len(wp_report['errors'])>0:wp_report['status']="ERROR"
         elif len(wp_report['warnings'])>0 and len(wp_report['alerts']) == 0: wp_report['status']='WARNING'
         elif len(wp_report['alerts'])>0: wp_report['status']='ALERT'
-        elif len(wp_report['fixed'])>0: wp_report['status']='FIXED'
         else: wp_report['status']='INFO'
 
     def handle_wpscan_err_api_wait(self,wp_site, wp_report):
@@ -301,7 +316,8 @@ class WPWatcherScanner():
         # Launch WPScan
         try:
             # If report is None, return None right away
-            if not self.wpscan_site(wp_site, wp_report): return None
+            if not self.wpscan_site(wp_site, wp_report): 
+                return None
 
         except RuntimeError as err:
             # Try to handle error and return, will recall scan_site()
@@ -330,6 +346,9 @@ class WPWatcherScanner():
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
+        
+        # Adjust wpscan_out_parse 'error' key in results to call wpscan_out_parse.formatter.format_results(wp_report)
+        wp_report['error']='\n'.join(wp_report['errors'])
 
         # Notify recepients if match triggers
         try:
@@ -347,6 +366,19 @@ class WPWatcherScanner():
         
         # Save scanned site
         self.scanned_sites.append(wp_site['url'])
+
+        # Send syslog if self.syslog is not None
+        if self.syslog:
+            self.syslog.info(
+                format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
+                wp_report['status'], # Report status
+                extra={
+                    'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
+                    'appname': 'WPWatcher',
+                    'structured_data': wp_report,
+                    'enterprise_id': '43558'# Github entreprise ID
+                } 
+            ) 
 
         # Discard wpscan_output from report
         if 'wpscan_output' in wp_report: 

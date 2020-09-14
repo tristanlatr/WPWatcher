@@ -92,7 +92,11 @@ class WPWatcherConfig():
             'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
             'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
             'from_email':self.parser.get('wpwatcher','from_email'),
-            'use_monospace_font':self.getbool(self.parser, 'use_monospace_font')
+            'use_monospace_font':self.getbool(self.parser, 'use_monospace_font'),
+            'syslog_server':self.parser.get('wpwatcher','syslog_server'),
+            'syslog_port':self.getint(self.parser, 'syslog_port'),
+            'syslog_tls_ca_bundle':self.parser.get('wpwatcher', 'syslog_tls_ca_bundle'),
+            'syslog_tls_verify':self.getbool(self.parser, 'syslog_tls_verify')
         }
         return ((config_dict, self.files))
     
@@ -120,6 +124,19 @@ class WPWatcherConfig():
             return conf.getboolean('wpwatcher', key)
         except ValueError as err:
             raise ValueError("Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(key, conf.get('wpwatcher',key))) from err
+
+    @staticmethod
+    def getint(conf, key):
+        '''Return int value from a configparser object.  
+        Arguments:  
+        - `conf`: configparser object  
+        - `key`: alt_job config key
+        '''
+        try:
+            return conf.getint('wpwatcher', key)
+        except ValueError as err:
+            raise ValueError("Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(key, conf.get('wpwatcher',key))) from err
+
 
     # Configuration template -------------------------
     TEMPLATE_FILE="""[wpwatcher]
@@ -186,6 +203,12 @@ smtp_ssl=Yes
 # Scan timeout
 # scan_timeout=5m
 
+# Syslog settings
+# syslog_server=
+# syslog_port=514
+# syslog_tls_ca_bundle=
+# syslog_tls_verify=False
+
 """%(GIT_URL)
 
     # Config default values
@@ -220,7 +243,11 @@ smtp_ssl=Yes
         'follow_redirect':'No',
         'wpscan_output_folder':'',
         'scan_timeout':'15m',
-        'use_monospace_font':'No'
+        'use_monospace_font':'No',
+        'syslog_server':'',
+        'syslog_port':'',
+        'syslog_tls_ca_bundle':'',
+        'syslog_tls_verify':'No'
     }
 
     @staticmethod

@@ -182,8 +182,6 @@ class WPWatcherNotification():
         message="<p>WordPress security scan report for site: %s<br />\n" % (wp_report['site'])
         message+="Scan datetime: %s<br />\n<p>" % (wp_report['datetime'])
         
-        # Adjust wpscan_out_parse 'error' key in results 
-        wp_report['error']='\n'.join(wp_report['errors'])
         message+=format_results(wp_report, format='html')
             
         message += "<br />\n<br />\n--"

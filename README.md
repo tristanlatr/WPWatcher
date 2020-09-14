@@ -30,7 +30,8 @@
   - Follow URL redirection if WPScan fails and propose to ignore main redirect 
   - Log file also lists all the findings 
   - Scan sites continuously at defined interval and configure script as a linux service
-  - Parse results differently wether WPScan format is JSON or CLI
+  - Parse results differently wether WPScan format is JSON or CLI  
+  - Forward scan results to Syslog server
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
@@ -38,10 +39,12 @@
 
 ## Install
 #### With PyPi (stable)
+
+
 ```bash
-python3 -m pip install wpwatcher
+python3 -m pip install 'wpwatcher[syslog]'
 ```
-Will install WPWatcher and [wpscan_out_parse](https://github.com/tristanlatr/wpscan_out_parse)  
+*Install WPWatcher with syslog forwarding support*  
 
 #####  Update
 ```bash
