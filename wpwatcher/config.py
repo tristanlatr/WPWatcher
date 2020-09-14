@@ -94,9 +94,7 @@ class WPWatcherConfig():
             'from_email':self.parser.get('wpwatcher','from_email'),
             'use_monospace_font':self.getbool(self.parser, 'use_monospace_font'),
             'syslog_server':self.parser.get('wpwatcher','syslog_server'),
-            'syslog_port':self.getint(self.parser, 'syslog_port'),
-            'syslog_tls_ca_bundle':self.parser.get('wpwatcher', 'syslog_tls_ca_bundle'),
-            'syslog_tls_verify':self.getbool(self.parser, 'syslog_tls_verify')
+            'syslog_port':self.getint(self.parser, 'syslog_port')
         }
         return ((config_dict, self.files))
     
@@ -206,8 +204,6 @@ smtp_ssl=Yes
 # Syslog settings
 # syslog_server=
 # syslog_port=514
-# syslog_tls_ca_bundle=
-# syslog_tls_verify=False
 
 """%(GIT_URL)
 
@@ -246,8 +242,6 @@ smtp_ssl=Yes
         'use_monospace_font':'No',
         'syslog_server':'',
         'syslog_port':'514',
-        'syslog_tls_ca_bundle':'',
-        'syslog_tls_verify':'No'
     }
 
     @staticmethod

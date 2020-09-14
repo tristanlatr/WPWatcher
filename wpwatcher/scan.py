@@ -5,6 +5,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 import socket
+import logging
 import threading
 import re
 import os
@@ -65,18 +66,18 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(self.wpscan_output_folder,'warning/'), exist_ok=True)
             os.makedirs(os.path.join(self.wpscan_output_folder,'info/'), exist_ok=True)
 
+        self.syslog=None
         if conf['syslog_server']:
             from rfc5424logging import Rfc5424SysLogHandler
             sh = Rfc5424SysLogHandler(
                 address=(conf['syslog_server'], conf['syslog_port']),
-                tls_enable=True if conf['syslog_tls_ca_bundle'] else False,
-                tls_verify=True if conf['syslog_tls_verify'] else False,
-                tls_ca_bundle=conf['syslog_tls_ca_bundle'] if conf['syslog_tls_ca_bundle'] else None,
                 socktype=socket.SOCK_STREAM, # Use TCP
+                appname='WPWatcher',
+                enterprise_id=0
             )
-            log.addHandler(sh)
-            if conf['verbose']:
-                log.debug("Sending the first debug message with Rfc5424SysLogHandler: "+str(sh))
+            self.syslog=logging.getLogger('wpwatcher-syslog')
+            self.syslog.setLevel(logging.DEBUG)
+            self.syslog.addHandler(sh)
 
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''
@@ -237,24 +238,25 @@ class WPWatcherScanner():
         # Launch WPScan 
         (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
 
+        log.debug("Parsing WPScan output")
+        try:
+            # Call parse_results_from_string from wpscan_out_parse module 
+            results = parse_results_from_string(wp_report['wpscan_output'] ,
+                self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
+
+            wp_report['infos'], wp_report['warnings'] , wp_report['alerts'], wp_report['summary'] = results['infos'], results['warnings'], results['alerts'], results['summary']
+            
+            if results['error']:
+                wp_report['error']+=results['error']
+
+        except Exception as err:
+            err_str="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
+            log.error(err_str)
+            raise RuntimeError(err_str) from err
+
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code in [0,5]:
-            # Call parse_result from parser.py 
-            log.debug("Parsing WPScan output")
-            try:
-                results = parse_results_from_string(wp_report['wpscan_output'] ,
-                    self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
-
-                wp_report['infos'], wp_report['warnings'] , wp_report['alerts'], wp_report['summary'] = results['infos'], results['warnings'], results['alerts'], results['summary']
-                if results['error']:
-                    wp_report['error']+=results['error']
-
-            except Exception as err:
-                err_str="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
-                log.error(err_str)
-                raise RuntimeError(err_str) from err
-            else:
-                return wp_report
+            return wp_report
         
         # Quick return if interrupting and/or if user cacelled scans
         if self.interrupting or wpscan_exit_code in [2, -2, -9]:
@@ -343,8 +345,6 @@ class WPWatcherScanner():
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
-        
-        # Adjust wpscan_out_parse 'error' key in results to call wpscan_out_parse.formatter.format_results(wp_report)
 
         # Notify recepients if match triggers
         try:
@@ -359,28 +359,31 @@ class WPWatcherScanner():
         except RuntimeError: 
             # Fail fast
             self.check_fail_fast()
-        
-        # Save scanned site
-        self.scanned_sites.append(wp_site['url'])
 
-        # # Send syslog if self.syslog is not None
-        # if self.syslog:
-        #     try:
-        #         self.syslog.info(
-        #             format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
-        #             extra={
-        #                 'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
-        #                 'appname': 'WPWatcher',
-        #                 'structured_data': wp_report,
-        #                 'enterprise_id': '43558'# Github entreprise ID
-        #             } 
-        #         ) 
-        #     except Exception as err:
-        #         log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
-        #         self.check_fail_fast()
+        self.fill_report_status(wp_report)
 
         # Discard wpscan_output from report
         if 'wpscan_output' in wp_report: 
             del wp_report['wpscan_output']
+
+        # Send syslog if self.syslog is not None
+        if self.syslog:
+            try:
+                log.debug("Sending Syslog message")
+                self.syslog.info(
+                    wp_report['summary']['line'],
+                    extra={
+                        'structured_data': {'wp_report': wp_report},
+                        } 
+                )
+            except Exception as err:
+                log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
+                wp_report['error']+="Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc()
+                self.check_fail_fast()
+
+        self.fill_report_status(wp_report)
+
+        # Save scanned site
+        self.scanned_sites.append(wp_site['url'])
 
         return(wp_report)
