@@ -66,7 +66,7 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(self.wpscan_output_folder,'info/'), exist_ok=True)
 
         if conf['syslog_server']:
-            from rfc5424logging import Rfc5424SysLogHandler,
+            from rfc5424logging import Rfc5424SysLogHandler
             sh = Rfc5424SysLogHandler(
                 address=(conf['syslog_server'], conf['syslog_port']),
                 tls_enable=True if conf['syslog_tls_ca_bundle'] else False,
