@@ -4,6 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+import socket
 import threading
 import re
 import os
@@ -65,12 +66,13 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(self.wpscan_output_folder,'info/'), exist_ok=True)
 
         if conf['syslog_server']:
-            from rfc5424logging import Rfc5424SysLogHandler
+            from rfc5424logging import Rfc5424SysLogHandler,
             sh = Rfc5424SysLogHandler(
                 address=(conf['syslog_server'], conf['syslog_port']),
                 tls_enable=True if conf['syslog_tls_ca_bundle'] else False,
                 tls_verify=True if conf['syslog_tls_verify'] else False,
-                tls_ca_bundle=conf['syslog_tls_ca_bundle'] if conf['syslog_tls_ca_bundle'] else None
+                tls_ca_bundle=conf['syslog_tls_ca_bundle'] if conf['syslog_tls_ca_bundle'] else None,
+                socktype=socket.SOCK_STREAM, # Use TCP
             )
             log.addHandler(sh)
             if conf['verbose']:
