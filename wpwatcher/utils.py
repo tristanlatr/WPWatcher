@@ -79,14 +79,16 @@ def results_summary(results):
     string+=frow.format(*header)
     for row in results:
         pb_components=[]
-        for m in row['alerts']+row['warnings']+[row['error']]:
+        for m in row['alerts']+row['warnings']:
             pb_components.append(m.splitlines()[0])
+        if row['error']:
+            pb_components.append("Scan failed")
         string+='\n'
         string+=frow.format(str(row['site']), 
             str(row['status']),
             str(row['datetime']),
             str(row['last_email']),
-            len(row['alerts']+row['warnings']+[row['error']]),
+            len(row['alerts']+row['warnings']),
             ', '.join(pb_components) )
     return string
 

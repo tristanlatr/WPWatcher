@@ -64,20 +64,17 @@ class WPWatcherScanner():
             os.makedirs(os.path.join(self.wpscan_output_folder,'warning/'), exist_ok=True)
             os.makedirs(os.path.join(self.wpscan_output_folder,'info/'), exist_ok=True)
 
-        # Creating syslog object
-        self.syslog = None
         if conf['syslog_server']:
-            import logging
             from rfc5424logging import Rfc5424SysLogHandler
-            self.syslog = logging.getLogger('WPWatcher syslog')
-            self.syslog.setLevel(logging.INFO)
             sh = Rfc5424SysLogHandler(
                 address=(conf['syslog_server'], conf['syslog_port']),
                 tls_enable=True if conf['syslog_tls_ca_bundle'] else False,
                 tls_verify=True if conf['syslog_tls_verify'] else False,
                 tls_ca_bundle=conf['syslog_tls_ca_bundle'] if conf['syslog_tls_ca_bundle'] else None
             )
-            self.syslog.addHandler(sh)
+            log.addHandler(sh)
+            if conf['verbose']:
+                log.debug("Sending the first debug message with Rfc5424SysLogHandler: "+str(sh))
 
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''
@@ -364,22 +361,21 @@ class WPWatcherScanner():
         # Save scanned site
         self.scanned_sites.append(wp_site['url'])
 
-        # Send syslog if self.syslog is not None
-        if self.syslog:
-            try:
-                self.syslog.info(
-                    format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
-                    wp_report['status'], # Report status
-                    extra={
-                        'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
-                        'appname': 'WPWatcher',
-                        'structured_data': wp_report,
-                        'enterprise_id': '43558'# Github entreprise ID
-                    } 
-                ) 
-            except Exception as err:
-                log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
-                self.check_fail_fast()
+        # # Send syslog if self.syslog is not None
+        # if self.syslog:
+        #     try:
+        #         self.syslog.info(
+        #             format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
+        #             extra={
+        #                 'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
+        #                 'appname': 'WPWatcher',
+        #                 'structured_data': wp_report,
+        #                 'enterprise_id': '43558'# Github entreprise ID
+        #             } 
+        #         ) 
+        #     except Exception as err:
+        #         log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
+        #         self.check_fail_fast()
 
         # Discard wpscan_output from report
         if 'wpscan_output' in wp_report: 

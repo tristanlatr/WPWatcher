@@ -44,7 +44,7 @@
 ```bash
 python3 -m pip install 'wpwatcher[syslog]'
 ```
-*Install WPWatcher with syslog forwarding support*  
+*Installs WPWatcher with syslog forwarding support*  
 
 #####  Update
 ```bash
@@ -55,7 +55,7 @@ python3 -m pip install wpwatcher --upgrade
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher
-python3 setup.py install
+python3 -m pip install '.[syslog]'
 ```
 `wpwatcher` should be in your `PATH`.
 
