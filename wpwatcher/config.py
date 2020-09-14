@@ -245,7 +245,7 @@ smtp_ssl=Yes
         'scan_timeout':'15m',
         'use_monospace_font':'No',
         'syslog_server':'',
-        'syslog_port':'',
+        'syslog_port':'514',
         'syslog_tls_ca_bundle':'',
         'syslog_tls_verify':'No'
     }
