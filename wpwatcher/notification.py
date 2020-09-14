@@ -145,7 +145,6 @@ class WPWatcherNotification():
             # No report notice
             log.info("Not sending WPWatcher %s email report for site %s because already sent in the last %s."%(wp_report['status'], wp_report['site'], self.resend_emails_after))
             should=False
-
         
         return should
 
@@ -172,7 +171,7 @@ class WPWatcherNotification():
         # Handle send mail error
         except (smtplib.SMTPException, ConnectionRefusedError, TimeoutError) as err:
             log.error("Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc())
-            wp_report['errors'].append("Unable to send mail report" + "\n" + traceback.format_exc())
+            wp_report['error']+="Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc()
             raise RuntimeError("Unable to send mail report") from err
 
     @staticmethod

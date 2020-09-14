@@ -38,7 +38,7 @@ class T(unittest.TestCase):
                 "status": "WARNING",
                 "datetime": "2020-04-08T16-05-16",
                 "last_email": None,
-                "errors": [],
+                "error": '',
                 "infos": [
                     "[+]","blablabla"],
                 "warnings": [

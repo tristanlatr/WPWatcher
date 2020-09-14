@@ -39,7 +39,7 @@ class T(unittest.TestCase):
                     "status": "WARNING",
                     "datetime": "2020-04-08T16-05-16",
                     "last_email": "2020-04-08T16-05-17",
-                    "errors": [],
+                    "error": '',
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
@@ -57,7 +57,7 @@ class T(unittest.TestCase):
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
                     "last_email": None,
-                    "errors": [],
+                    "error": '',
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
@@ -74,7 +74,7 @@ class T(unittest.TestCase):
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
                     "last_email": "2020-04-08T16-05-17",
-                    "errors": [],
+                    "error": '',
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
@@ -105,7 +105,7 @@ class T(unittest.TestCase):
                 "status": "WARNING",
                 "datetime": "2020-04-08T16-05-16",
                 "last_email": None,
-                "errors": [],
+                "error": '',
                 "infos": [
                     "[+]","blablabla"],
                 "warnings": [
@@ -137,4 +137,4 @@ class T(unittest.TestCase):
         scanner=WPWatcherScanner(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
         report=scanner.scan_site(WPWatcher.format_site({'url':'http://localhost:8080'}))
         self.assertEqual(report['status'], 'ERROR')
-        self.assertRegex(report['errors'][0], 'does not seem to be running WordPress')
+        self.assertRegex(report['error'], 'does not seem to be running WordPress')

@@ -175,7 +175,7 @@ class WPWatcherScanner():
 
     def fill_report_status(self, wp_report):
         '''Fill Report status according to the number of items n alerts, watnings, infos, errors and fixed'''
-        if len(wp_report['errors'])>0:wp_report['status']="ERROR"
+        if len(wp_report['error'])>0:wp_report['status']="ERROR"
         elif len(wp_report['warnings'])>0 and len(wp_report['alerts']) == 0: wp_report['status']='WARNING'
         elif len(wp_report['alerts'])>0: wp_report['status']='ALERT'
         else: wp_report['status']='INFO'
@@ -211,7 +211,7 @@ class WPWatcherScanner():
         else:
             err_str="Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
             log.error(err_str)
-            wp_report['errors'].append(err_str)
+            wp_report['error']+=err_str
             return ((wp_report, False))
 
     def handle_wpscan_err(self, wp_site, wp_report):
@@ -248,10 +248,8 @@ class WPWatcherScanner():
 
                 wp_report['infos'], wp_report['warnings'] , wp_report['alerts'], wp_report['summary'] = results['infos'], results['warnings'], results['alerts'], results['summary']
                 if results['error']:
-                    wp_report['errors'].append(results['error'])
+                    wp_report['error']+=results['error']
 
-                # Should not be useful
-                # wp_report['errors'] = [] # clear errors if any
             except Exception as err:
                 err_str="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
                 log.error(err_str)
@@ -279,7 +277,7 @@ class WPWatcherScanner():
             if wp_report_new: wp_report.update(wp_report_new)
             else : return None
         except TimeoutError:
-            wp_report['errors'].append("Timeout scanning site after %s seconds.\nSetup scan_timeout in config file to allow more time"%self.scan_timeout.total_seconds())
+            wp_report['error']+="Timeout scanning site after %s seconds.\nSetup scan_timeout in config file to allow more time"%self.scan_timeout.total_seconds()
             log.error("Timeout scanning site %s after %s seconds. Setup scan_timeout in config file to allow more time"%(wp_site['url'], self.scan_timeout.total_seconds()))
             # Kill process
             for p in self.wpscan.processes:
@@ -300,7 +298,7 @@ class WPWatcherScanner():
             "status":None,
             "datetime": datetime.now().strftime(DATE_FORMAT),
             "last_email":None,
-            "errors":[],
+            "error":'',
             "infos":[],
             "warnings":[],
             "alerts":[],
@@ -329,7 +327,7 @@ class WPWatcherScanner():
             elif not self.interrupting: 
                 log.error("Could not scan site %s"%wp_site['url'])
                 log.debug(traceback.format_exc())
-                wp_report['errors'].append(str(err))
+                wp_report['error']+=str(err)
                 # Fail fast
                 self.check_fail_fast()
 
@@ -348,7 +346,6 @@ class WPWatcherScanner():
         self.update_report(wp_report, last_wp_report, wp_site)
         
         # Adjust wpscan_out_parse 'error' key in results to call wpscan_out_parse.formatter.format_results(wp_report)
-        wp_report['error']='\n'.join(wp_report['errors'])
 
         # Notify recepients if match triggers
         try:
@@ -369,16 +366,20 @@ class WPWatcherScanner():
 
         # Send syslog if self.syslog is not None
         if self.syslog:
-            self.syslog.info(
-                format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
-                wp_report['status'], # Report status
-                extra={
-                    'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
-                    'appname': 'WPWatcher',
-                    'structured_data': wp_report,
-                    'enterprise_id': '43558'# Github entreprise ID
-                } 
-            ) 
+            try:
+                self.syslog.info(
+                    format_results(wp_report, 'cli', warnings=True, infos=True, nocolor=True), # formatted results
+                    wp_report['status'], # Report status
+                    extra={
+                        'msgid': 'WPWatcher-{}-{}-{}'.format(wp_report['status'], wp_report['site'], wp_report['datetime']),
+                        'appname': 'WPWatcher',
+                        'structured_data': wp_report,
+                        'enterprise_id': '43558'# Github entreprise ID
+                    } 
+                ) 
+            except Exception as err:
+                log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
+                self.check_fail_fast()
 
         # Discard wpscan_output from report
         if 'wpscan_output' in wp_report: 
