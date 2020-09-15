@@ -1,7 +1,7 @@
 import unittest
 import os
 import shlex
-from . import DEFAULT_CONFIG, NUMBER_OF_CONFIG_VALUES
+from . import DEFAULT_CONFIG
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.scan import WPWatcherScanner
