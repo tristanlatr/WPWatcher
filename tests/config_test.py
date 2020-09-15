@@ -12,14 +12,12 @@ class T(unittest.TestCase):
         self.assertEqual(0, len(config_object.files), "Files seems to have been loaded even if custom string passed to config oject")
         config_dict, files=config_object.build_config()
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
-        self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
         
         # Test config template file
         config_object=WPWatcherConfig(string=WPWatcherConfig.TEMPLATE_FILE)
         self.assertEqual(0, len(config_object.files), "Files seems to have been loaded even if custom string passed to config oject")
         config_dict, files=config_object.build_config()
         self.assertEqual(0, len(files), "Files seems to have been loaded even if custom string passed to config oject")
-        self.assertEqual(NUMBER_OF_CONFIG_VALUES, len(config_dict), "The number of config values if not right or you forgot to change the value of NUMBER_OF_CONFIG_VALUES")
 
     def test_init_config_from_file(self):
 

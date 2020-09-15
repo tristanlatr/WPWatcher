@@ -111,7 +111,7 @@ class WPWatcherConfig():
             loaded=json.loads(self.parser.get('wpwatcher', key))
             return loaded if loaded else []
         except ValueError as err:
-            raise ValueError("Could not read JSON value in config file for key '{}' and string: '{}'".format(key, conf.get('wpwatcher',key))) from err
+            raise ValueError("Could not read JSON value in config file for key '{}' and string: '{}'".format(key, self.parser.get('wpwatcher',key))) from err
 
     def getbool(self, key):
         '''Return bool value from a configparser object.  
@@ -122,7 +122,7 @@ class WPWatcherConfig():
         try:
             return self.parser.getboolean('wpwatcher', key)
         except ValueError as err:
-            raise ValueError("Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(key, conf.get('wpwatcher',key))) from err
+            raise ValueError("Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(key, self.parser.get('wpwatcher',key))) from err
 
     def getint(self, key):
         '''Return int value from a configparser object.  
@@ -133,7 +133,7 @@ class WPWatcherConfig():
         try:
             return self.parser.getint('wpwatcher', key)
         except ValueError as err:
-            raise ValueError("Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(key, conf.get('wpwatcher',key))) from err
+            raise ValueError("Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(key, self.parser.get('wpwatcher',key))) from err
 
 
     # Configuration template -------------------------

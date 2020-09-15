@@ -1,7 +1,5 @@
 import json
 from wpwatcher.core import WPWatcher
-# Constants
-NUMBER_OF_CONFIG_VALUES=33
 
 WP_SITES=[ WPWatcher.format_site(s) for s in [ {"url":"exemple.com"},
               {"url":"exemple2.com"}  ] ]
