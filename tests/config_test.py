@@ -1,6 +1,6 @@
 import unittest
 import os
-from . import DEFAULT_CONFIG, NUMBER_OF_CONFIG_VALUES
+from . import DEFAULT_CONFIG
 from wpwatcher.config import WPWatcherConfig
 
 class T(unittest.TestCase):
