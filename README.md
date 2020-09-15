@@ -17,21 +17,21 @@
 </p>
 
 ## Features
-  - Scan multiple sites with WPScan
-  - Parse WPScan output and divide the results in "Alerts", "Warnings", "Informations" and eventually "Errors"
-  - Additionnal alerts depending of finding type (SQL dump, etc.)  
-  - Keep track of fixed issues
-  - Handled VulnDB API limit
-  - Define reporting emails addresses for every configured site individually and globally
-  - Define false positives strings for every configured site individually and globally
-  - Define WPScan arguments for every configured site individually and globally
-  - Save raw WPScan results into files
+  - Scan **multiple sites** with WPScan
+  - **Parse WPScan output** and divide the results in *"Alerts", "Warnings", "Informations" and eventually "Errors"*
+  - **Handled VulnDB API limit**
+  - Define **reporting emails addresses** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
+  - Define **false positives strings** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
+  - Define **WPScan arguments** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
+  - Send scan reports to **Syslog** server ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
+  - Save raw WPScan output into files
+  - Log file can also lists all the findings ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Output))
   - Speed up scans using several asynchronous workers
-  - Follow URL redirection if WPScan fails and propose to ignore main redirect 
-  - Log file also lists all the findings 
-  - Scan sites continuously at defined interval and configure script as a linux service
+  - Parse and **follow URL redirection** if WPScan fails and propose to ignore main redirect
+  - Scan sites continuously at defined interval and configure script as a linux service ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
   - Parse results differently wether WPScan format is JSON or CLI  
-  - Forward scan results to Syslog server
+  - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
+  - Keep track of fixed issues
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
@@ -44,7 +44,7 @@
 ```bash
 python3 -m pip install 'wpwatcher[syslog]'
 ```
-*Installs WPWatcher with syslog forwarding support*  
+*Installs WPWatcher with syslog output support*  
 
 #####  Update
 ```bash
@@ -100,7 +100,7 @@ vim ./wpwatcher.conf
 
 ### Configuration exemple
 
-Sample configuration file with full featured `wp_sites` entry, custom WPScan path and arguments, vuln DB api limit handling and email reporting.
+Sample configuration file with full featured `wp_sites` entry, custom WPScan path and arguments, vuln DB api limit handling, email and syslog reporting
 
 ```ini
 [wpwatcher]
@@ -128,6 +128,8 @@ smtp_server=smtp.gmail.com:587
 smtp_ssl=Yes
 smtp_auth=Yes
 smtp_pass=P@assW0rd
+syslog_server=syslogserver.ca
+syslog_port=514
 ```
 
 ### Email reports
