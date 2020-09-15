@@ -10,7 +10,7 @@ import argparse
 import shlex
 import sys
 from wpwatcher import VERSION, AUTHORS, GIT_URL, log, init_log
-from wpwatcher.utils import parse_timedelta, results_summary
+from wpwatcher.utils import parse_timedelta
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
@@ -51,7 +51,7 @@ class WPWatcherCLI():
     def wprs(filepath=None, daemon=False):
         """Generate JSON file database summary"""
         db=WPWatcherDataBase(filepath, daemon=daemon)
-        sys.stdout.buffer.write(results_summary(db._data).encode('utf8'))
+        sys.stdout.buffer.write(WPWatcher.results_summary(db._data).encode('utf8'))
         sys.stdout.flush()
         exit(0)
 

@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from wpwatcher import log, init_log
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
-from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, results_summary, timeout
+from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
@@ -147,12 +147,40 @@ class WPWatcher():
         '''Print the result summary for the scanned sites'''
         new_reports = [n for n in new_reports if n]
         if len(new_reports)>0:
-            log.info(results_summary(new_reports))
+            log.info(self.results_summary(new_reports))
             if self.wp_reports.filepath != "null":
                 log.info("Updated %s reports in database: %s"%(len(new_reports), self.wp_reports.filepath))
             else: 
                 log.info("No reports updated in local database")
     
+    @staticmethod
+    def results_summary(results):
+        '''Print the summary table of all sites.  
+        Columns : "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
+        '''
+        string='Results summary\n'
+        header = ("Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)")
+        sites_w=20
+        # Determine the longest width for site column
+        for r in results:
+            sites_w=len(r['site'])+4 if r and len(r['site'])>sites_w else sites_w
+        frow="{:<%d} {:<8} {:<20} {:<20} {:<8} {}"%sites_w
+        string+=frow.format(*header)
+        for row in results:
+            pb_components=[]
+            for m in row['alerts']+row['warnings']:
+                pb_components.append(m.splitlines()[0])
+            if row['error']:
+                pb_components.append("Scan failed")
+            string+='\n'
+            string+=frow.format(str(row['site']), 
+                str(row['status']),
+                str(row['datetime']),
+                str(row['last_email']),
+                len(row['alerts']+row['warnings']),
+                ', '.join(pb_components) )
+        return string
+
     @staticmethod
     def format_site(wp_site):
         '''Make sure the site structure is correct, parse 'url', init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.

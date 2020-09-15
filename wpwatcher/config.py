@@ -15,7 +15,7 @@ class WPWatcherConfig():
     '''Init WPWatcherConfig from file or string.  
     Arguments:  
     - `files`: List of filenames. Exemple: ["/home/user/Documents/wpwatcher.conf"]
-    - `string`: Complete configuration string, will not read `files` argument. Passed as docstring would be more redable like :
+    - `string`: Complete configuration string, will NOT read `files` argument. Passed as docstring would be more redable like :
 
             conf = WPWatcherConfig(string="""
                     wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
@@ -58,80 +58,80 @@ class WPWatcherConfig():
         Return a tuple (config dict, read files list).  
         The dict returned contain all possible config values. Default values are applied if not specified in the file(s) or string.
         '''
-        # Saving config file in right dict format - no 'wpwatcher' section, just config options
+        # Saving config file in right dict format and types - no 'wpwatcher' section, just config options
         config_dict = {
             # Configurable witg cli arguments
-            'wp_sites' :self.getjson(self.parser,'wp_sites'),
-            'send_email_report':self.getbool(self.parser, 'send_email_report'),
-            'send_errors':self.getbool(self.parser, 'send_errors'),
-            'email_to':self.getjson(self.parser,'email_to'),
-            'send_infos':self.getbool(self.parser, 'send_infos'),
-            'quiet':self.getbool(self.parser, 'quiet'),
-            'verbose':self.getbool(self.parser, 'verbose'),
-            'attach_wpscan_output':self.getbool(self.parser, 'attach_wpscan_output'),
-            'fail_fast':self.getbool(self.parser, 'fail_fast'),
-            'api_limit_wait':self.getbool(self.parser, 'api_limit_wait'),
-            'daemon':self.getbool(self.parser, 'daemon'),
+            'wp_sites' :self.getjson('wp_sites'),
+            'send_email_report':self.getbool('send_email_report'),
+            'send_errors':self.getbool('send_errors'),
+            'email_to':self.getjson('email_to'),
+            'send_infos':self.getbool('send_infos'),
+            'quiet':self.getbool('quiet'),
+            'verbose':self.getbool('verbose'),
+            'attach_wpscan_output':self.getbool('attach_wpscan_output'),
+            'fail_fast':self.getbool('fail_fast'),
+            'api_limit_wait':self.getbool( 'api_limit_wait'),
+            'daemon':self.getbool( 'daemon'),
             'daemon_loop_sleep':parse_timedelta(self.parser.get('wpwatcher','daemon_loop_sleep')),
             'resend_emails_after':parse_timedelta(self.parser.get('wpwatcher','resend_emails_after')),
             'wp_reports':self.parser.get('wpwatcher','wp_reports'),
             'asynch_workers':self.parser.getint('wpwatcher','asynch_workers'),
             'log_file':self.parser.get('wpwatcher','log_file'),
-            'follow_redirect':self.getbool(self.parser, 'follow_redirect'),
+            'follow_redirect':self.getbool( 'follow_redirect'),
             'wpscan_output_folder':self.parser.get('wpwatcher','wpscan_output_folder'),
-            'wpscan_args':self.getjson(self.parser,'wpscan_args'),
+            'wpscan_args':self.getjson('wpscan_args'),
             'scan_timeout':parse_timedelta(self.parser.get('wpwatcher', 'scan_timeout')),
-            'false_positive_strings' : self.getjson(self.parser,'false_positive_strings'), 
+            'false_positive_strings' : self.getjson('false_positive_strings'), 
             # Not configurable with cli arguments
-            'send_warnings':self.getbool(self.parser, 'send_warnings'),
-            'email_errors_to':self.getjson(self.parser,'email_errors_to'),
+            'send_warnings':self.getbool('send_warnings'),
+            'email_errors_to':self.getjson('email_errors_to'),
             'wpscan_path':self.parser.get('wpwatcher','wpscan_path'),
             'smtp_server':self.parser.get('wpwatcher','smtp_server'),
-            'smtp_auth':self.getbool(self.parser, 'smtp_auth'),
+            'smtp_auth':self.getbool( 'smtp_auth'),
             'smtp_user':self.parser.get('wpwatcher','smtp_user'),
             'smtp_pass':self.parser.get('wpwatcher','smtp_pass'),
-            'smtp_ssl':self.getbool(self.parser, 'smtp_ssl'),
+            'smtp_ssl':self.getbool('smtp_ssl'),
             'from_email':self.parser.get('wpwatcher','from_email'),
-            'use_monospace_font':self.getbool(self.parser, 'use_monospace_font'),
+            'use_monospace_font':self.getbool('use_monospace_font'),
             'syslog_server':self.parser.get('wpwatcher','syslog_server'),
-            'syslog_port':self.getint(self.parser, 'syslog_port')
+            'syslog_port':self.getint('syslog_port'),
+            'syslog_stream':self.parser.get('wpwatcher','syslog_stream'),
+            'syslog_kwargs':self.getjson('syslog_kwargs'),
+
         }
         return ((config_dict, self.files))
     
-    @staticmethod
-    def getjson(conf, key):
+    def getjson(self, key):
         '''Return json loaded structure from a configparser object. Empty list if the loaded value is null.   
         Arguments:  
         - `conf`: configparser object  
         - `key`: wpwatcher config key
         '''
         try:
-            loaded=json.loads(conf.get('wpwatcher', key))
+            loaded=json.loads(self.parser.get('wpwatcher', key))
             return loaded if loaded else []
         except ValueError as err:
             raise ValueError("Could not read JSON value in config file for key '{}' and string: '{}'".format(key, conf.get('wpwatcher',key))) from err
 
-    @staticmethod
-    def getbool(conf, key):
+    def getbool(self, key):
         '''Return bool value from a configparser object.  
         Arguments:  
         - `conf`: configparser object  
         - `key`: wpwatcher config key
         '''
         try:
-            return conf.getboolean('wpwatcher', key)
+            return self.parser.getboolean('wpwatcher', key)
         except ValueError as err:
             raise ValueError("Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(key, conf.get('wpwatcher',key))) from err
 
-    @staticmethod
-    def getint(conf, key):
+    def getint(self, key):
         '''Return int value from a configparser object.  
         Arguments:  
         - `conf`: configparser object  
         - `key`: alt_job config key
         '''
         try:
-            return conf.getint('wpwatcher', key)
+            return self.parser.getint('wpwatcher', key)
         except ValueError as err:
             raise ValueError("Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(key, conf.get('wpwatcher',key))) from err
 
@@ -204,6 +204,8 @@ smtp_ssl=Yes
 # Syslog settings
 # syslog_server=
 # syslog_port=514
+# syslog_stream=SOCK_STREAM
+# syslog_kwargs={"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}
 
 """%(GIT_URL)
 
@@ -242,6 +244,8 @@ smtp_ssl=Yes
         'use_monospace_font':'No',
         'syslog_server':'',
         'syslog_port':'514',
+        'syslog_stream':'SOCK_STREAM',
+        'syslog_kwargs':'{"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}'
     }
 
     @staticmethod

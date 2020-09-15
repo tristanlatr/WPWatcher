@@ -71,9 +71,9 @@ class WPWatcherScanner():
             from rfc5424logging import Rfc5424SysLogHandler
             sh = Rfc5424SysLogHandler(
                 address=(conf['syslog_server'], conf['syslog_port']),
-                socktype=socket.SOCK_STREAM, # Use TCP
+                socktype=getattr(socket, conf['syslog_stream']), # Use TCP or UDP
                 appname='WPWatcher',
-                enterprise_id=0
+                **conf['syslog_kwargs']
             )
             self.syslog=logging.getLogger('wpwatcher-syslog')
             self.syslog.setLevel(logging.DEBUG)
@@ -370,7 +370,11 @@ class WPWatcherScanner():
         if self.syslog:
             try:
                 log.debug("Sending Syslog message")
-                self.syslog.info(
+                log_method=('warning' if wp_report['status'] == 'WARNING'
+                    else 'critical' if wp_report['status'] == 'ALERT'
+                    else 'error' if wp_report['status'] == 'ERROR' else 'info' )
+
+                getattr(self.syslog, log_method)(
                     wp_report['summary']['line'],
                     extra={
                         'structured_data': {'wp_report': wp_report},

@@ -65,33 +65,6 @@ def print_progress_bar(count,total):
     percent = int(float(count)/float(total)*100)
     log.info( "Progress - [{}{}] {}% - {} / {}".format('='*int(int(percent)*size), ' '*int((100-int(percent))*size), percent, count, total) )
 
-def results_summary(results):
-    '''Print the summary table of all sites.  
-    Columns : "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
-    '''
-    string='Results summary\n'
-    header = ("Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)")
-    sites_w=20
-    # Determine the longest width for site column
-    for r in results:
-        sites_w=len(r['site'])+4 if r and len(r['site'])>sites_w else sites_w
-    frow="{:<%d} {:<8} {:<20} {:<20} {:<8} {}"%sites_w
-    string+=frow.format(*header)
-    for row in results:
-        pb_components=[]
-        for m in row['alerts']+row['warnings']:
-            pb_components.append(m.splitlines()[0])
-        if row['error']:
-            pb_components.append("Scan failed")
-        string+='\n'
-        string+=frow.format(str(row['site']), 
-            str(row['status']),
-            str(row['datetime']),
-            str(row['last_email']),
-            len(row['alerts']+row['warnings']),
-            ', '.join(pb_components) )
-    return string
-
 def parse_timedelta(time_str):
     """
     Parse a time string e.g. (2h13m) into a timedelta object.  Stolen on the web
