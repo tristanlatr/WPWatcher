@@ -15,6 +15,7 @@ from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.daemon import WPWatcherDaemon
+from wpwatcher.syslogout import WPSyslogOutput
 
 class WPWatcherCLI():
     """Main program class"""
@@ -36,6 +37,9 @@ class WPWatcherCLI():
         if args.wprs!=False: self.wprs(args.wprs, args.daemon)
         # Read config
         configuration=self.build_config_cli(args)
+        # Launch syslog test
+        if args.syslog_test:
+            self.syslog_test(configuration)
         # If daemon lopping
         if configuration['daemon']: 
             # Run 4 ever
@@ -67,6 +71,13 @@ class WPWatcherCLI():
         """Print template configuration"""
         sys.stdout.buffer.write(WPWatcherConfig.TEMPLATE_FILE.encode('utf8'))
         sys.stdout.flush()
+        exit(0)
+
+    @staticmethod
+    def syslog_test(conf):
+        """Launch the emit_test_messages() method"""
+        syslog = WPSyslogOutput(conf)
+        syslog.emit_test_messages()
         exit(0)
 
     @staticmethod
@@ -107,6 +118,8 @@ class WPWatcherCLI():
         parser.add_argument('--quiet', '-q', help="Print only errors and WPScan ALERTS", action='store_true')
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
         parser.add_argument('--wprs', metavar="Path", help="Print database summary table (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
+        parser.add_argument('--syslog_test', help="Sends syslog testing packets of all possible sorts to the configured syslog server.", action='store_true')
+
 
         args = parser.parse_args()
         return(args)

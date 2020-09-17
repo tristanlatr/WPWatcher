@@ -30,6 +30,7 @@ class WPSyslogOutput(object):
     DEVICE_VERSION = VERSION
 
     # Dict of  # report_key: (signatureId, name, severiry)
+    # This definition must not change!
     EVENTS =    {   'infos':    ('100', 'WPScan INFO',           4),  
                     'fixed':    ('101', 'WPScan issue FIXED',    4),  
                     'error':    ('102', 'WPScan ERROR',          6),  
@@ -74,7 +75,16 @@ class WPSyslogOutput(object):
                     messages.append(msg)
         return messages
 
-
+    def emit_test_messages(self):
+        wp_report={
+            "site":'https://exemple.com',
+            "error":'WPScan Failed ... (TESTING)',
+            "infos":["Plugin: wpdatatables\nThe version could not be determined (latest is 2.1.2) (TESTING)"],
+            "warnings":["Outdated Wordpress version: 5.1.1\nRelease Date: 2019-03-13 (TESTING)"],
+            "alerts":["Vulnerability: WooCommerce < 4.1.0 - Unescaped Metadata when Duplicating Products (TESTING)"],
+            "fixed":["Issue regarding component 123 has been fixed since last report. (TESTING)"],
+        }
+        self.emit_messages(wp_report)
 
        
 
