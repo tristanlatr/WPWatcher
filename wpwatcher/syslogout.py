@@ -30,16 +30,16 @@ class WPSyslogOutput(object):
     DEVICE_VERSION = VERSION
 
     # Dict of  # report_key: (signatureId, name, severiry)
-    EVENTS =    {   'infos':    ('0', 'WPScan INFO - {}',           4),  
-                    'fixed':    ('1', 'WPScan issue FIXED - {}',    4),  
-                    'error':    ('2', 'WPScan ERROR - {}',          6),  
-                    'warnings': ('3', 'WPScan WARNING - {}',        6),  
-                    'alerts':   ('4', 'WPScan ALERT - {}',          9),
+    EVENTS =    {   'infos':    ('100', 'WPScan INFO',           4),  
+                    'fixed':    ('101', 'WPScan issue FIXED',    4),  
+                    'error':    ('102', 'WPScan ERROR',          6),  
+                    'warnings': ('103', 'WPScan WARNING',        6),  
+                    'alerts':   ('104', 'WPScan ALERT',          9),  
                 }
     
     def emit_messages(self, wp_report):
         """
-        Sends the syslog messages for the report.  
+        Sends the CEF syslog messages for the report.  
         """ 
         log.debug("Sending Syslog messages for site {}".format(wp_report['site']))
         for m in self.get_messages(wp_report):
@@ -57,18 +57,18 @@ class WPSyslogOutput(object):
             for msg_data in items:
                 if msg_data:
                     log.debug("Message data: {}".format(msg_data))
-                    c = CEFEvent(strict=True)
+                    c = CEFEvent()
                     # WPWatcher related fields
                     c.set_prefix('deviceVendor', self.DEVICE_VENDOR)
                     c.set_prefix('deviceProduct', self.DEVICE_PRODUCT)
                     c.set_prefix('deviceVersion', VERSION)
                     # Message common fields
                     c.set_prefix('signatureId', self.EVENTS[v][0])
-                    c.set_prefix('name', self.EVENTS[v][1].format(wp_report['site']))
+                    c.set_prefix('name', self.EVENTS[v][1])
                     c.set_prefix('severity', self.EVENTS[v][2])
                     # Message supp infos
                     c.set_field('message', msg_data[:1022])   
-                    c.set_field("sourceHostName", urlparse(wp_report['site']).netloc)
+                    c.set_field("sourceHostName", wp_report['site'][:1022])
                     msg = c.build_cef()
                     log.debug("Message CEF: {}".format(msg))
                     messages.append(msg)
