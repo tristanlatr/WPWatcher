@@ -171,7 +171,7 @@ class WPWatcher():
             for m in row['alerts']+row['warnings']:
                 pb_components.append(m.splitlines()[0])
             if row['error']:
-                pb_components.append("Scan failed")
+                pb_components.append("Failure")
             string+='\n'
             string+=frow.format(str(row['site']), 
                 str(row['status']),

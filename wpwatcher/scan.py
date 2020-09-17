@@ -13,18 +13,20 @@ import time
 import signal
 import traceback
 from datetime import timedelta, datetime
-from wpwatcher import log
+from wpwatcher import VERSION, log
+import wpwatcher
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
 from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
 from wpscan_out_parse.formatter import format_results
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
+from wpwatcher.syslogout import WPSyslogOutput
 
 # Wait when API limit reached
 API_WAIT_SLEEP=timedelta(hours=24)
 
 # Send kill signal after X seconds when cancelling
-INTERRUPT_TIMEOUT=10
+INTERRUPT_TIMEOUT=3
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
@@ -68,16 +70,36 @@ class WPWatcherScanner():
 
         self.syslog=None
         if conf['syslog_server']:
-            from rfc5424logging import Rfc5424SysLogHandler
-            sh = Rfc5424SysLogHandler(
-                address=(conf['syslog_server'], conf['syslog_port']),
-                socktype=getattr(socket, conf['syslog_stream']), # Use TCP or UDP
-                appname='WPWatcher',
-                **conf['syslog_kwargs']
-            )
-            self.syslog=logging.getLogger('wpwatcher-syslog')
-            self.syslog.setLevel(logging.DEBUG)
-            self.syslog.addHandler(sh)
+            self.syslog = WPSyslogOutput(conf)
+
+    @staticmethod
+    def get_cef_syslog_message(wp_report):
+        from cefevent import CEFEvent
+
+        c = CEFEvent()  
+        c.set_field('name', 'WPWatcher scan report') 
+        c.set_field('deviceVendor', 'Github') 
+        c.set_field('deviceProduct', 'WPWatcher') 
+        c.set_field('deviceVersion', VERSION) 
+        c.set_field('severity', ( 9 if wp_report['status'] == 'ALERT'
+            else 7 if wp_report['status'] == 'WARNING' 
+            else 5 if wp_report['status'] == 'ERROR'
+            else 3 ))
+        c.set_field('message', wp_report['summary']['line'] )   
+        c.set_field("sourceHostName", wp_report['site'])
+        c.set_field("deviceCustomString1", "\n\n".join(wp_report['alerts'])[:1023])
+        c.set_field("deviceCustomString1Label", "alerts")
+        c.set_field("deviceCustomString2", "\n\n".join(wp_report['warnings'])[:1023])
+        c.set_field("deviceCustomString2Label", "warnings")
+        c.set_field("deviceCustomString3", "\n\n".join(wp_report['infos'])[:1023])
+        c.set_field("deviceCustomString3Label", "infos")
+        c.set_field("deviceCustomString4", "\n\n".join(wp_report['fixed'][:1023]))
+        c.set_field("deviceCustomString4Label", "fixed")
+        c.set_field("deviceCustomString5", wp_report['error'])
+        c.set_field("deviceCustomString5Label", "error")
+
+        return c.build_cef() 
+
 
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''
@@ -93,11 +115,11 @@ class WPWatcherScanner():
         '''
         self.interrupting=True
         # Send ^C to all WPScan not finished
-        for p in self.wpscan.processes: p.send_signal(signal.SIGINT)
+        for p in self.wpscan.processes: 
+            p.terminate()
         # Wait for all processes to finish , kill after timeout
         try: timeout(INTERRUPT_TIMEOUT, self.wait_all_wpscan_process)
         except TimeoutError:
-            log.error("Interrupt timeout reached, killing WPScan processes")
             for p in self.wpscan.processes: p.kill()
         # Unlock api wait
         self.api_wait.set()
@@ -106,7 +128,7 @@ class WPWatcherScanner():
         '''Wait all WPScan processes. To be called with timeout() function
         '''
         while len(self.wpscan.processes)>0:
-            time.sleep(0.05)
+            time.sleep(0.5)
         
     # Scan process
 
@@ -369,20 +391,10 @@ class WPWatcherScanner():
         # Send syslog if self.syslog is not None
         if self.syslog:
             try:
-                log.debug("Sending Syslog message")
-                log_method=('warning' if wp_report['status'] == 'WARNING'
-                    else 'critical' if wp_report['status'] == 'ALERT'
-                    else 'error' if wp_report['status'] == 'ERROR' else 'info' )
-
-                getattr(self.syslog, log_method)(
-                    wp_report['summary']['line'],
-                    extra={
-                        'structured_data': {'wp_report': wp_report},
-                        } 
-                )
+                self.syslog.emit_messages(wp_report)
             except Exception as err:
-                log.error("Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc())
-                wp_report['error']+="Unable to send syslog report for site "+wp_site['url']+"\n"+traceback.format_exc()
+                log.error("Unable to send the syslog messages for site "+wp_site['url']+"\n"+traceback.format_exc())
+                wp_report['error']+="Unable to send all syslog messages for site "+wp_site['url']+"\n"+traceback.format_exc()
                 self.check_fail_fast()
 
         self.fill_report_status(wp_report)

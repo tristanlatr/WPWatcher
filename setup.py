@@ -22,7 +22,7 @@ WPWATCHER = (HERE / "wpwatcher" / "__init__.py").read_text()
 README = (HERE / "README.md").read_text()
 setup(
     name                =   'wpwatcher',
-    description         =   "WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.",
+    description         =   "WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email and syslog.",
     url                 =   parse_setup('GIT_URL'),
     maintainer          =   parse_setup('AUTHORS'),
     version             =   parse_setup('VERSION'),
@@ -33,5 +33,6 @@ setup(
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
     install_requires    =   ['wpscan-out-parse>=1.7.1'],
-    extras_require      =   {'syslog' : ['rfc5424-logging-handler']}
+    extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent>=0.5.2']},
+    dependency_links    =   ['https://github.com/tristanlatr/cefevent/tarball/master#egg=cefevent-0.5.2'] 
 )
