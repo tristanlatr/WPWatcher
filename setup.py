@@ -33,6 +33,5 @@ setup(
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
     install_requires    =   ['wpscan-out-parse>=1.7.1'],
-    extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent>=0.5.2']},
-    dependency_links    =   ['https://github.com/tristanlatr/cefevent/tarball/master#egg=cefevent-0.5.2'] 
+    extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent']}
 )
