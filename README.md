@@ -40,23 +40,19 @@
 ## Install
 #### With PyPi (stable)
 
-
 ```bash
-python3 -m pip install 'wpwatcher[syslog]'
+python3 -m pip install 'wpwatcher' --upgrade
 ```
-*Installs WPWatcher with syslog output support*  
+*Installs WPWatcher without syslog output support*  
 
-#####  Update
-```bash
-python3 -m pip install wpwatcher --upgrade
-```
 
 #### Manually (develop)
 ```bash
 git clone https://github.com/tristanlatr/WPWatcher.git
 cd WPWatcher
-python3 -m pip install '.[syslog]'
+python3 -m pip install '.[syslog]' # install with syslog support
 ```
+
 `wpwatcher` should be in your `PATH`.
 
 **[Review the Wiki](https://github.com/tristanlatr/WPWatcher/wiki)** for more documentation.
