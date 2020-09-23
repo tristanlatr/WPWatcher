@@ -81,7 +81,7 @@ class WPWatcherNotification():
         message = MIMEMultipart("html")
         message['Subject'] = 'WPWatcher %s report - %s - %s' % (  wp_report['status'], wp_report['site'], wp_report['datetime'])
         message['From'] = self.from_email
-        message['To'] = email_to
+        message['To'] = ','.join(email_to)
 
         # Email body
         body=self.build_message(wp_report, warnings=self.send_warnings, infos=self.send_infos)
@@ -152,9 +152,9 @@ class WPWatcherNotification():
         '''Sending the report'''
         # Send the report to
         if len(self.email_errors_to)>0 and wp_report['status']=='ERROR':
-            to = ','.join( self.email_errors_to )
+            to = self.email_errors_to
         else: 
-            to = ','.join( wp_site['email_to'] + self.email_to )
+            to = wp_site['email_to'] + self.email_to
 
         if not to :
             log.info("Not sending WPWatcher %s email report because no email is configured for site %s"%(wp_report['status'], wp_report['site']))
