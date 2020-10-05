@@ -14,5 +14,5 @@ __author__ = "Florian Roth, Tristan Landes"
 __author_email__ = ""
 __license__ = "Apache License 2.0"
 __url__ = "https://github.com/tristanlatr/WPWatcher"
-__keywords__ = "mcafee siem api python wrapper"
+__keywords__ = "wpscan auto multiple bulk batch scan wordpress email report alerts warnings service automate mass vulnerable sites asynchronous syslog"
 
