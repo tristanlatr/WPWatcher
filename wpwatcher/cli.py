@@ -64,7 +64,7 @@ class WPWatcherCLI():
     def verion():
         """Print version and contributors"""
         log.info("Version:\t\t%s"%__version__)
-        log.info("Authors:\t\t%s"""%__ve__author__)
+        log.info("Authors:\t\t%s"""%__author__)
         exit(0)
 
     @staticmethod
