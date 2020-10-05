@@ -8,7 +8,6 @@ import io
 import re
 import smtplib
 import socket
-import traceback
 import threading
 import time
 from datetime import datetime
@@ -18,7 +17,7 @@ from email.mime.text import MIMEText
 from wpscan_out_parse.formatter import format_results
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
-from wpwatcher.utils import get_valid_filename, replace
+from wpwatcher.utils import get_valid_filename
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
@@ -57,7 +56,7 @@ class WPWatcherNotification():
         '''Notify recipients if match conditions
         '''
         if self.should_notify(wp_report, last_wp_report):
-            self._notify(wp_site, wp_report, last_wp_report)
+            self._notify(wp_site, wp_report)
             return True
         else: return False
 
@@ -149,7 +148,7 @@ class WPWatcherNotification():
         
         return should
 
-    def _notify(self, wp_site, wp_report, last_wp_report):
+    def _notify(self, wp_site, wp_report):
         '''Sending the report'''
         # Send the report to
         if len(self.email_errors_to)>0 and wp_report['status']=='ERROR':
@@ -164,16 +163,10 @@ class WPWatcherNotification():
         while mail_lock.locked(): 
             time.sleep(0.01)
 
-        try:
-            with mail_lock:
-                self.send_report(wp_report, to)
-                return True
-                
-        # Handle send mail error
-        except (smtplib.SMTPException, ConnectionRefusedError, TimeoutError) as err:
-            log.error("Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc())
-            wp_report['error']+="Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc()
-            raise RuntimeError("Unable to send mail report") from err
+        with mail_lock:
+            self.send_report(wp_report, to)
+            return True
+            
 
     @staticmethod
     def build_message(wp_report, warnings=True, infos=False):

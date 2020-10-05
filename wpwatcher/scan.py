@@ -4,20 +4,17 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-import socket
-import logging
 import threading
 import re
 import os
-import time
-import signal
+import time 
 import traceback
+from smtplib import SMTPException
 from datetime import timedelta, datetime
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
 from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
-from wpscan_out_parse.formatter import format_results
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.syslogout import WPSyslogOutput
@@ -75,7 +72,6 @@ class WPWatcherScanner():
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''
         if self.fail_fast and not self.interrupting: 
-            log.error("Failure")
             raise InterruptedError()
         return None # Interrupt will generate other errors
 
@@ -221,31 +217,43 @@ class WPWatcherScanner():
         else: return ((wp_report, False)) 
 
     def _wpscan_site(self, wp_site, wp_report):
-        '''Handled WPScan scanning , parsing, errors and reporting.  
+        '''
+        Handled WPScan scanning , parsing, errors and reporting.  
         Returns filled wp_report, None if interrupted or killed.  
-        Can raise RuntimeError if WPScan failed'''
+        Can raise `RuntimeError` if any errors.  
+        '''
+        
         # WPScan arguments
         wpscan_arguments=self.wpscan_args+wp_site['wpscan_args']+['--url', wp_site['url']]
+        
         # Output
         log.info("Scanning site %s"%wp_site['url'] )
+        
         # Launch WPScan 
-        (wpscan_exit_code, wp_report["wpscan_output"]) = self.wpscan.wpscan(*wpscan_arguments)
-
+        wpscan_exit_code, wp_report["wpscan_output"] = self.wpscan.wpscan(*wpscan_arguments)
+        log.debug("WPScan raw output:\n"+wp_report["wpscan_output"])
         log.debug("Parsing WPScan output")
+        
         try:
             # Call parse_results_from_string from wpscan_out_parse module 
             results = parse_results_from_string(wp_report['wpscan_output'] ,
                 self.false_positive_strings + wp_site['false_positive_strings'] + ['No WPVulnDB API Token given'] )
-
-            wp_report['infos'], wp_report['warnings'] , wp_report['alerts'], wp_report['summary'] = results['infos'], results['warnings'], results['alerts'], results['summary']
-            
+            # Save WPScan result dict
+            (   wp_report['infos'], 
+                wp_report['warnings'] , 
+                wp_report['alerts'], 
+                wp_report['summary']
+                ) = (
+                    results['infos'], 
+                    results['warnings'], 
+                    results['alerts'], 
+                    results['summary'] )
+            # Including error if not None
             if results['error']:
-                wp_report['error']+=results['error']
+                wp_report['error']=results['error']
 
         except Exception as err:
-            err_str="Could not parse WPScan output for site %s\n%s"%(wp_site['url'],traceback.format_exc())
-            log.error(err_str)
-            raise RuntimeError(err_str) from err
+            raise RuntimeError("Could not parse WPScan output for site %s"%(wp_site['url'])) from err
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code in [0,5]:
@@ -256,33 +264,38 @@ class WPWatcherScanner():
             return None
 
         # Other errors codes : 127, etc, simply raise error
-        err_str="WPScan failed with exit code %s. \nArguments: %s. \nOutput: \n%s"%((wpscan_exit_code, 
+        err_str="WPScan failed with exit code %s. \nArguments: %s. \nOutput: \n%s"%(wpscan_exit_code, 
             safe_log_wpscan_args(wpscan_arguments), 
-            re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output']) ))
+            re.sub(r'(\x1b|\[[0-9][0-9]?m)','', wp_report['wpscan_output']) )
         raise RuntimeError(err_str)
     
     def wpscan_site(self, wp_site, wp_report):
-        '''Timeout wrapper arround `WPWatcherScanner._wpscan_site()`  
+        '''
+        Timeout wrapper arround `WPWatcherScanner._wpscan_site()`.  
         Launch WPScan.  
-        Returns filled wp_report or None
+        Returns filled wp_report or None.  
+        Can raise `RuntimeError` if any errors.  
         '''
         try:
             wp_report_new= timeout(self.scan_timeout.total_seconds(), self._wpscan_site, args=(wp_site, wp_report) )
-            if wp_report_new: wp_report.update(wp_report_new)
-            else : return None
-        except TimeoutError:
-            wp_report['error']+="Timeout scanning site after %s seconds.\nSetup scan_timeout in config file to allow more time"%self.scan_timeout.total_seconds()
-            log.error("Timeout scanning site %s after %s seconds. Setup scan_timeout in config file to allow more time"%(wp_site['url'], self.scan_timeout.total_seconds()))
+            if wp_report_new: 
+                wp_report.update(wp_report_new)
+            else : 
+                return None
+        except TimeoutError as err:
             # Kill process
             for p in self.wpscan.processes:
                 if ( wp_site['url'] in p.args ) and not p.returncode:
                     log.info('Killing WPScan process %s'%(safe_log_wpscan_args(p.args)))
                     p.kill()
-            self.check_fail_fast()
+            # Raise error
+            err_str="Timeout scanning site %s after %s seconds. Setup scan_timeout in config file to allow more time. "%(wp_site['url'], self.scan_timeout.total_seconds())
+            raise RuntimeError(err_str) from err
         return wp_report
 
     def scan_site(self, wp_site, last_wp_report=None):
-        '''Orchestrate the scanning of a site.  
+        '''
+        Orchestrate the scanning of a site.  
         Return the final wp_report or None if something happened.
         '''
 
@@ -312,16 +325,21 @@ class WPWatcherScanner():
                 return None
 
         except RuntimeError as err:
+
             # Try to handle error and return, will recall scan_site()
             wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)                
+            
             if handled:
                 wp_report=wp_report_new
                 return wp_report
 
             elif not self.interrupting: 
-                log.error("Could not scan site %s"%wp_site['url'])
-                log.debug(traceback.format_exc())
+
+                log.error("Could not scan site %s \n%s"%(wp_site['url'], traceback.format_exc()))
+                if wp_report['error']:
+                    wp_report['error']+='\n\n'
                 wp_report['error']+=str(err)
+                
                 # Fail fast
                 self.check_fail_fast()
 
@@ -334,26 +352,35 @@ class WPWatcherScanner():
         
         # Write wpscan output 
         wpscan_results_file=self.write_wpscan_output(wp_report)
-        if wpscan_results_file: log.info("WPScan output saved to file %s"%wpscan_results_file)
+        if wpscan_results_file: 
+            log.info("WPScan output saved to file %s"%wpscan_results_file)
         
         # Updating report entry with data from last scan 
         self.update_report(wp_report, last_wp_report, wp_site)
 
-        # Notify recepients if match triggers
+        
         try:
             # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
             log.debug("%s\n"%(WPWatcherNotification.build_message(wp_report, warnings=True, infos=True)))
+            
+            # Notify recepients if match triggers
             if self.mail.notify(wp_site, wp_report, last_wp_report):
                 # Store report time
                 wp_report['last_email']=datetime.now().strftime(DATE_FORMAT)
                 # Discard fixed items because infos have been sent
                 wp_report['fixed']=[]
 
-        except RuntimeError: 
+        # Handle sendmail errors
+        except (SMTPException, ConnectionRefusedError, TimeoutError): 
+            err_str="Unable to send mail report for site " + wp_site['url'] + "\n" + traceback.format_exc()
+            log.error(err_str)
+            if wp_report['error']:
+                wp_report['error']+='\n\n'
+            wp_report['error']+=err_str
+            wp_report['status']='ERROR'
             # Fail fast
             self.check_fail_fast()
 
-        self.fill_report_status(wp_report)
 
         # Discard wpscan_output from report
         if 'wpscan_output' in wp_report: 
@@ -364,11 +391,13 @@ class WPWatcherScanner():
             try:
                 self.syslog.emit_messages(wp_report)
             except Exception as err:
-                log.error("Unable to send the syslog messages for site "+wp_site['url']+"\n"+traceback.format_exc())
-                wp_report['error']+="Unable to send all syslog messages for site "+wp_site['url']+"\n"+traceback.format_exc()
+                err_str="Unable to send syslog messages for site "+wp_site['url']+"\n"+traceback.format_exc()
+                log.error(err_str)
+                if wp_report['error']:
+                    wp_report['error']+='\n\n'
+                wp_report['error']+=err_str
+                wp_report['status']='ERROR'
                 self.check_fail_fast()
-
-        self.fill_report_status(wp_report)
 
         # Save scanned site
         self.scanned_sites.append(wp_site['url'])
