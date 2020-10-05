@@ -17,6 +17,7 @@ from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.daemon import WPWatcherDaemon
 from wpwatcher.syslogout import WPSyslogOutput
+from wpscan_out_parse import format_results
 
 class WPWatcherCLI():
     """Main program class"""
@@ -26,21 +27,36 @@ class WPWatcherCLI():
         
         # Parse arguments
         args=self.parse_args()
+
         # Init logger with CLi arguments
         init_log(args.verbose, args.quiet)
+
         # If template conf , print and exit
-        if args.template_conf: self.template_conf()
+        if args.template_conf: 
+            self.template_conf()
+
         # Print "banner"
         log.info("WPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites")
-        # If version, print and exit
-        if args.version: self.verion()
-        # Init WPWatcher obhect and dump reports
-        if args.wprs!=False: self.wprs(args.wprs, args.daemon)
+        
+        if args.version: 
+            # Print and exit
+            self.verion()
+        
+        if args.wprs!=False: 
+            # Init WPWatcherDataBase object and dump reports
+            self.wprs(filepath=args.wprs, daemon=args.daemon)
+
         # Read config
         configuration=self.build_config_cli(args)
+
+        if args.show: 
+            # Init WPWatcherDataBase object and dump cli formatted report
+            self.show(urlpart=args.show, filepath=configuration['wp_reports'], daemon=args.daemon)
+
         # Launch syslog test
         if args.syslog_test:
             self.syslog_test(configuration)
+
         # If daemon lopping
         if configuration['daemon']: 
             # Run 4 ever
@@ -59,6 +75,27 @@ class WPWatcherCLI():
         sys.stdout.buffer.write(WPWatcher.results_summary(db._data).encode('utf8'))
         sys.stdout.flush()
         exit(0)
+
+
+    @staticmethod
+    def show(urlpart, filepath=None, daemon=False):
+        """Inspect a report in database"""
+        db=WPWatcherDataBase(filepath, daemon=daemon)
+        matching_reports = [ r for r in db._data if urlpart in r['site']]
+        eq_reports = [ r for r in db._data if urlpart == r['site']]
+        if len(eq_reports):
+            sys.stdout.buffer.write(format_results(eq_reports[0], format='cli').encode('utf8'))
+        elif len(matching_reports)==1:
+            sys.stdout.buffer.write(format_results(matching_reports[0], format='cli').encode('utf8'))
+        elif len(matching_reports)>1:
+            sys.stdout.buffer.write('The following sites match your search: \n'.encode('utf8'))
+            sys.stdout.buffer.write(WPWatcher.results_summary(matching_reports).encode('utf8'))
+            sys.stdout.buffer.write('\nPlease be more specific. \n'.encode('utf8'))
+        else:
+            sys.stdout.buffer.write('No report found'.encode('utf8'))
+            exit(1)
+        exit(0)
+
 
     @staticmethod
     def verion():
@@ -94,7 +131,7 @@ class WPWatcherCLI():
     All options can be missing from config file.""", nargs='+', default=None)
         parser.add_argument('--template_conf', '--tmpconf', help="""Print a template config file.""", action='store_true')
         
-        # Declare arguments that will overwrite config options
+        # Declare arguments
         parser.add_argument('--wp_sites', '--url', metavar="URL", help="Site(s) to scan, you can pass multiple values", nargs='+', default=None)
         parser.add_argument('--wp_sites_list', '--urls', metavar="Path", help="Read URLs from a text file. File must contain one URL per line", default=None)
         parser.add_argument('--send_email_report', '--send', help="Enable email report sending", action='store_true')
@@ -118,9 +155,9 @@ class WPWatcherCLI():
         parser.add_argument('--verbose', '-v', help="Verbose output, print WPScan raw output and parsed WPScan results.", action='store_true')
         parser.add_argument('--quiet', '-q', help="Print only errors and WPScan ALERTS", action='store_true')
         parser.add_argument('--version', '-V', help="Print WPWatcher version", action='store_true')
-        parser.add_argument('--wprs', metavar="Path", help="Print database summary table (wp_reports in config) summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
         parser.add_argument('--syslog_test', help="Sends syslog testing packets of all possible sorts to the configured syslog server.", action='store_true')
-
+        parser.add_argument('--wprs', metavar="Path", help="Print all reports summary. Leave path blank to find default file. Can be used with --daemon to print default daemon databse.", nargs='?', default=False)
+        parser.add_argument('--show', metavar="Site", help="Inspect a report in the Database")
 
         args = parser.parse_args()
         return(args)
