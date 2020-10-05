@@ -8,14 +8,16 @@ import time
 from wpwatcher import log
 from wpwatcher.core import WPWatcher
 
-class WPWatcherDaemon():
+
+class WPWatcherDaemon:
     def __init__(self, conf):
         log.info("Daemon mode selected, looping for ever...")
         # keep data in memory
-        wpwatcher=WPWatcher(conf)
+        wpwatcher = WPWatcher(conf)
         while True:
             # Run scans for ever
             wpwatcher.run_scans_and_notify()
-            log.info("Daemon sleeping %s and scanning again..."%conf['daemon_loop_sleep'])
-            time.sleep(conf['daemon_loop_sleep'].total_seconds())
-            
+            log.info(
+                "Daemon sleeping %s and scanning again..." % conf["daemon_loop_sleep"]
+            )
+            time.sleep(conf["daemon_loop_sleep"].total_seconds())
