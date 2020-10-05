@@ -8,7 +8,8 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import socket
 import logging
 from urllib.parse import urlparse
-from wpwatcher import VERSION, log
+from wpwatcher import log
+from wpwatcher.__version__ import __version__
 
 class WPSyslogOutput(object):
 
@@ -27,7 +28,7 @@ class WPSyslogOutput(object):
 
     DEVICE_VENDOR = "Github"
     DEVICE_PRODUCT = "WPWatcher"
-    DEVICE_VERSION = VERSION
+    DEVICE_VERSION = __version__
 
     # Dict of  # report_key: (signatureId, name, severiry)
     # This definition must not change!

@@ -8,18 +8,11 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import logging
 import sys
 import os
-# Setup configuration: will be parsed by setup.py -------------------
-# Values must be in one line
-# Project version.
-VERSION='2.4.1'
-# URL that will be displayed in help and other places
-GIT_URL="https://github.com/tristanlatr/WPWatcher"
-# Authors
-AUTHORS="Florian Roth, Tristan Landes"
 
 # Global log handler
 log = logging.getLogger('wpwatcher')
-# Setup stdout logger
+
+# Setup global stdout logger
 def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
     format_string='%(asctime)s - %(levelname)s - %(message)s'
     format_string_cli='%(levelname)s - %(message)s'

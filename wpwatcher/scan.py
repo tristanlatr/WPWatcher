@@ -13,8 +13,8 @@ import time
 import signal
 import traceback
 from datetime import timedelta, datetime
-from wpwatcher import VERSION, log
-import wpwatcher
+from wpwatcher import log
+from wpwatcher.__version__ import __version__
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
 from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
 from wpscan_out_parse.formatter import format_results
@@ -26,7 +26,7 @@ from wpwatcher.syslogout import WPSyslogOutput
 API_WAIT_SLEEP=timedelta(hours=24)
 
 # Send kill signal after X seconds when cancelling
-INTERRUPT_TIMEOUT=3
+INTERRUPT_TIMEOUT=5
 
 # Date format used everywhere
 DATE_FORMAT='%Y-%m-%dT%H-%M-%S'
@@ -71,35 +71,6 @@ class WPWatcherScanner():
         self.syslog=None
         if conf['syslog_server']:
             self.syslog = WPSyslogOutput(conf)
-
-    @staticmethod
-    def get_cef_syslog_message(wp_report):
-        from cefevent import CEFEvent
-
-        c = CEFEvent()  
-        c.set_field('name', 'WPWatcher scan report') 
-        c.set_field('deviceVendor', 'Github') 
-        c.set_field('deviceProduct', 'WPWatcher') 
-        c.set_field('deviceVersion', VERSION) 
-        c.set_field('severity', ( 9 if wp_report['status'] == 'ALERT'
-            else 7 if wp_report['status'] == 'WARNING' 
-            else 5 if wp_report['status'] == 'ERROR'
-            else 3 ))
-        c.set_field('message', wp_report['summary']['line'] )   
-        c.set_field("sourceHostName", wp_report['site'])
-        c.set_field("deviceCustomString1", "\n\n".join(wp_report['alerts'])[:1023])
-        c.set_field("deviceCustomString1Label", "alerts")
-        c.set_field("deviceCustomString2", "\n\n".join(wp_report['warnings'])[:1023])
-        c.set_field("deviceCustomString2Label", "warnings")
-        c.set_field("deviceCustomString3", "\n\n".join(wp_report['infos'])[:1023])
-        c.set_field("deviceCustomString3Label", "infos")
-        c.set_field("deviceCustomString4", "\n\n".join(wp_report['fixed'][:1023]))
-        c.set_field("deviceCustomString4Label", "fixed")
-        c.set_field("deviceCustomString5", wp_report['error'])
-        c.set_field("deviceCustomString5Label", "error")
-
-        return c.build_cef() 
-
 
     def check_fail_fast(self):
         '''Fail fast, triger InterruptedError if fail_fast and not already interrupting.'''

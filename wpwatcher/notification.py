@@ -16,7 +16,8 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from wpscan_out_parse.formatter import format_results
-from wpwatcher import log, VERSION
+from wpwatcher import log
+from wpwatcher.__version__ import __version__
 from wpwatcher.utils import get_valid_filename, replace
 
 # Date format used everywhere
@@ -185,5 +186,5 @@ class WPWatcherNotification():
             
         message += "<br />\n<br />\n--"
         message += "<br />\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
-        message += "<br />\nServer: %s - Version: %s<br />\n"%(socket.gethostname(),VERSION)
+        message += "<br />\nServer: %s - Version: %s<br />\n"%(socket.gethostname(),__version__)
         return message

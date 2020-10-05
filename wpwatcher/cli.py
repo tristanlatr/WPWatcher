@@ -9,7 +9,8 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import argparse
 import shlex
 import sys
-from wpwatcher import VERSION, AUTHORS, GIT_URL, log, init_log
+from wpwatcher import log, init_log
+from wpwatcher.__version__ import __version__, __author__, __url__
 from wpwatcher.utils import parse_timedelta
 from wpwatcher.config import WPWatcherConfig
 from wpwatcher.core import WPWatcher
@@ -62,8 +63,8 @@ class WPWatcherCLI():
     @staticmethod
     def verion():
         """Print version and contributors"""
-        log.info("Version:\t\t%s"%VERSION)
-        log.info("Authors:\t\t%s"""%AUTHORS)
+        log.info("Version:\t\t%s"%__version__)
+        log.info("Authors:\t\t%s"""%__ve__author__)
         exit(0)
 
     @staticmethod
@@ -87,7 +88,7 @@ class WPWatcherCLI():
         parser = argparse.ArgumentParser(description="""WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.
     Some config arguments can be passed to the command.
     It will overwrite previous values from config file(s).
-    Check %s for more informations."""%(GIT_URL))
+    Check %s for more informations."""%(__url__))
         parser.add_argument('--conf', '-c', metavar='File path', help="""Configuration file. You can specify multiple files, it will overwrites the keys with each successive file.
     If not specified, will try to load config from file `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` and `./wpwatcher.conf`.
     All options can be missing from config file.""", nargs='+', default=None)

@@ -7,7 +7,8 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import configparser
 import os
 import json
-from wpwatcher import log, GIT_URL
+from wpwatcher import log
+from wpwatcher.__version__ import __url__
 from wpwatcher.utils import parse_timedelta
 
 # Configuration handling -------------------------------------------------------
@@ -207,7 +208,7 @@ smtp_ssl=Yes
 # syslog_stream=SOCK_STREAM
 # syslog_kwargs={"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}
 
-"""%(GIT_URL)
+"""%(__url__)
 
     # Config default values
     DEFAULT_CONFIG={
