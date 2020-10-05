@@ -170,8 +170,14 @@ class WPWatcher():
             pb_components=[]
             for m in row['alerts']+row['warnings']:
                 pb_components.append(m.splitlines()[0])
-            if row['error']:
-                pb_components.append("Failure")
+            # 'errors' key is deprecated. 
+            if row.get('error', None) or row.get('errors', []):
+                err=row.get('error', '').splitlines()
+                if err:
+                    pb_components.append(err[0])
+                # 'errors' key is deprecated, this part would be removed in the future
+                for m in row.get('errors', []):
+                    pb_components.append(m.splitlines()[0])
             string+='\n'
             string+=frow.format(str(row['site']), 
                 str(row['status']),
@@ -183,8 +189,10 @@ class WPWatcher():
 
     @staticmethod
     def format_site(wp_site):
-        '''Make sure the site structure is correct, parse 'url', init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.
-        Raise ValueError if url key is not present'''
+        '''
+        Make sure the site structure is correct, parse 'url', init optionals 'email_to','false_positive_strings','wpscan_args' to empty list if not present.
+        Raise ValueError if url key is not present
+        '''
         if 'url' not in wp_site :
             raise ValueError("Invalid site %s\nMust contain 'url' key"%wp_site)
         else:
@@ -202,13 +210,15 @@ class WPWatcher():
         return wp_site
 
     def scan_site_wrapper(self, wp_site):
-        """Helper method to wrap the raw scanning process that offer WPWatcherScanner.scan_site() and add the following:  
+        """
+        Helper method to wrap the raw scanning process that offer WPWatcherScanner.scan_site() and add the following:  
         - Handle site structure formatting  
         - Find the last report in the database and launch the scan
         - Write it in DB after scan.   
         - Print progress bar  
         This function will be called asynchronously.  
-        Return one report"""
+        Return one report
+        """
         
         wp_site=self.format_site(wp_site)
         last_wp_report=self.wp_reports.find_last_wp_report({'site':wp_site['url']})
@@ -225,11 +235,11 @@ class WPWatcher():
         return(wp_report)
 
     def run_scans_wrapper(self, wp_sites):
-        """Helper method to deal with : 
+        """
+        Helper method to deal with : 
         - executor, concurent futures
         - Trigger self.interrupt() on InterruptedError (raised if fail fast enabled)
-        
-        Pass `kwargs` arguments to scan_site_wrapper() """
+        """
 
         log.info("Starting scans on %s configured sites"%(len(wp_sites)))
         for wp_site in wp_sites:
@@ -248,7 +258,8 @@ class WPWatcher():
     def run_scans_and_notify(self):
         """
         Run WPScan on defined websites and send notifications.  
-        Returns a `tuple (exit code, reports)`"""
+        Returns a `tuple (exit code, reports)`
+        """
         
         # Check sites are in the config
         if len(self.wp_sites)==0:
