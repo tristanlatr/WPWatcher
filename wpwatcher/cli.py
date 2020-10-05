@@ -132,7 +132,7 @@ class WPWatcherCLI:
         exit(0)
 
     @staticmethod
-    def parse_args():
+    def get_arg_parser():
         """Parse CLI arguments, arguments can overwrite config file values"""
 
         parser = argparse.ArgumentParser(
@@ -316,15 +316,21 @@ class WPWatcherCLI:
         parser.add_argument(
             "--show", metavar="Site", help="Inspect a report in the Database"
         )
-
+        return parser
+    
+    @staticmethod
+    def parse_args():
+        parser = WPWatcherCLI.get_arg_parser()
         args = parser.parse_args()
         return args
 
     @staticmethod
     def build_config_cli(args):
-        """Assemble the config dict from args and from file.
+        """Assemble the config dict from args and from file.  
+
         Arguments:
-        - 'args': Namespace from ArgumentParser.parse_args()
+
+        - 'args': Namespace from `ArgumentParser.parse_args()`
         """
 
         args = vars(
@@ -345,7 +351,7 @@ class WPWatcherCLI:
                 conf_args.update({k: args[k]})
 
         # Append or init list of urls from file if any
-        if "wp_sites_list" in args and args["wp_sites_list"]:
+        if args.get("wp_sites_list", None):
             with open(args["wp_sites_list"], "r") as urlsfile:
                 sites = [site.replace("\n", "") for site in urlsfile.readlines()]
                 conf_args["wp_sites"] = (
@@ -356,7 +362,7 @@ class WPWatcherCLI:
 
         conf_args = WPWatcherCLI.adjust_special_cli_args(conf_args)
 
-        # Overwrite with conf dict biult from CLI Args
+        # Overwrite with conf dict built from CLI Args
         if conf_args:
             for k in conf_args:
                 if k == "wpscan_args":
@@ -369,13 +375,18 @@ class WPWatcherCLI:
 
     @staticmethod
     def adjust_special_cli_args(conf_args):
-        """Adjust special CLI arguments types.
+        """
+        Adjust special CLI arguments types.
+
         Arguments:
-        - 'conf_args': Configuration dict with CLI parsed values only"""
+
+        - 'conf_args': Configuration dict with CLI parsed values only
+        """
 
         # Adjust special case of urls that are list of dict
         if "wp_sites" in conf_args:
             conf_args["wp_sites"] = [{"url": site} for site in conf_args["wp_sites"]]
+        
         # Adjust special case of resend_emails_after
         if "resend_emails_after" in conf_args:
             conf_args["resend_emails_after"] = parse_timedelta(
