@@ -7,7 +7,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 Project version and meta informations.
 """
 
-__version__ = "2.5.0.dev"
+__version__ = "2.4.3"
 __title__ = "wpwatcher"
 __description__ = "wpwatcher - WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email and syslog"
 __author__ = "Florian Roth, Tristan Landes"
