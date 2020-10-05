@@ -8,7 +8,7 @@ import pathlib
 HERE = pathlib.Path(__file__).parent
 # About the project
 ABOUT = {}
-exec((HERE / "msiempy" / "__version__.py").read_text(), ABOUT)
+exec((HERE / "wpwatcher" / "__version__.py").read_text(), ABOUT)
 # The text of the README file
 README = (HERE / "README.md").read_text()
 setup(
