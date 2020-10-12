@@ -12,7 +12,7 @@
   <a href="https://github.com/tristanlatr/WPWatcher/actions" target="_blank"><img src="https://github.com/tristanlatr/WPWatcher/workflows/test/badge.svg"></a>
   <a href="https://codecov.io/gh/tristanlatr/WPWatcher" target="_blank"><img src="https://codecov.io/gh/tristanlatr/WPWatcher/branch/master/graph/badge.svg"></a>
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
-  <!-- <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a> -->
+  <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a>
 
 </p>
 
@@ -20,18 +20,18 @@
   - Scan **multiple sites** with WPScan
   - **Parse WPScan output** and divide the results in *"Alerts", "Warnings", "Informations" and eventually "Errors"*
   - **Handled VulnDB API limit**
-  - Define **reporting emails addresses** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
-  - Define **false positives strings** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
-  - Define **WPScan arguments** for every configured site individually and globally ([doc](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
-  - Send scan reports to **Syslog** server ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
+  - Define **reporting emails addresses** for every configured site individually and globally ([wiki/Email-reports](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
+  - Define **false positives strings** for every configured site individually and globally ([wiki/False-positives](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
+  - Define **WPScan arguments** for every configured site individually and globally ([wiki/WPScan-configuration](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
+  - Send scan reports to **Syslog** server ([wiki/Syslog-output](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
   - Save raw WPScan output into files
-  - Log file can also lists all the findings ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Output))
+  - Log file can also lists all the findings ([wiki/Output](https://github.com/tristanlatr/WPWatcher/wiki/Output))
   - Speed up scans using several asynchronous workers
   - Parse and **follow URL redirection** if WPScan fails and propose to ignore main redirect
-  - Scan sites continuously at defined interval and configure script as a linux service ([doc](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
-  - Parse results differently wether WPScan format is JSON or CLI  
+  - Scan sites continuously at defined interval and configure script as a linux service ([wiki/Linux-service](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
   - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
   - Keep track of fixed issues
+  - Simple library usage ([wiki/Library-usage](https://github.com/tristanlatr/WPWatcher/wiki/Library-usage))
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
@@ -79,6 +79,12 @@ wpwatcher --urls sites.txt \
 
 WPWatcher must read a configuration file to send mail reports.  
 *This exemple assume you have filled your config file with mail server setings*.
+
+**Inspect a report in database**
+
+```bash
+wpwatcher --show <site>
+```
 
 ## Configuration
 
