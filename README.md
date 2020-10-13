@@ -45,14 +45,6 @@ python3 -m pip install 'wpwatcher' --upgrade
 ```
 *Installs WPWatcher without syslog output support*  
 
-
-#### Manually (develop)
-```bash
-git clone https://github.com/tristanlatr/WPWatcher.git
-cd WPWatcher
-python3 -m pip install '.[syslog]' # install with syslog support
-```
-
 `wpwatcher` should be in your `PATH`.
 
 **[Review the Wiki](https://github.com/tristanlatr/WPWatcher/wiki)** for more documentation.
@@ -89,15 +81,19 @@ wpwatcher --show <site>
 ## Configuration
 
 Select config file with `--conf File path`. You can specify multiple files. Will overwrites the keys with each successive file.  
-Default config files are `~/.wpwatcher/wpwatcher.conf` , `~/wpwatcher.conf` and `./wpwatcher.conf`.
 
 Create and edit a new config file from template.
 
 ```bash
-wpwatcher --template_conf > ./wpwatcher.conf
-vim ./wpwatcher.conf
+wpwatcher --template_conf > wpwatcher.conf
+vim wpwatcher.conf
 ```
 
+To load the config file by default, move the file to the following location:
+  - For Windows: `%APPDATA%\.wpwatcher\wpwatcher.conf` or `%APPDATA%\wpwatcher.conf`
+  - For Mac/Linux : `$HOME/.wpwatcher/wpwatcher.conf` or `$HOME/wpwatcher.conf`
+
+See:
 **[All configuration options](https://github.com/tristanlatr/WPWatcher/wiki/All-configuration-options)**
 
 ### Configuration exemple
