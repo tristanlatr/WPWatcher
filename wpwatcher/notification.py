@@ -14,7 +14,7 @@ from datetime import datetime
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from wpscan_out_parse.formatter import format_results
+from wpscan_out_parse.formatter import format_results, format_issues
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
 from wpwatcher.utils import get_valid_filename
@@ -92,7 +92,7 @@ class WPWatcherNotification:
 
         # Email body
         body = self.build_message(
-            wp_report, warnings=self.send_warnings, infos=self.send_infos
+            wp_report
         )
         if self.use_monospace_font:
             body = (
@@ -214,7 +214,7 @@ class WPWatcherNotification:
             return True
 
     @staticmethod
-    def build_message(wp_report, warnings=True, infos=False):
+    def build_message(wp_report):
         """Build mail message text base on report and warnngs and info switch"""
 
         message = "<p>WordPress security scan report for site: %s<br />\n" % (
@@ -224,8 +224,12 @@ class WPWatcherNotification:
 
         message += format_results(wp_report, format="html")
 
+        if wp_report["fixed"]:
+            message += "<br/>\n"
+            message += format_issues("Fixed", wp_report["fixed"], format="html")
+
         message += "<br />\n<br />\n--"
-        message += "<br />\nWPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
+        message += '<br />\n<a href="https://github.com/tristanlatr/WPWatcher">WPWatcher</a> -  Automating WPscan to scan and report vulnerable Wordpress sites'
         message += "<br />\nServer: %s - Version: %s<br />\n" % (
             socket.gethostname(),
             __version__,

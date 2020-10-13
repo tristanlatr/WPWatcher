@@ -115,18 +115,22 @@ class WPWatcherScanner:
         if last_wp_report:
             # Save already fixed issues but not reported yet
             wp_report["fixed"] = last_wp_report["fixed"]
-            # Fill out fixed issues
-            wp_report["fixed"].extend(
-                self.get_fixed_issues(
-                    wp_report, last_wp_report, wp_site, issue_type="alerts"
-                )
-            )
-            if self.mail.send_warnings:
+            
+            # Fill out fixed issues if the scan is not an error
+            if wp_report['status'] != 'ERROR':
+
                 wp_report["fixed"].extend(
                     self.get_fixed_issues(
-                        wp_report, last_wp_report, wp_site, issue_type="warnings"
+                        wp_report, last_wp_report, wp_site, issue_type="alerts"
                     )
                 )
+                if self.mail.send_warnings:
+                    wp_report["fixed"].extend(
+                        self.get_fixed_issues(
+                            wp_report, last_wp_report, wp_site, issue_type="warnings"
+                        )
+                    )
+
             # Fill out last_email datetime if any
             if last_wp_report["last_email"]:
                 wp_report["last_email"] = last_wp_report["last_email"]
@@ -172,7 +176,7 @@ class WPWatcherScanner:
                     a.splitlines()[0] for a in wp_report[issue_type]
                 ]:
                     issues.append(
-                        '%s regarding component "%s" has been fixed since last report.\nLast report sent the %s'
+                        '%s regarding component "%s" has been fixed since last report.\nLast report datetime is: %s'
                         % (
                             "Alert" if issue_type == "alerts" else "Issue",
                             last_alert.splitlines()[0],
@@ -459,7 +463,7 @@ class WPWatcherScanner:
                 "%s\n"
                 % (
                     WPWatcherNotification.build_message(
-                        wp_report, warnings=True, infos=True
+                        wp_report
                     )
                 )
             )
@@ -467,7 +471,7 @@ class WPWatcherScanner:
             # Notify recepients if match triggers
             if self.mail.notify(wp_site, wp_report, last_wp_report):
                 # Store report time
-                wp_report["last_email"] = datetime.now().strftime(DATE_FORMAT)
+                wp_report["last_email"] = wp_report["datetime"]
                 # Discard fixed items because infos have been sent
                 wp_report["fixed"] = []
 
