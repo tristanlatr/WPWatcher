@@ -38,7 +38,7 @@ class T(unittest.TestCase):
                     "site": s['url'],
                     "status": "WARNING",
                     "datetime": "2020-04-08T16-05-16",
-                    "last_email": "2020-04-08T16-05-17",
+                    "last_email": "2020-04-08T16-05-16",
                     "error": '',
                     "infos": [
                         "[+]","blablabla"],
@@ -73,7 +73,7 @@ class T(unittest.TestCase):
                     "site": s['url'],
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
-                    "last_email": "2020-04-08T16-05-17",
+                    "last_email": "2020-04-08T16-05-16",
                     "error": '',
                     "infos": [
                         "[+]","blablabla"],
@@ -83,7 +83,7 @@ class T(unittest.TestCase):
                     "alerts": [],
                     "fixed": [
                         "This issue was fixed",
-                        'Issue regarding component "%s" has been fixed since last report.\nLast report sent the %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'])    
+                        'Issue regarding component "%s" has been fixed since last report.\nLast report datetime is: %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'])    
                     ],
                     "summary":None,
                     "wpscan_output":""
