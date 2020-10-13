@@ -23,7 +23,7 @@ setup(
     license             =   ABOUT['__license__'],
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
-    install_requires    =   ['wpscan-out-parse>=1.8'],
+    install_requires    =   ['wpscan-out-parse>=1.8.1'],
     extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent']},
     keywords            =   ABOUT['__keywords__'],
 )
