@@ -457,19 +457,25 @@ class WPWatcherScanner:
         # Updating report entry with data from last scan
         self.update_report(wp_report, last_wp_report, wp_site)
 
+        wpscan_command=' '.join(safe_log_wpscan_args(['wpscan'] + 
+            self.wpscan_args + wp_site["wpscan_args"] + ["--url", wp_site["url"]]))
+
         try:
             # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
             log.debug(
                 "%s\n"
                 % (
                     WPWatcherNotification.build_message(
-                        wp_report
+                        wp_report,
+                        wpscan_command=wpscan_command
                     )
                 )
             )
 
             # Notify recepients if match triggers
-            if self.mail.notify(wp_site, wp_report, last_wp_report):
+            if self.mail.notify(wp_site, wp_report, last_wp_report,
+                wpscan_command=wpscan_command
+                ):
                 # Store report time
                 wp_report["last_email"] = wp_report["datetime"]
                 # Discard fixed items because infos have been sent
