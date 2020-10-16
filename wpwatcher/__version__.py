@@ -7,7 +7,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 Project version and meta informations.
 """
 
-__version__ = "2.4.5"
+__version__ = "2.4.6"
 __title__ = "wpwatcher"
 __description__ = "WordPress Watcher - Automating WPScan to scan and report vulnerable Wordpress sites"
 __author__ = "Florian Roth, Tristan Landes"
