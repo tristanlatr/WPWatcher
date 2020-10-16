@@ -335,7 +335,6 @@ TEMPLATE_EMAIL=Template("""
         <td class="container" style="font-family: sans-serif; font-size: 14px; vertical-align: top; display: block; Margin: 0 auto; max-width: 800px; padding: 10px; width: 800px;">
           <div class="content" style="box-sizing: border-box; display: block; Margin: 0 auto; max-width: 1000px; padding: 10px;">
             <!-- START CENTERED WHITE CONTAINER -->
-            <span class="preheader" style="color: transparent; display: none; height: 0; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all; visibility: hidden; width: 0;">New job postings</span>
             <table class="main" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%; background: #ffffff; border-radius: 3px;">
               <!-- START MAIN CONTENT AREA -->
               <tr>
