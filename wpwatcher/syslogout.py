@@ -65,7 +65,7 @@ class WPSyslogOutput(object):
                     # WPWatcher related fields
                     c.set_prefix("deviceVendor", self.DEVICE_VENDOR)
                     c.set_prefix("deviceProduct", self.DEVICE_PRODUCT)
-                    c.set_prefix("deviceVersion", VERSION)
+                    c.set_prefix("deviceVersion", self.DEVICE_VERSION)
                     # Message common fields
                     c.set_prefix("signatureId", self.EVENTS[v][0])
                     c.set_prefix("name", self.EVENTS[v][1])
