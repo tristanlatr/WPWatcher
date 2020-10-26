@@ -23,7 +23,7 @@
   - Define **reporting emails addresses** for every configured site individually and globally ([wiki/Email-reports](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
   - Define **false positives strings** for every configured site individually and globally ([wiki/False-positives](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
   - Define **WPScan arguments** for every configured site individually and globally ([wiki/WPScan-configuration](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
-  - Send scan reports to **Syslog** server ([wiki/Syslog-output](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
+  - Send WPScan findings to **Syslog** server ([wiki/Syslog-output](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
   - Save raw WPScan output into files
   - Log file can also lists all the findings ([wiki/Output](https://github.com/tristanlatr/WPWatcher/wiki/Output))
   - Speed up scans using several asynchronous workers
