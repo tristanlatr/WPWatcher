@@ -170,9 +170,6 @@ class WPWatcherScanner:
                     else:
                         wp_report[issue_type][issue_index] += 'Warning: This issue is unfixed since {}'.format(
                             last_wp_report['datetime'])
-
-                # log.warning(oneline("** UNFIXED Issue {} ** {} {}".format(wp_report['site'], 
-                #     wp_report[issue_type][issue_index].splitlines()[-1])))
     
     def get_fixed_n_unfixed_issues(self, wp_report, last_wp_report, wp_site, issue_type):
         """Return list of fixed issue texts to include in mails"""
