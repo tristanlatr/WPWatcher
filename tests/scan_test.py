@@ -9,6 +9,8 @@ from wpwatcher.config import WPWatcherConfig
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
+from wpscan_out_parse.parser import WPScanJsonParser
+
 executor=None
 server=None
 class T(unittest.TestCase):
@@ -38,7 +40,7 @@ class T(unittest.TestCase):
                     "site": s['url'],
                     "status": "WARNING",
                     "datetime": "2020-04-08T16-05-16",
-                    "last_email": "2020-04-08T16-05-16",
+                    "last_email": "2020-04-08T16-05-17",
                     "error": '',
                     "infos": [
                         "[+]","blablabla"],
@@ -51,7 +53,7 @@ class T(unittest.TestCase):
                     "summary":None,
                     "wpscan_output":""
                 }
-
+            parser = WPScanJsonParser(data={})
             new={
                     "site": s['url'],
                     "status": "",
@@ -66,6 +68,7 @@ class T(unittest.TestCase):
                     "alerts": [],
                     "fixed": [],
                     "summary":None,
+                    "wpscan_parser": parser,
                     "wpscan_output":""
                 }
 
@@ -73,19 +76,20 @@ class T(unittest.TestCase):
                     "site": s['url'],
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
-                    "last_email": "2020-04-08T16-05-16",
+                    "last_email": "2020-04-08T16-05-17",
                     "error": '',
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
-                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up"
+                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up\nWarning: This issue is unfixed since 2020-04-08T16-05-16"
                     ],
                     "alerts": [],
                     "fixed": [
                         "This issue was fixed",
-                        'Issue regarding component "%s" has been fixed since last report.\nLast report datetime is: %s'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).",old['last_email'])    
+                        'Issue regarding component "%s" has been fixed since the last scan.'%("[+] WordPress version 5.2.2 identified (Insecure, released on 2019-06-18).")    
                     ],
                     "summary":None,
+                    "wpscan_parser": parser,
                     "wpscan_output":""
                 }
             

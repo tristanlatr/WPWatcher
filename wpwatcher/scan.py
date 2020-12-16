@@ -9,12 +9,16 @@ import re
 import os
 import time
 import traceback
+import json
 from smtplib import SMTPException
 from datetime import timedelta, datetime
+from urllib.parse import parse_qsl
+
+from wpscan_out_parse.parser import WPScanJsonParser
+
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
 from wpwatcher.utils import get_valid_filename, safe_log_wpscan_args, oneline, timeout
-from wpscan_out_parse.parser import parse_results_from_string, WPScanJsonParser
 from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.syslogout import WPSyslogOutput
@@ -115,25 +119,83 @@ class WPWatcherScanner:
         if last_wp_report:
             # Save already fixed issues but not reported yet
             wp_report["fixed"] = last_wp_report["fixed"]
-            
-            # Fill out fixed issues if the scan is not an error
-            if wp_report['status'] != 'ERROR':
-
-                wp_report["fixed"].extend(
-                    self.get_fixed_issues(
-                        wp_report, last_wp_report, wp_site, issue_type="alerts"
-                    )
-                )
-                if self.mail.send_warnings:
-                    wp_report["fixed"].extend(
-                        self.get_fixed_issues(
-                            wp_report, last_wp_report, wp_site, issue_type="warnings"
-                        )
-                    )
 
             # Fill out last_email datetime if any
             if last_wp_report["last_email"]:
                 wp_report["last_email"] = last_wp_report["last_email"]
+            
+            # Fill out fixed issues if the scan is not an error
+            if wp_report['status'] != 'ERROR':
+                fixed, unfixed = self.get_fixed_n_unfixed_issues(
+                        wp_report, last_wp_report, wp_site, issue_type="alerts"
+                    )
+                wp_report["fixed"].extend(
+                    fixed
+                )
+                self.add_unfixed_warnings(wp_report, last_wp_report, unfixed, issue_type="alerts")
+
+                fixed, unfixed = self.get_fixed_n_unfixed_issues(
+                    wp_report, last_wp_report, wp_site, issue_type="warnings"
+                    )
+                wp_report["fixed"].extend(
+                    fixed
+                )
+                self.add_unfixed_warnings(wp_report, last_wp_report, unfixed, issue_type="warnings")
+
+    def add_unfixed_warnings(self, wp_report, last_wp_report, unfixed_items, issue_type):
+        """
+        A line will be added at the end of the warning like:  
+        "Warning: This issue is unfixed since {date}"
+        """
+
+        for unfixed_item in unfixed_items:
+            try:
+                # Get unfixd issue
+                issue_index = [ alert.splitlines()[0] 
+                    for alert in wp_report[issue_type] ].index(unfixed_item.splitlines()[0])
+            except ValueError as e:
+                log.error(str(e)+". List is {}".format(l))
+            else:
+                wp_report[issue_type][issue_index] += '\n'
+                try:
+                    # Try to get older issue if it exists
+                    older_issue_index = [ alert.splitlines()[0] 
+                        for alert in last_wp_report[issue_type] ].index(unfixed_item.splitlines()[0])
+                except ValueError as e:
+                    log.error(e)
+                else:
+                    older_warn_last_line = last_wp_report[issue_type][older_issue_index].splitlines()[-1]
+                    if "Warning: This issue is unfixed" in older_warn_last_line:
+                        wp_report[issue_type][issue_index] += older_warn_last_line
+                    else:
+                        wp_report[issue_type][issue_index] += 'Warning: This issue is unfixed since {}'.format(
+                            last_wp_report['datetime'])
+
+                # log.warning(oneline("** UNFIXED Issue {} ** {} {}".format(wp_report['site'], 
+                #     wp_report[issue_type][issue_index].splitlines()[-1])))
+    
+    def get_fixed_n_unfixed_issues(self, wp_report, last_wp_report, wp_site, issue_type):
+        """Return list of fixed issue texts to include in mails"""
+        fixed_issues = []
+        unfixed_issues = []
+        for last_alert in last_wp_report[issue_type]:
+            if not wp_report['wpscan_parser'].is_false_positive(last_alert):
+                
+                if last_alert.splitlines()[0] not in [
+                    alert.splitlines()[0] for alert in wp_report[issue_type]
+                ]:
+                    fixed_issues.append(
+                        '%s regarding component "%s" has been fixed since the last scan.'
+                        % (
+                            "Alert" if issue_type == "alerts" else "Issue",
+                            last_alert.splitlines()[0]
+                        )
+                    )
+                else:
+                        unfixed_issues.append(last_alert)
+
+        return fixed_issues, unfixed_issues
+
 
     @staticmethod
     def _write_wpscan_output(wp_report, fpwpout):
@@ -164,26 +226,6 @@ class WPWatcherScanner:
             with open(wpscan_results_file, "wb") as wpout:
                 self._write_wpscan_output(wp_report, wpout)
         return wpscan_results_file
-
-    def get_fixed_issues(self, wp_report, last_wp_report, wp_site, issue_type="alerts"):
-        """Return list of fixed issue texts to include in mails"""
-        issues = []
-        for last_alert in last_wp_report[issue_type]:
-            if not WPScanJsonParser(
-                None, self.false_positive_strings + wp_site["false_positive_strings"]
-            ).is_false_positive(last_alert):
-                if last_alert.splitlines()[0] not in [
-                    a.splitlines()[0] for a in wp_report[issue_type]
-                ]:
-                    issues.append(
-                        '%s regarding component "%s" has been fixed since last report.\nLast report datetime is: %s'
-                        % (
-                            "Alert" if issue_type == "alerts" else "Issue",
-                            last_alert.splitlines()[0],
-                            last_wp_report["last_email"],
-                        )
-                    )
-        return issues
 
     def skip_this_site(self, wp_report, last_wp_report):
         """Return true if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`"""
@@ -289,6 +331,27 @@ class WPWatcherScanner:
         else:
             return (wp_report, False)
 
+    def _load_parser_results(self, parser:WPScanJsonParser, wp_report:dict):
+        results = parser.get_results()
+        # Save WPScan result dict
+        (
+            wp_report["infos"],
+            wp_report["warnings"],
+            wp_report["alerts"],
+            wp_report["summary"],
+        ) = (
+            results["infos"],
+            results["warnings"],
+            results["alerts"],
+            results["summary"],
+        )
+        # Including error if not None
+        if results["error"]:
+            if wp_report["error"]:
+                wp_report["error"] += "\n\n"
+            wp_report["error"] += results["error"]
+
+
     def _wpscan_site(self, wp_site, wp_report):
         """
         Handled WPScan scanning , parsing, errors and reporting.
@@ -312,28 +375,15 @@ class WPWatcherScanner:
         log.debug("Parsing WPScan output")
 
         try:
-            # Call parse_results_from_string from wpscan_out_parse module
-            results = parse_results_from_string(
-                wp_report["wpscan_output"],
+            # Use wpscan_out_parse module
+            parser = WPScanJsonParser(
+                json.loads(wp_report["wpscan_output"]),
                 self.false_positive_strings
                 + wp_site["false_positive_strings"]
                 + ["No WPVulnDB API Token given"],
             )
-            # Save WPScan result dict
-            (
-                wp_report["infos"],
-                wp_report["warnings"],
-                wp_report["alerts"],
-                wp_report["summary"],
-            ) = (
-                results["infos"],
-                results["warnings"],
-                results["alerts"],
-                results["summary"],
-            )
-            # Including error if not None
-            if results["error"]:
-                wp_report["error"] = results["error"]
+            wp_report['wpscan_parser'] = parser
+            self._load_parser_results(parser, wp_report)
 
         except Exception as err:
             raise RuntimeError(
@@ -408,6 +458,7 @@ class WPWatcherScanner:
             "fixed": [],
             "summary": None,
             "wpscan_output": "",  # will be deleted
+            "wpscan_parser": None # will be deleted
         }
 
         # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
@@ -447,15 +498,15 @@ class WPWatcherScanner:
 
         self.fill_report_status(wp_report)
 
-        self.log_report_results(wp_report)
-
         # Write wpscan output
         wpscan_results_file = self.write_wpscan_output(wp_report)
         if wpscan_results_file:
             log.info("WPScan output saved to file %s" % wpscan_results_file)
 
-        # Updating report entry with data from last scan
+        # Updating report entry with data from last scan and append
         self.update_report(wp_report, last_wp_report, wp_site)
+
+        self.log_report_results(wp_report)
 
         wpscan_command=' '.join(safe_log_wpscan_args(['wpscan'] + 
             self.wpscan_args + wp_site["wpscan_args"] + ["--url", wp_site["url"]]))
@@ -500,6 +551,10 @@ class WPWatcherScanner:
         # Discard wpscan_output from report
         if "wpscan_output" in wp_report:
             del wp_report["wpscan_output"]
+
+        # Discard wpscan_parser from report
+        if "wpscan_parser" in wp_report:
+            del wp_report["wpscan_parser"]
 
         # Send syslog if self.syslog is not None
         if self.syslog:
