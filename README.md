@@ -28,12 +28,12 @@ Automate scans and get notified when vulnerabilities, outdated plugins or other 
   - Define **WPScan arguments** for every configured site individually and globally ([wiki/WPScan-configuration](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
   - Send WPScan findings to **Syslog** server ([wiki/Syslog-output](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
   - Save raw WPScan output into files
-  - Log file can also lists all the findings ([wiki/Output](https://github.com/tristanlatr/WPWatcher/wiki/Output))
+  - Log file lists all the findings ([wiki/Output](https://github.com/tristanlatr/WPWatcher/wiki/Output))
   - Speed up scans using several asynchronous workers
-  - Parse and **follow URL redirection** if WPScan fails and propose to ignore main redirect
+  - **Follow URL redirection** if WPScan fails and propose to ignore main redirect
   - Scan sites continuously at defined interval and configure script as a linux service ([wiki/Linux-service](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
   - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
-  - Keep track of fixed issues
+  - Keep track of fixed and unfixed issues
   - Simple library usage ([wiki/Library-usage](https://github.com/tristanlatr/WPWatcher/wiki/Library-usage))
 
 ## Prerequisites 
