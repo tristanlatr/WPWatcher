@@ -16,6 +16,9 @@
 
 </p>
 
+Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email.  
+Automate scans and get notified when vulnerabilities, outdated plugins or other risks are found. 
+
 ## Features
   - Scan **multiple sites** with WPScan
   - **Parse WPScan output** and divide the results in *"Alerts", "Warnings", "Informations" and eventually "Errors"*
