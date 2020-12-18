@@ -26,17 +26,20 @@ class WPScanWrapper:
 
     def _lazy_init(self):
         # Check if WPScan exists
+        wp_version = [ "--version", "--format", "json", "--no-banner" ]
         try:
             exit_code, version_info = self._wpscan(
-                "--version", "--format", "json", "--no-banner"
-            )
+                *wp_version )
         except FileNotFoundError as err:
             raise FileNotFoundError(
-                "Could not find WPScan executale. Make sure wpscan in you PATH or configure full path to executable in config file. If you're using RVM, the path should point to the WPScan wrapper like '/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan'"
+                "Could not find WPScan executale. "
+                "Make sure wpscan in you PATH or configure full path to executable in config file. "
+                "If you're using RVM, the path should point to the WPScan wrapper like '/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan'"
             ) from err
         if exit_code != 0:
-            raise Exception(
-                "There is an issue with your WPScan installation. See https://wpscan.org for installation steps.\nOutput:\n{}".fornat(
+            raise RuntimeError(
+                "There is an issue with WPScan. Non-zero exit code when requesting '{}' \nOutput:\n{}".fornat(
+                    " ".join(wp_version), 
                     version_info
                 )
             )
@@ -87,44 +90,5 @@ class WPScanWrapper:
             wpscan_output = wpscan_output.decode("utf-8")
         except UnicodeDecodeError:
             wpscan_output = wpscan_output.decode("latin1")
-
-        """
-        # Error when wpscan failed, except exit code 5: means the target has at least one vulnerability.
-        #   See https://github.com/wpscanteam/CMSScanner/blob/master/lib/cms_scanner/exit_code.rb
-        if process.returncode in [0,5]:
-            # WPScan comamnd success
-            log.debug("WPScan raw output:\n"+wpscan_output)
-        
-        # Log error
-        else : 
-            err_string, full_err_string=self.get_full_err_string(cmd, process.returncode, wpscan_output, stderr)
-            log.error(err_string)
-            log.debug(full_err_string)
-        """
-
         return (process.returncode, wpscan_output)
 
-    @staticmethod
-    def get_full_err_string(cmd, returncode, wpscan_output, stderr):
-        try:
-            reason_short = (
-                [
-                    line
-                    for line in wpscan_output.splitlines()
-                    if "aborted" in line.lower()
-                ][0]
-                .replace('"', "")
-                .strip()
-            )
-        except IndexError:
-            reason_short = ""
-        full = "%s %s" % (
-            "\nWPScan output: %s" % wpscan_output if wpscan_output else "",
-            "\nStandard error output: %s" % stderr if stderr else "",
-        )
-        short = "WPScan command '%s' failed with exit code %s %s" % (
-            " ".join(safe_log_wpscan_args(cmd)),
-            str(returncode),
-            reason_short,
-        )
-        return (short, full)

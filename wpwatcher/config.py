@@ -66,7 +66,7 @@ class WPWatcherConfig:
         """
         # Saving config file in right dict format and types - no 'wpwatcher' section, just config options
         config_dict = {
-            # Configurable witg cli arguments
+            # Configurable with cli arguments
             "wp_sites": self.getjson("wp_sites"),
             "send_email_report": self.getbool("send_email_report"),
             "send_errors": self.getbool("send_errors"),
@@ -118,7 +118,7 @@ class WPWatcherConfig:
         """Return json loaded structure from a configparser object. Empty list if the loaded value is null.
         Arguments:
         - `conf`: configparser object
-        - `key`: wpwatcher config key
+        - `key`: config key
         """
         try:
             loaded = json.loads(self.parser.get("wpwatcher", key))
@@ -134,7 +134,7 @@ class WPWatcherConfig:
         """Return bool value from a configparser object.
         Arguments:
         - `conf`: configparser object
-        - `key`: wpwatcher config key
+        - `key`: config key
         """
         try:
             return self.parser.getboolean("wpwatcher", key)
@@ -149,7 +149,7 @@ class WPWatcherConfig:
         """Return int value from a configparser object.
         Arguments:
         - `conf`: configparser object
-        - `key`: alt_job config key
+        - `key`: config key
         """
         try:
             return self.parser.getint("wpwatcher", key)
@@ -266,7 +266,7 @@ smtp_ssl=Yes
         "asynch_workers": "1",
         "follow_redirect": "No",
         "wpscan_output_folder": "",
-        "scan_timeout": "15m",
+        "scan_timeout": "30m",
         "use_monospace_font": "No",
         "syslog_server": "",
         "syslog_port": "514",
@@ -300,12 +300,12 @@ smtp_ssl=Yes
             os.makedirs(os.path.dirname(potential_paths[0]), exist_ok=True)
             with open(potential_paths[0], "w") as config_file:
                 config_file.write(default_content)
-            log.info("Init new file: %s" % (p))
+            log.info("Init new file: %s" % (potential_paths[0]))
             existent_files.append(potential_paths[0])
         return existent_files
 
     @staticmethod
-    def find_config_files(create=False):
+    def find_config_files():
         """
         Returns the location of existing `wpwatcher.conf` file at `./wpwatcher.conf` and/or `~/wpwatcher.conf` or under `~/.wpwatcher/` folder
         """

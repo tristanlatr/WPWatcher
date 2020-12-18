@@ -88,7 +88,7 @@ class WPWatcherScanner:
 
     def cancel_scans(self):
         """
-        Send ^C to all WPScan processes.
+        Send SIGTERM to all WPScan processes.
         Escape api limit wait if the program is sleeping.
         """
         self.interrupting = True
@@ -206,11 +206,10 @@ class WPWatcherScanner:
             fpwpout.write(nocolor_output.encode("latin1"))
 
     def write_wpscan_output(self, wp_report):
-        """Write WPScan output to configured place with `wpscan_output_folder` or return None"""
+        """Write WPScan output to configured place with `wpscan_output_folder` if configured"""
         # Subfolder
         folder = "%s/" % wp_report["status"].lower()
         # Write wpscan output
-        wpscan_results_file = None
         if self.wpscan_output_folder:
             wpscan_results_file = os.path.join(
                 self.wpscan_output_folder,
@@ -220,9 +219,10 @@ class WPWatcherScanner:
                     % (wp_report["site"], wp_report["datetime"])
                 ),
             )
+            log.info("Saving WPScan output to file %s" % wpscan_results_file)
             with open(wpscan_results_file, "wb") as wpout:
                 self._write_wpscan_output(wp_report, wpout)
-        return wpscan_results_file
+
 
     def skip_this_site(self, wp_report, last_wp_report):
         """Return true if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`"""
@@ -436,6 +436,20 @@ class WPWatcherScanner:
             raise RuntimeError(err_str) from err
         return wp_report
 
+    def _fail_scan(self, wp_report, err_str):
+        """
+        Common manipulations when a scan fail. This will not stop the scan 
+        process unless --fail_fast if enabled. 
+        """
+        log.error(err_str)
+        if wp_report["error"]:
+            wp_report["error"] += "\n\n"
+        wp_report["error"] += err_str
+        wp_report["status"] = "ERROR"
+        # Fail fast
+        self.check_fail_fast()
+
+
     def scan_site(self, wp_site, last_wp_report=None):
         """
         Orchestrate the scanning of a site.
@@ -468,7 +482,7 @@ class WPWatcherScanner:
             if not self.wpscan_site(wp_site, wp_report):
                 return None
 
-        except RuntimeError as err:
+        except RuntimeError:
 
             # Try to handle error and return, will recall scan_site()
             wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)
@@ -478,27 +492,13 @@ class WPWatcherScanner:
                 return wp_report
 
             elif not self.interrupting:
-
-                log.error(
-                    "Could not scan site %s \n%s"
-                    % (wp_site["url"], traceback.format_exc())
-                )
-                if wp_report["error"]:
-                    wp_report["error"] += "\n\n"
-                wp_report["error"] += str(err)
-
-                # Fail fast
-                self.check_fail_fast()
+                self._fail_scan(wp_report, "Could not scan site %s \n%s"
+                    % (wp_site["url"], traceback.format_exc()))
 
             else:
                 return None
 
         self.fill_report_status(wp_report)
-
-        # Write wpscan output
-        wpscan_results_file = self.write_wpscan_output(wp_report)
-        if wpscan_results_file:
-            log.info("WPScan output saved to file %s" % wpscan_results_file)
 
         # Updating report entry with data from last scan and append
         self.update_report(wp_report, last_wp_report, wp_site)
@@ -507,18 +507,15 @@ class WPWatcherScanner:
 
         wpscan_command=' '.join(safe_log_wpscan_args(['wpscan'] + 
             self.wpscan_args + wp_site["wpscan_args"] + ["--url", wp_site["url"]]))
+        
+        # Print parsed readable Alerts, Warnings, etc as they will appear in email reports
+        log.debug("%s\n" % (
+                WPWatcherNotification.build_message(
+                    wp_report,
+                    wpscan_command=wpscan_command
+            )))
 
         try:
-            # Will print parsed readable Alerts, Warnings, etc as they will appear in email reports
-            log.debug(
-                "%s\n"
-                % (
-                    WPWatcherNotification.build_message(
-                        wp_report,
-                        wpscan_command=wpscan_command
-                    )
-                )
-            )
 
             # Notify recepients if match triggers
             if self.mail.notify(wp_site, wp_report, last_wp_report,
@@ -531,19 +528,9 @@ class WPWatcherScanner:
 
         # Handle sendmail errors
         except (SMTPException, ConnectionRefusedError, TimeoutError):
-            err_str = (
-                "Unable to send mail report for site "
+            self._fail_scan(wp_report, "Could not send mail report for site "
                 + wp_site["url"]
-                + "\n"
-                + traceback.format_exc()
-            )
-            log.error(err_str)
-            if wp_report["error"]:
-                wp_report["error"] += "\n\n"
-            wp_report["error"] += err_str
-            wp_report["status"] = "ERROR"
-            # Fail fast
-            self.check_fail_fast()
+                + "\n" + traceback.format_exc())
 
         # Discard wpscan_output from report
         if "wpscan_output" in wp_report:
@@ -558,18 +545,9 @@ class WPWatcherScanner:
             try:
                 self.syslog.emit_messages(wp_report)
             except Exception as err:
-                err_str = (
-                    "Unable to send syslog messages for site "
-                    + wp_site["url"]
-                    + "\n"
-                    + traceback.format_exc()
-                )
-                log.error(err_str)
-                if wp_report["error"]:
-                    wp_report["error"] += "\n\n"
-                wp_report["error"] += err_str
-                wp_report["status"] = "ERROR"
-                self.check_fail_fast()
+                self._fail_scan(wp_report, "Could not send syslog messages for site "
+                + wp_site["url"]
+                + "\n" + traceback.format_exc())
 
         # Save scanned site
         self.scanned_sites.append(wp_site["url"])
