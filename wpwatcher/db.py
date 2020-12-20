@@ -25,7 +25,7 @@ class WPWatcherDataBase:
 
         self.no_local_storage = wp_reports_filepath == "null"
         if not wp_reports_filepath:
-            wp_reports_filepath = self.find_wp_reports_file(create=True, daemon=daemon)
+            wp_reports_filepath = self.find_wp_reports_file(daemon=daemon)
         self.filepath = wp_reports_filepath
         self._data = self.build_wp_reports(self.filepath)
 
@@ -38,8 +38,9 @@ class WPWatcherDataBase:
                 )
             )
             raise
-
-    def find_wp_reports_file(self, create=False, daemon=False):
+    
+    @staticmethod
+    def find_wp_reports_file(daemon=False):
         files = [DEFAULT_REPORTS] if not daemon else [DEFAULT_REPORTS_DAEMON]
         env = ["HOME", "PWD", "XDG_CONFIG_HOME", "APPDATA"]
         return WPWatcherConfig.find_files(env, files, "[]", create=True)[0]
@@ -76,7 +77,7 @@ class WPWatcherDataBase:
         if not new_wp_report_list:
             return
 
-        for newr in new_wp_report_list:
+        for newr in [ dict(r) for r in new_wp_report_list ]:
             new = True
             for r in self._data:
                 if r["site"] == newr["site"]:

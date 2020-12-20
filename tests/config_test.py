@@ -9,13 +9,13 @@ class T(unittest.TestCase):
     
         # Test minimal config
         config_dict=WPWatcherConfig.fromstring(DEFAULT_CONFIG)
-        self.assertEquals(config_dict['email_to'], ["test@mail.com"])
-        self.assertEquals(config_dict['from_email'], "testing-wpwatcher@exemple.com")
-        self.assertEquals(config_dict['smtp_server'], "localhost:1025")
+        self.assertEqual(config_dict['email_to'], ["test@mail.com"])
+        self.assertEqual(config_dict['from_email'], "testing-wpwatcher@exemple.com")
+        self.assertEqual(config_dict['smtp_server'], "localhost:1025")
         
         # Test config template file
         config_dict2=WPWatcherConfig.fromstring(WPWatcherConfig.TEMPLATE_FILE)
-        self.assertEquals(config_dict2['smtp_server'], "mailserver.de:587")
+        self.assertEqual(config_dict2['smtp_server'], "mailserver.de:587")
 
     def test_init_config_from_file(self):
 

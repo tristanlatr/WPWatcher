@@ -6,6 +6,7 @@ import concurrent.futures
 from wpwatcher.core import WPWatcher
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.config import WPWatcherConfig
+from wpwatcher.site import WPWatcherSite
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
@@ -139,6 +140,6 @@ class T(unittest.TestCase):
     def test_scan_localhost_error_not_wordpress(self):
         # test info, warnings and alerts
         scanner=WPWatcherScanner(WPWatcherConfig.fromstring(DEFAULT_CONFIG))
-        report=scanner.scan_site(WPWatcher.format_site({'url':'http://localhost:8080'}))
+        report=scanner.scan_site(WPWatcherSite({'url':'http://localhost:8080'}))
         self.assertEqual(report['status'], 'ERROR')
         self.assertRegex(report['error'], 'does not seem to be running WordPress')

@@ -1,7 +1,13 @@
 
-from collections import UserDict
+from collections import UserDict, UserList
+
+
 
 class WPWatcherReport(UserDict):
+    """ 
+    Dict-Like object to store scan results. 
+
+    """
 
     DEFAULT_REPORT:dict = {
         "site":"",
@@ -24,3 +30,54 @@ class WPWatcherReport(UserDict):
         super().__init__(*args, **kwargs)
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
+
+class WPWatcherReportCollection(UserList):
+    """
+    List-Like object to store `WPWatcherReport`s. 
+    """
+
+    def __repr__(self) -> str:
+        """
+        Get the summary string.
+
+        :Return: Summary table of all sites contained in the collection. 
+                 Columns are: "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
+        """
+        results = self.data
+        string = "Results summary\n"
+        header = (
+            "Site",
+            "Status",
+            "Last scan",
+            "Last email",
+            "Issues",
+            "Problematic component(s)",
+        )
+        sites_w = 20
+        # Determine the longest width for site column
+        for r in results:
+            sites_w = len(r["site"]) + 4 if r and len(r["site"]) > sites_w else sites_w
+        frow = "{:<%d} {:<8} {:<20} {:<20} {:<8} {}" % sites_w
+        string += frow.format(*header)
+        for row in results:
+            pb_components = []
+            for m in row["alerts"] + row["warnings"]:
+                pb_components.append(m.splitlines()[0])
+            # 'errors' key is deprecated.
+            if row.get("error", None) or row.get("errors", []):
+                err = row.get("error", "").splitlines()
+                if err:
+                    pb_components.append(err[0])
+                # 'errors' key is deprecated, this part would be removed in the future
+                for m in row.get("errors", []):
+                    pb_components.append(m.splitlines()[0])
+            string += "\n"
+            string += frow.format(
+                str(row["site"]),
+                str(row["status"]),
+                str(row["datetime"]),
+                str(row["last_email"]),
+                len(row["alerts"] + row["warnings"]),
+                ", ".join(pb_components),
+            )
+        return string

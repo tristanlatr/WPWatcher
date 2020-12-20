@@ -62,7 +62,7 @@ class WPScanWrapper:
         log.info("Updating WPScan")
         exit_code, out = self._wpscan("--update", "--format", "json", "--no-banner")
         if exit_code != 0:
-            raise Exception("Error updating WPScan.\nOutput:\n{}".format(out))
+            raise RuntimeError("Error updating WPScan.\nOutput:\n{}".format(out))
 
     # Wrapper for lazy initiation
     def wpscan(self, *args):
