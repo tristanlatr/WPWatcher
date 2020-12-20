@@ -4,6 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+from typing import Mapping, List
 import copy
 import os
 import json
@@ -19,6 +20,7 @@ from wpwatcher import log, init_log
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
+from wpwatcher.site import WPWatcherSite
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
@@ -47,34 +49,34 @@ class WPWatcher:
     """
 
     # WPWatcher must use a configuration dict
-    def __init__(self, conf):
+    def __init__(self, conf:Mapping):
         # (Re)init logger with config
         init_log(verbose=conf["verbose"], quiet=conf["quiet"], logfile=conf["log_file"])
 
         self.delete_tmp_wpscan_files()
 
         # Init DB interface
-        self.wp_reports = WPWatcherDataBase(conf["wp_reports"])
+        self.wp_reports:WPWatcherDataBase = WPWatcherDataBase(conf["wp_reports"])
 
         # Update config before passing it to WPWatcherScanner
         conf.update({"wp_reports": self.wp_reports.filepath})
 
         # Init scanner
-        self.scanner = WPWatcherScanner(conf)
+        self.scanner:WPWatcherScanner = WPWatcherScanner(conf)
 
         # Dump config
         log.debug("WPWatcher configuration:{}".format(self.dump_config(conf)))
 
         # Save sites
-        self.wp_sites = conf["wp_sites"]
+        self.wp_sites:List[WPWatcherSite] = [ WPWatcherSite(site_conf) for site_conf in conf["wp_sites"] ]
 
         # Asynchronous executor
-        self.executor = concurrent.futures.ThreadPoolExecutor(
+        self.executor:concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(
             max_workers=conf["asynch_workers"]
         )
 
         # List of conccurent futures
-        self.futures = []
+        self.futures:list = []
 
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt()
         signal.signal(signal.SIGINT, self.interrupt)

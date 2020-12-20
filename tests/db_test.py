@@ -12,7 +12,7 @@ class T(unittest.TestCase):
         # Compare with config and no config
         db=WPWatcherDataBase()
         paths_found=db.find_wp_reports_file()
-        db2=WPWatcherDataBase(WPWatcherConfig(string=SPECIFIC_WP_REPORTS_FILE_CONFIG%(paths_found)).build_config()[0]['wp_reports'])
+        db2=WPWatcherDataBase(WPWatcherConfig.fromstring(SPECIFIC_WP_REPORTS_FILE_CONFIG%(paths_found))['wp_reports'])
         self.assertEqual(db._data, db2._data, "WP reports database are different even if files are the same")
         
         # Test Reports database 
