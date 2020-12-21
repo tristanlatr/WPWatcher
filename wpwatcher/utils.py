@@ -76,13 +76,7 @@ def print_progress_bar(count:int, total:int) -> None:
     size = 0.3  # size of progress bar
     percent = int(float(count) / float(total) * 100)
     log.info(
-        "Progress - [{}{}] {}% - {} / {}".format(
-            "=" * int(int(percent) * size),
-            " " * int((100 - int(percent)) * size),
-            percent,
-            count,
-            total,
-        )
+        f"Progress - [{'=' * int(int(percent) * size)}{' ' * int((100 - int(percent)) * size)}] {percent}% - {count} / {total}"
     )
 
 
@@ -112,9 +106,7 @@ def parse_timedelta(time_str:str) -> timedelta:
     parts = regex.match(time_str)
     if parts is None:
         raise ValueError(
-            "Could not parse any time information from '{}'.  Examples of valid strings: '8h', '2d8h5m20s', '2m4s'".format(
-                time_str
-            )
+            f"Could not parse any time information from '{time_str}'.  Examples of valid strings: '8h', '2d8h5m20s', '2m4s'"
         )
     time_params = {
         name: float(param) for name, param in parts.groupdict().items() if param

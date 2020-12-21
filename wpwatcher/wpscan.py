@@ -43,10 +43,7 @@ class WPScanWrapper:
         else:
             if exit_code != 0:
                 raise RuntimeError(
-                    "There is an issue with WPScan. Non-zero exit code when requesting 'wpscan {}' \nOutput:\n{}\nError:\n{}".format(
-                        " ".join(wp_version_args), 
-                        out, stderr
-                    )
+                    f"There is an issue with WPScan. Non-zero exit code when requesting 'wpscan {' '.join(wp_version_args)}' \nOutput:\n{out}\nError:\n{stderr}"
                 )
 
         version_info = json.loads(out)

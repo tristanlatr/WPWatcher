@@ -98,8 +98,7 @@ class WPWatcher:
                 log.info("Deleted temp WPScan files in /tmp/wpscan/")
             except (FileNotFoundError, OSError, Exception):
                 log.info(
-                    "Could not delete temp WPScan files in /tmp/wpscan/\n%s"
-                    % (traceback.format_exc())
+                    f"Could not delete temp WPScan files in /tmp/wpscan/\n{traceback.format_exc()}"
                 )
 
     
@@ -148,8 +147,7 @@ class WPWatcher:
             log.info(repr(new_reports))
             if self.wp_reports.filepath != "null":
                 log.info(
-                    "Updated %s reports in database: %s"
-                    % (len(new_reports), self.wp_reports.filepath)
+                    f"Updated {len(new_reports)} reports in database: {self.wp_reports.filepath}"
                 )
             else:
                 log.info("Local database disabled, no reports updated.")

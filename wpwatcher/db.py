@@ -33,9 +33,7 @@ class WPWatcherDataBase:
             self.update_and_write_wp_reports(self._data)
         except:
             log.error(
-                "Could not write wp_reports database: {}. Use '--reports null' to ignore local Json database".format(
-                    self.filepath
-                )
+                f"Could not write wp_reports database: {self.filepath}. Use '--reports null' to ignore local Json database"
             )
             raise
     
@@ -59,9 +57,7 @@ class WPWatcherDataBase:
                 log.info(f"Load wp_reports database: {filepath}")
             except Exception:
                 log.error(
-                    "Could not read wp_reports database: {}. Use '--reports null' to ignore local Json database".format(
-                        filepath
-                    )
+                    f"Could not read wp_reports database: {filepath}. Use '--reports null' to ignore local Json database"
                 )
                 raise
         else:

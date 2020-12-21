@@ -186,8 +186,7 @@ smtp_ssl=Yes
                     parser.read_file(fp)
             except (FileNotFoundError, OSError) as err:
                 raise ValueError(
-                    "Could not read config %s. Make sure the file exists and you have correct access right."
-                    % (f)
+                    f"Could not read config {f}. Make sure the file exists and you have correct access right."
                 ) from err
             else:
                 log.info(f"Load config file: {f}")
@@ -381,9 +380,7 @@ smtp_ssl=Yes
             return loaded if loaded else []
         except ValueError as err:
             raise ValueError(
-                "Could not read JSON value in config file for key '{}' and string: '{}'".format(
-                    key, parser.get(section, key)
-                )
+                f"Could not read JSON value in config file for key '{key}' and string: '{parser.get(section, key)}'"
             ) from err
 
     @staticmethod
@@ -397,9 +394,7 @@ smtp_ssl=Yes
             return parser.getboolean(section, key)
         except ValueError as err:
             raise ValueError(
-                "Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(
-                    key, parser.get(section, key)
-                )
+                f"Could not read boolean value in config file for key '{key}' and string '{parser.get(section, key)}'. Must be Yes/No"
             ) from err
 
     @staticmethod
@@ -413,9 +408,7 @@ smtp_ssl=Yes
             return parser.getint(section, key)
         except ValueError as err:
             raise ValueError(
-                "Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(
-                    key, parser.get(section, key)
-                )
+                f"Could not read int value in config file for key '{key}' and string '{parser.get(section, key)}'. Must be an integer"
             ) from err
 
     @staticmethod

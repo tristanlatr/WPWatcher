@@ -84,11 +84,7 @@ class WPWatcherNotification:
 
         # Building message
         message = MIMEMultipart("html")
-        message["Subject"] = "WPWatcher %s report - %s - %s" % (
-            wp_report["status"],
-            wp_report["site"],
-            wp_report["datetime"],
-        )
+        message["Subject"] = f"WPWatcher {wp_report['status']} report - {wp_report['site']} - {wp_report['datetime']}"
         message["From"] = self.from_email
         message["To"] = ",".join(email_to)
 
@@ -99,9 +95,7 @@ class WPWatcherNotification:
         )
         if self.use_monospace_font:
             body = (
-                '<font face="Courier New, Courier, monospace" size="-1">'
-                + body
-                + "</font>"
+                f"<font face=\"Courier New, Courier, monospace\" size=\"-1\">{body}</font>"
             )
 
         message.attach(MIMEText(body, "html"))
@@ -145,16 +139,14 @@ class WPWatcherNotification:
         if not self.send_email_report:
             # No report notice
             log.info(
-                "Not sending WPWatcher %s email report for site %s. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."
-                % (wp_report["status"], wp_report["site"])
+                f"Not sending WPWatcher {wp_report['status']} email report for site {wp_report['site']}. To receive emails, setup mail server settings in the config and enable send_email_report or use --send."
             )
             should = False
 
         # Return if error email and disabled
         elif wp_report["status"] == "ERROR" and not self.send_errors:
             log.info(
-                "Not sending WPWatcher ERROR email report for site %s because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."
-                % (wp_report["site"])
+                f"Not sending WPWatcher ERROR email report for site {wp_report['site']} because send_errors=No. If you want to receive error emails, set send_errors=Yes in the config or use --errors."
             )
             should = False
 
@@ -165,16 +157,14 @@ class WPWatcherNotification:
             and not self.send_infos
         ):
             log.info(
-                "Not sending WPWatcher WARNING email report for site %s because send_warnings=No. If you want to receive warning emails, set send_warnings=Yes in the config or use --infos."
-                % (wp_report["site"])
+                f"Not sending WPWatcher WARNING email report for site {wp_report['site']} because send_warnings=No. If you want to receive warning emails, set send_warnings=Yes in the config or use --infos."
             )
             should = False
 
         elif wp_report["status"] == "INFO" and not self.send_infos:
             # No report notice
             log.info(
-                "Not sending WPWatcher INFO email report for site %s because send_infos=No. If you want to receive infos emails, set send_infos=Yes in the config or use --infos."
-                % (wp_report["site"])
+                f"Not sending WPWatcher INFO email report for site {wp_report['site']} because send_infos=No. If you want to receive infos emails, set send_infos=Yes in the config or use --infos."
             )
             should = False
 
@@ -187,8 +177,7 @@ class WPWatcherNotification:
         ):
             # No report notice
             log.info(
-                "Not sending WPWatcher %s email report for site %s because already sent in the last %s."
-                % (wp_report["status"], wp_report["site"], self.resend_emails_after)
+                f"Not sending WPWatcher {wp_report['status']} email report for site {wp_report['site']} because already sent in the last {self.resend_emails_after}."
             )
             should = False
 
@@ -204,8 +193,7 @@ class WPWatcherNotification:
 
         if not to:
             log.info(
-                "Not sending WPWatcher %s email report because no email is configured for site %s"
-                % (wp_report["status"], wp_report["site"])
+                f"Not sending WPWatcher {wp_report['status']} email report because no email is configured for site {wp_report['site']}"
             )
             return False
 
@@ -220,9 +208,7 @@ class WPWatcherNotification:
     def build_message(wp_report:Dict[str, Any], wpscan_command:str) -> str:
         """Build mail message text base on report and warnngs and info switch"""
 
-        message = "<p>WordPress security scan report for site: %s<br />\n" % (
-            wp_report["site"]
-        )
+        message = f"<p>WordPress security scan report for site: {wp_report['site']}<br />\n"
         message += f"Scan datetime: {wp_report['datetime']}<br />\n<p>"
 
         message += format_results(wp_report, format="html")

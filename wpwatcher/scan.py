@@ -170,8 +170,7 @@ class WPWatcherScanner:
                     if "Warning: This issue is unfixed" in older_warn_last_line:
                         wp_report[issue_type][issue_index] += older_warn_last_line
                     else:
-                        wp_report[issue_type][issue_index] += 'Warning: This issue is unfixed since {}'.format(
-                            last_wp_report['datetime'])
+                        wp_report[issue_type][issue_index] += f"Warning: This issue is unfixed since {last_wp_report['datetime']}"
     
     def get_fixed_n_unfixed_issues(self, wp_report:WPWatcherReport, last_wp_report:WPWatcherReport, issue_type:str) -> Tuple[List[str], List[str]]:
         """Return list of fixed issue texts to include in mails"""
@@ -184,11 +183,7 @@ class WPWatcherScanner:
                     alert.splitlines()[0] for alert in wp_report[issue_type]
                 ]:
                     fixed_issues.append(
-                        '%s regarding component "%s" has been fixed since the last scan.'
-                        % (
-                            "Alert" if issue_type == "alerts" else "Issue",
-                            last_alert.splitlines()[0]
-                        )
+                        f'Issue regarding component "{last_alert.splitlines()[0]}" has been fixed since the last scan.'
                     )
                 else:
                         unfixed_issues.append(last_alert)
@@ -237,8 +232,7 @@ class WPWatcherScanner:
             < self.daemon_loop_sleep
         ):
             log.info(
-                "Daemon skipping site %s because already scanned in the last %s"
-                % (wp_report["site"], self.daemon_loop_sleep)
+                f"Daemon skipping site {wp_report['site']} because already scanned in the last {self.daemon_loop_sleep}"
             )
             self.scanned_sites.append(None)
             return True
@@ -278,8 +272,7 @@ class WPWatcherScanner:
         If interrupting, return (None, True). True not to trigger errors.
         """
         log.info(
-            "API limit has been reached after %s sites, sleeping %s and continuing the scans..."
-            % (len(self.scanned_sites), API_WAIT_SLEEP)
+            f"API limit has been reached after {len(self.scanned_sites)} sites, sleeping {API_WAIT_SLEEP} and continuing the scans..."
         )
         self.wpscan.init_check_done = (
             False  # will re-trigger wpscan update next time wpscan() is called
@@ -372,7 +365,7 @@ class WPWatcherScanner:
         wpscan_exit_code, wp_report["wpscan_output"], stderr = self.wpscan.wpscan(
             *wpscan_arguments
         )
-        log.debug("WPScan raw output:\n" + wp_report["wpscan_output"])
+        log.debug(f"WPScan raw output:\n{wp_report['wpscan_output']}")
         log.debug("Parsing WPScan output")
 
         try:
@@ -400,11 +393,8 @@ class WPWatcherScanner:
             return None
 
         # Other errors codes : 127, etc, simply raise error
-        err_str = "WPScan failed with exit code %s. \nArguments: %s. \nOutput: \n%s\nError: \n%s" % (
-            wpscan_exit_code,
-            safe_log_wpscan_args(wpscan_arguments),
-            re.sub(r"(\x1b|\[[0-9][0-9]?m)", "", wp_report["wpscan_output"]), stderr, 
-        )
+        no_color_out = re.sub(r"(\x1b|\[[0-9][0-9]?m)", "", wp_report["wpscan_output"])
+        err_str = f"WPScan failed with exit code {wpscan_exit_code}. \nArguments: {safe_log_wpscan_args(wpscan_arguments)}. \nOutput: \n{no_color_out}\nError: \n{stderr}"
         raise RuntimeError(err_str)
 
     def wpscan_site(self, wp_site:WPWatcherSite, wp_report:WPWatcherReport) -> Optional[WPWatcherReport]:
@@ -429,14 +419,12 @@ class WPWatcherScanner:
             for p in self.wpscan.processes:
                 if (wp_site["url"] in p.args) and not p.returncode:
                     log.info(
-                        "Killing WPScan process %s" 
-                        % (safe_log_wpscan_args(str(a) for a in p.args))
+                        f"Killing WPScan process {safe_log_wpscan_args(str(a) for a in p.args)}"
                     )
                     p.kill()
             # Raise error
             err_str = (
-                "Timeout scanning site %s after %s seconds. Setup scan_timeout in config file to allow more time. "
-                % (wp_site["url"], self.scan_timeout.total_seconds())
+                f"Timeout scanning site {wp_site['url']} after {self.scan_timeout.total_seconds()} seconds. Setup scan_timeout in config file to allow more time. "
             )
             raise RuntimeError(err_str) from err
         return wp_report
@@ -487,8 +475,7 @@ class WPWatcherScanner:
                 return wp_report_new
 
             elif not self.interrupting:
-                self._fail_scan(wp_report, "Could not scan site %s \n%s"
-                    % (wp_site["url"], traceback.format_exc()))
+                self._fail_scan(wp_report, f"Could not scan site {wp_site['url']} \n{traceback.format_exc()}")
 
             else:
                 return None
@@ -504,11 +491,7 @@ class WPWatcherScanner:
             self.wpscan_args + wp_site["wpscan_args"] + ["--url", wp_site["url"]]))
         
         # Print parsed readable Alerts, Warnings, etc as they will appear in email reports
-        log.debug("%s\n" % (
-                WPWatcherNotification.build_message(
-                    wp_report,
-                    wpscan_command=wpscan_command
-            )))
+        log.debug(f"{WPWatcherNotification.build_message(wp_report, wpscan_command=wpscan_command)}\n")
 
         try:
 
@@ -523,9 +506,7 @@ class WPWatcherScanner:
 
         # Handle sendmail errors
         except (SMTPException, ConnectionRefusedError, TimeoutError):
-            self._fail_scan(wp_report, "Could not send mail report for site "
-                + wp_site["url"]
-                + "\n" + traceback.format_exc())
+            self._fail_scan(wp_report, f"Could not send mail report for site {wp_site['url']}\n{traceback.format_exc()}")
 
         # Discard wpscan_output from report
         if "wpscan_output" in wp_report:
@@ -540,9 +521,7 @@ class WPWatcherScanner:
             try:
                 self.syslog.emit_messages(wp_report)
             except Exception:
-                self._fail_scan(wp_report, "Could not send syslog messages for site "
-                + wp_site["url"]
-                + "\n" + traceback.format_exc())
+                self._fail_scan(wp_report, f"Could not send syslog messages for site {wp_site['url']}\n{traceback.format_exc()}")
 
         # Save scanned site
         self.scanned_sites.append(wp_site["url"])

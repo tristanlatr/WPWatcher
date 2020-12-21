@@ -23,7 +23,7 @@ class WPWatcherSite(Dict[str, Any]):
             # Format sites with scheme indication
             p_url = list(urlparse(self["url"]))
             if p_url[0] == "":
-                self["url"] = "http://" + self["url"]
+                self["url"] = f"http://{self['url']}"
 
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_SITE[key])

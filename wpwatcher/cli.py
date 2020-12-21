@@ -132,11 +132,10 @@ def get_arg_parser():
     """Parse CLI arguments, arguments can overwrite config file values"""
 
     parser = argparse.ArgumentParser(
-        description="""WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.
+        description=f"""WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email.
 Some config arguments can be passed to the command.
 It will overwrite previous values from config file(s).
-Check %s for more informations."""
-        % (__url__)
+Check {__url__} for more informations."""
     )
     parser.add_argument(
         "--conf",
