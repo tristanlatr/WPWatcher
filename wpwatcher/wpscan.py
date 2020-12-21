@@ -99,7 +99,7 @@ class WPScanWrapper:
             out_decoded = wpscan_output.decode("utf-8")
             err_decoded = stderr.decode("utf-8")
         except UnicodeDecodeError:
-            out_decoded = wpscan_output.decode("latin1")
-            err_decoded = stderr.decode("latin1")
+            out_decoded = wpscan_output.decode("latin1", errors='replace')
+            err_decoded = stderr.decode("latin1", errors='replace')
         finally:
             return (process.returncode, out_decoded, err_decoded)

@@ -430,7 +430,8 @@ class WPWatcherScanner:
             for p in self.wpscan.processes:
                 if (wp_site["url"] in p.args) and not p.returncode:
                     log.info(
-                        "Killing WPScan process %s" % (safe_log_wpscan_args(p.args))
+                        "Killing WPScan process %s" 
+                        % (safe_log_wpscan_args(str(a) for a in p.args))
                     )
                     p.kill()
             # Raise error
