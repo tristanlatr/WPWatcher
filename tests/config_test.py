@@ -33,7 +33,7 @@ class T(unittest.TestCase):
         # Init config and compare
         config_object=WPWatcherConfig.fromenv()
         config_object2=WPWatcherConfig.fromfiles(paths_found)
-        self.assertEqual(config_object.data, config_object2.data, "Config built with config path and without are different even if files are the same")
+        self.assertEqual(config_object, config_object2, "Config built with config path and without are different even if files are the same")
         for f in paths_found: 
             os.remove(f)
         for f in existent_files:

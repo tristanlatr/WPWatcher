@@ -5,7 +5,6 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
 from typing import Iterable, Tuple, Union, Optional, List, Dict, Any
-from collections import UserDict
 import configparser
 import os
 import json
@@ -18,7 +17,7 @@ from wpwatcher.__version__ import __url__
 from wpwatcher.utils import parse_timedelta, safe_log_wpscan_args
 
 # Configuration handling -------------------------------------------------------
-class WPWatcherConfig(UserDict): # type: ignore [type-arg]
+class WPWatcherConfig(dict): # type: ignore [type-arg]
     """
     Dict-Like object.
 
@@ -223,9 +222,8 @@ smtp_ssl=Yes
     def fromparser(cls, parser:configparser.ConfigParser) -> Dict[str, Any]:
         """
         Get config from ConfigParser, the parser should contain all values. 
-        Use `ConfigParser.read_dict(WPWatcherConfig.DEFAULT_CONFIG)`
         """
-        return cls(WPWatcherConfig._build_config(parser)) # type: ignore [return-value]
+        return cls(WPWatcherConfig._build_config(parser))
     
     @classmethod
     def fromcliargs(cls, cliargs:argparse.Namespace) -> Dict[str, Any]:
@@ -272,7 +270,7 @@ smtp_ssl=Yes
 
     def __repr__(self) -> str:
         """Get the config representation without passwords, ready for printing. """
-        dump_conf = copy.deepcopy(self.data)
+        dump_conf = copy.deepcopy(self)
         string = ""
         for k in dump_conf:
             v = dump_conf[k]
@@ -475,7 +473,7 @@ smtp_ssl=Yes
         # Raise if missing fields
         missing = []
         for key in self.FIELDS:
-            if key not in self.data:
+            if key not in self:
                 missing.append(key)
         if missing:
             fields = ', '.join(f"'{key}'" for key in missing)

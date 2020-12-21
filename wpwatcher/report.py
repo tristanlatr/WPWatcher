@@ -1,7 +1,6 @@
 from typing import Dict, Any, List, Iterable, Tuple
-from collections import UserDict, UserList
 
-class WPWatcherReport(UserDict): # type: ignore [type-arg]
+class WPWatcherReport(Dict[str, Any]):
     """ 
     Dict-Like object to store scan results. 
 
@@ -29,7 +28,7 @@ class WPWatcherReport(UserDict): # type: ignore [type-arg]
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
 
-class WPWatcherReportCollection(UserList): # type: ignore [type-arg]
+class WPWatcherReportCollection(List[WPWatcherReport]):
     """
     List-Like object to store `WPWatcherReport`s. 
     """
@@ -41,7 +40,7 @@ class WPWatcherReportCollection(UserList): # type: ignore [type-arg]
         :Return: Summary table of all sites contained in the collection. 
                  Columns are: "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
         """
-        results = self.data
+        results = self
         string = "Results summary\n"
         header = (
             "Site",

@@ -4,6 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+from typing import Dict, Any, List, Optional
 import io
 import re
 import smtplib
@@ -11,7 +12,7 @@ import socket
 import threading
 import time
 from string import Template
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -30,31 +31,31 @@ mail_lock = threading.Lock()
 class WPWatcherNotification:
     """Send conditions logic + build and send mail reports"""
 
-    def __init__(self, conf):
+    def __init__(self, conf:Dict[str, Any]):
         # store specific mailserver values
-        self.from_email = conf["from_email"]
-        self.smtp_server = conf["smtp_server"]
-        self.smtp_ssl = conf["smtp_ssl"]
-        self.smtp_auth = conf["smtp_auth"]
-        self.smtp_user = conf["smtp_user"]
-        self.smtp_pass = conf["smtp_pass"]
+        self.from_email:str = conf["from_email"]
+        self.smtp_server:str = conf["smtp_server"]
+        self.smtp_ssl:bool = conf["smtp_ssl"]
+        self.smtp_auth:bool = conf["smtp_auth"]
+        self.smtp_user:str = conf["smtp_user"]
+        self.smtp_pass:str = conf["smtp_pass"]
 
         # store specific notification values
-        self.send_email_report = conf["send_email_report"]
-        self.email_to = conf["email_to"]
-        self.email_errors_to = conf["email_errors_to"]
-        self.send_warnings = conf["send_warnings"]
-        self.send_infos = conf["send_infos"]
-        self.send_errors = conf["send_errors"]
-        self.attach_wpscan_output = conf["attach_wpscan_output"]
-        self.resend_emails_after = conf["resend_emails_after"]
+        self.send_email_report:bool = conf["send_email_report"]
+        self.email_to:List[str] = conf["email_to"]
+        self.email_errors_to:List[str] = conf["email_errors_to"]
+        self.send_warnings:bool = conf["send_warnings"]
+        self.send_infos:bool = conf["send_infos"]
+        self.send_errors:bool = conf["send_errors"]
+        self.attach_wpscan_output:bool = conf["attach_wpscan_output"]
+        self.resend_emails_after:timedelta = conf["resend_emails_after"]
 
         # mail server, will be created when sending mails
-        self.server = None
+        self.server:Optional[smtplib.SMTP] = None
 
-        self.use_monospace_font = conf["use_monospace_font"]
+        self.use_monospace_font:bool = conf["use_monospace_font"]
 
-    def notify(self, wp_site, wp_report, last_wp_report, wpscan_command):
+    def notify(self, wp_site:Dict[str, Any], wp_report:Dict[str, Any], last_wp_report:Optional[Dict[str, Any]], wpscan_command:str) -> bool:
         """Notify recipients if match conditions"""
         if self.should_notify(wp_report, last_wp_report):
             self._notify(wp_site, wp_report, wpscan_command)
@@ -62,7 +63,7 @@ class WPWatcherNotification:
         else:
             return False
 
-    def send_mail(self, message, to):
+    def send_mail(self, message:MIMEMultipart, to:List[str]) -> None:
         """Raw sendmail"""
         # Connecting and sending
         self.server = smtplib.SMTP(self.smtp_server)
@@ -78,7 +79,7 @@ class WPWatcherNotification:
         self.server.quit()
 
     # Send email report with status and timestamp
-    def send_report(self, wp_report, email_to, wpscan_command):
+    def send_report(self, wp_report:Dict[str, Any], email_to:List[str], wpscan_command:str) -> None:
         """Build MIME message based on report and call send_mail"""
 
         # Building message
@@ -134,7 +135,7 @@ class WPWatcherNotification:
         self.send_mail(message, email_to)
         log.info("Email sent: %s to %s" % (message["Subject"], email_to))
 
-    def should_notify(self, wp_report, last_wp_report):
+    def should_notify(self, wp_report:Dict[str, Any], last_wp_report:Optional[Dict[str, Any]]) -> bool:
         """Determine if the notification should be sent"""
         should = True
         if not wp_report:
@@ -193,7 +194,7 @@ class WPWatcherNotification:
 
         return should
 
-    def _notify(self, wp_site, wp_report, wpscan_command):
+    def _notify(self, wp_site:Dict[str, Any], wp_report:Dict[str, Any], wpscan_command:str) -> bool:
         """Sending the report"""
         # Send the report to
         if len(self.email_errors_to) > 0 and wp_report["status"] == "ERROR":
@@ -206,7 +207,7 @@ class WPWatcherNotification:
                 "Not sending WPWatcher %s email report because no email is configured for site %s"
                 % (wp_report["status"], wp_report["site"])
             )
-            return
+            return False
 
         while mail_lock.locked():
             time.sleep(0.01)
@@ -216,7 +217,7 @@ class WPWatcherNotification:
             return True
 
     @staticmethod
-    def build_message(wp_report, wpscan_command):
+    def build_message(wp_report:Dict[str, Any], wpscan_command:str) -> str:
         """Build mail message text base on report and warnngs and info switch"""
 
         message = "<p>WordPress security scan report for site: %s<br />\n" % (

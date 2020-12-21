@@ -13,7 +13,7 @@
   <a href="https://codecov.io/gh/tristanlatr/WPWatcher" target="_blank"><img src="https://codecov.io/gh/tristanlatr/WPWatcher/branch/master/graph/badge.svg"></a>
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
   <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a>
-
+  <a href="http://mypy-lang.org/" target="_blank"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></a>
 </p>
 
 Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email and/or syslog.  
