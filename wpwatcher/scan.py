@@ -210,18 +210,17 @@ class WPWatcherScanner:
     def write_wpscan_output(self, wp_report:WPWatcherReport) -> Optional[str]:
         """Write WPScan output to configured place with `wpscan_output_folder` if configured"""
         # Subfolder
-        folder = "%s/" % wp_report["status"].lower()
+        folder = f"{wp_report['status'].lower()}/"
         # Write wpscan output
         if self.wpscan_output_folder:
             wpscan_results_file = os.path.join(
                 self.wpscan_output_folder,
                 folder,
                 get_valid_filename(
-                    "WPScan_output_%s_%s.txt"
-                    % (wp_report["site"], wp_report["datetime"])
+                    f"WPScan_output_{wp_report['site']}_{wp_report['datetime']}.txt"
                 ),
             )
-            log.info("Saving WPScan output to file %s" % wpscan_results_file)
+            log.info(f"Saving WPScan output to file {wpscan_results_file}")
             with open(wpscan_results_file, "wb") as wpout:
                 self._write_wpscan_output(wp_report, wpout)
                 return wpout.name
@@ -248,16 +247,16 @@ class WPWatcherScanner:
     def log_report_results(self, wp_report:WPWatcherReport) -> None:
         """Print WPScan findings"""
         for info in wp_report["infos"]:
-            log.info(oneline("** WPScan INFO %s ** %s" % (wp_report["site"], info)))
+            log.info(oneline(f"** WPScan INFO {wp_report['site']} ** {info}"))
         for fix in wp_report["fixed"]:
-            log.info(oneline("** FIXED Issue %s ** %s" % (wp_report["site"], fix)))
+            log.info(oneline(f"** FIXED Issue {wp_report['site']} ** {fix}"))
         for warning in wp_report["warnings"]:
             log.warning(
-                oneline("** WPScan WARNING %s ** %s" % (wp_report["site"], warning))
+                oneline(f"** WPScan WARNING {wp_report['site']} ** {warning}")
             )
         for alert in wp_report["alerts"]:
             log.critical(
-                oneline("** WPScan ALERT %s ** %s" % (wp_report["site"], alert))
+                oneline(f"** WPScan ALERT {wp_report['site']} ** {alert}")
             )
 
     def fill_report_status(self, wp_report:WPWatcherReport) -> None:
@@ -303,7 +302,7 @@ class WPWatcherScanner:
 
         if len(url) == 1:
             wp_site["url"] = url[0].strip()
-            log.info("Following redirection to %s" % wp_site["url"])
+            log.info(f"Following redirection to {wp_site['url']}")
             new_report = self.scan_site(wp_site)
             return (new_report, new_report != None)
 
@@ -367,7 +366,7 @@ class WPWatcherScanner:
         )
 
         # Output
-        log.info("Scanning site %s" % wp_site["url"])
+        log.info(f"Scanning site {wp_site['url']}")
 
         # Launch WPScan
         wpscan_exit_code, wp_report["wpscan_output"], stderr = self.wpscan.wpscan(
@@ -389,7 +388,7 @@ class WPWatcherScanner:
 
         except Exception as err:
             raise RuntimeError(
-                "Could not parse WPScan output for site %s" % (wp_site["url"])
+                f"Could not parse WPScan output for site {wp_site['url']}"
             ) from err
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors

@@ -67,7 +67,7 @@ class WPScanWrapper:
         log.info("Updating WPScan")
         exit_code, out, err = self._wpscan("--update", "--format", "json", "--no-banner")
         if exit_code != 0:
-            raise RuntimeError("Error updating WPScan.\nOutput:{}\nError:\n{}".format(out, err))
+            raise RuntimeError(f"Error updating WPScan.\nOutput:{out}\nError:\n{err}")
 
     def wpscan(self, *args:str) -> Tuple[int, str, str]:
         """
@@ -88,7 +88,7 @@ class WPScanWrapper:
         # WPScan arguments
         cmd = self.wpscan_executable + list(args)
         # Log wpscan command without api token
-        log.debug("Running WPScan command: %s" % " ".join(safe_log_wpscan_args(cmd)))
+        log.debug(f"Running WPScan command: {' '.join(safe_log_wpscan_args(cmd))}")
         # Run wpscan
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # Append process to current process list and launch

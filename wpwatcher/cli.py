@@ -109,8 +109,8 @@ def show(urlpart, filepath=None, daemon=False):
 
 def verion():
     """Print version and contributors"""
-    log.info("Version:\t\t%s" % __version__)
-    log.info("Authors:\t\t%s" "" % __author__)
+    log.info(f"Version:\t\t{__version__}")
+    log.info(f"Authors:\t\t{__author__}")
     exit(0)
 
 

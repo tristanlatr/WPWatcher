@@ -190,7 +190,7 @@ smtp_ssl=Yes
                     % (f)
                 ) from err
             else:
-                log.info("Load config file: %s" % f)
+                log.info(f"Load config file: {f}")
         return WPWatcherConfig.fromparser(parser)
 
     @classmethod
@@ -282,7 +282,7 @@ smtp_ssl=Yes
                 v = json.dumps(v)
             else:
                 v = str(v)
-            string += "\n{:<25}\t=\t{}".format(k, v)
+            string += f"\n{k:<25}\t=\t{v}"
         return string
 
     @staticmethod
@@ -444,7 +444,7 @@ smtp_ssl=Yes
             os.makedirs(os.path.dirname(potential_paths[0]), exist_ok=True)
             with open(potential_paths[0], "w") as config_file:
                 config_file.write(default_content)
-            log.info("Init new file: %s" % (potential_paths[0]))
+            log.info(f"Init new file: {potential_paths[0]}")
             existent_files.append(potential_paths[0])
         return existent_files
 

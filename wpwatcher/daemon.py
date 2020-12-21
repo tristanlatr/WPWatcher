@@ -18,6 +18,6 @@ class WPWatcherDaemon:
             # Run scans for ever
             wpwatcher.run_scans_and_notify()
             log.info(
-                "Daemon sleeping %s and scanning again..." % conf["daemon_loop_sleep"]
+                f"Daemon sleeping {conf['daemon_loop_sleep']} and scanning again..."
             )
             time.sleep(conf["daemon_loop_sleep"].total_seconds())

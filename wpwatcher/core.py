@@ -68,7 +68,7 @@ class WPWatcher:
         self.scanner:WPWatcherScanner = WPWatcherScanner(conf)
 
         # Dump config
-        log.info("WPWatcher configuration:{}".format(repr(conf)))
+        log.info(f"WPWatcher configuration:{repr(conf)}")
 
         # Save sites
         self.wp_sites:List[WPWatcherSite] = [ WPWatcherSite(site_conf) for site_conf in conf["wp_sites"] ]
@@ -175,7 +175,7 @@ class WPWatcher:
         if wp_report:
             self.wp_reports.update_and_write_wp_reports([wp_report])
         else:
-            log.info("No report saved for site %s" % wp_site["url"])
+            log.info(f"No report saved for site {wp_site['url']}")
         # Print progress
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))
         return wp_report
@@ -188,7 +188,7 @@ class WPWatcher:
         - Append result to `self.new_reports` list. 
         """
 
-        log.info("Starting scans on %s configured sites" % (len(wp_sites)))
+        log.info(f"Starting scans on {len(wp_sites)} configured sites")
         for wp_site in wp_sites:
             self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site))
         for f in self.futures:

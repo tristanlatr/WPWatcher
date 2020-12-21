@@ -117,23 +117,23 @@ class WPWatcherNotification:
             part = MIMEApplication(attachment.read(), Name="WPScan_output")
             # Sanitize WPScan report filename
             wpscan_report_filename = get_valid_filename(
-                "WPScan_output_%s_%s" % (wp_report["site"], wp_report["datetime"])
+                f"WPScan_output_{wp_report['site']}_{wp_report['datetime']}"
             )
             # Add header as key/value pair to attachment part
             part.add_header(
                 "Content-Disposition",
-                "attachment; filename=%s.txt" % (wpscan_report_filename),
+                f"attachment; filename={wpscan_report_filename}.txt",
             )
             # Attach the report
             message.attach(part)
-            log.info("%s attached" % (wpscan_report_filename))
+            log.info(f"{wpscan_report_filename} attached")
         else:
             log.info(
                 "No file attached, set attach_wpscan_output=Yes or use --attach to attach WPScan output to emails"
             )
         # # Connecting and sending
         self.send_mail(message, email_to)
-        log.info("Email sent: %s to %s" % (message["Subject"], email_to))
+        log.info(f"Email sent: {message['Subject']} to {email_to}")
 
     def should_notify(self, wp_report:Dict[str, Any], last_wp_report:Optional[Dict[str, Any]]) -> bool:
         """Determine if the notification should be sent"""
@@ -223,7 +223,7 @@ class WPWatcherNotification:
         message = "<p>WordPress security scan report for site: %s<br />\n" % (
             wp_report["site"]
         )
-        message += "Scan datetime: %s<br />\n<p>" % (wp_report["datetime"])
+        message += f"Scan datetime: {wp_report['datetime']}<br />\n<p>"
 
         message += format_results(wp_report, format="html")
 

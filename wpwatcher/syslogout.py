@@ -44,7 +44,7 @@ class WPSyslogOutput:
         """
         Sends the CEF syslog messages for the report.
         """
-        log.debug("Sending Syslog messages for site {}".format(wp_report["site"]))
+        log.debug(f"Sending Syslog messages for site {wp_report['site']}")
         for m in self.get_messages(wp_report):
             self.syslog.info(m)
 
@@ -60,7 +60,7 @@ class WPSyslogOutput:
             items = wp_report[v] if isinstance(wp_report[v], list) else [wp_report[v]]
             for msg_data in items:
                 if msg_data:
-                    log.debug("Message data: {}".format(msg_data))
+                    log.debug(f"Message data: {msg_data}")
                     c = CEFEvent()
                     # WPWatcher related fields
                     c.set_prefix("deviceVendor", self.DEVICE_VENDOR)
@@ -74,7 +74,7 @@ class WPSyslogOutput:
                     c.set_field("message", msg_data[:1022])
                     c.set_field("sourceHostName", wp_report["site"][:1022])
                     msg = c.build_cef()
-                    log.debug("Message CEF: {}".format(msg))
+                    log.debug(f"Message CEF: {msg}")
                     messages.append(msg)
         return messages
 

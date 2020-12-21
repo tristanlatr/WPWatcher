@@ -16,7 +16,7 @@ class WPWatcherSite(Dict[str, Any]):
         super().__init__(*args, **kwargs)
 
         if "url" not in self:
-            raise ValueError("Invalid site %s\nMust contain 'url' key" % self)
+            raise ValueError(f"Invalid site {self}\nMust contain 'url' key")
         else:
             # Strip URL string
             self["url"] = self["url"].strip()

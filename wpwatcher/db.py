@@ -56,7 +56,7 @@ class WPWatcherDataBase:
             try:
                 with open(filepath, "r") as reportsfile:
                     wp_reports = json.load(reportsfile)
-                log.info("Load wp_reports database: %s" % filepath)
+                log.info(f"Load wp_reports database: {filepath}")
             except Exception:
                 log.error(
                     "Could not read wp_reports database: {}. Use '--reports null' to ignore local Json database".format(
@@ -66,7 +66,7 @@ class WPWatcherDataBase:
                 raise
         else:
             log.info(
-                "The database file %s do not exist. It will be created." % (filepath)
+                f"The database file {filepath} do not exist. It will be created."
             )
         return wp_reports
 
