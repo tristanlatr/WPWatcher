@@ -4,6 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+from typing import List, Tuple
 import shlex
 import subprocess
 import json
@@ -18,33 +19,37 @@ init_lock = threading.Lock()
 
 # WPScan helper class -----------
 class WPScanWrapper:
-    def __init__(self, wpscan_executable):
-        self.wpscan_executable = shlex.split(wpscan_executable)
+    def __init__(self, wpscan_executable:str) -> None:
+        """
+        :Param wpscan_executable: Path to WPScan executable. Exemple: '/usr/local/rvm/gems/default/wrappers/wpscan'
+        """
+        self.wpscan_executable:List[str] = shlex.split(wpscan_executable)
         # List of current WPScan processes
-        self.processes = []
-        self.init_check_done = False
+        self.processes:List[subprocess.Popen] = [] # type: ignore [type-arg]
+        self.init_check_done:bool = False
 
-    def _lazy_init(self):
+    def _lazy_init(self) -> None:
         # Check if WPScan exists
-        wp_version = [ "--version", "--format", "json", "--no-banner" ]
+        wp_version_args = [ "--version", "--format", "json", "--no-banner" ]
         try:
-            exit_code, version_info = self._wpscan(
-                *wp_version )
+            exit_code, out, stderr = self._wpscan(
+                *wp_version_args )
         except FileNotFoundError as err:
             raise FileNotFoundError(
                 "Could not find WPScan executale. "
                 "Make sure wpscan in you PATH or configure full path to executable in config file. "
-                "If you're using RVM, the path should point to the WPScan wrapper like '/usr/local/rvm/gems/ruby-2.6.0/wrappers/wpscan'"
+                "If you're using RVM+bundler, the path should point to the WPScan wrapper like '/usr/local/rvm/gems/default/wrappers/wpscan'"
             ) from err
-        if exit_code != 0:
-            raise RuntimeError(
-                "There is an issue with WPScan. Non-zero exit code when requesting 'wpscan {}' \nOutput:\n{}".format(
-                    " ".join(wp_version), 
-                    version_info
+        else:
+            if exit_code != 0:
+                raise RuntimeError(
+                    "There is an issue with WPScan. Non-zero exit code when requesting 'wpscan {}' \nOutput:\n{}\nError:\n{}".format(
+                        " ".join(wp_version_args), 
+                        out, stderr
+                    )
                 )
-            )
 
-        version_info = json.loads(version_info)
+        version_info = json.loads(out)
         if (
             not version_info["last_db_update"]
             or datetime.now()
@@ -53,20 +58,24 @@ class WPScanWrapper:
             )
             > UPDATE_DB_INTERVAL
         ):
-            self.update_wpscan()
+            self._update_wpscan()
 
         self.init_check_done = True
 
-    def update_wpscan(self):
+    def _update_wpscan(self) -> None:
         # Update wpscan database
         log.info("Updating WPScan")
-        exit_code, out = self._wpscan("--update", "--format", "json", "--no-banner")
+        exit_code, out, err = self._wpscan("--update", "--format", "json", "--no-banner")
         if exit_code != 0:
-            raise RuntimeError("Error updating WPScan.\nOutput:\n{}".format(out))
+            raise RuntimeError("Error updating WPScan.\nOutput:{}\nError:\n{}".format(out, err))
 
-    # Wrapper for lazy initiation
-    def wpscan(self, *args):
-        if not self.init_check_done:
+    def wpscan(self, *args:str) -> Tuple[int, str, str]:
+        """
+        Run WPScan and return raw results. 
+        :Param args: Sequence of arguments to pass to WPScan. 
+        :Return: `Tuple[Exit code, Output, Stderr]`
+        """
+        if not self.init_check_done: # for lazy initiation
             while init_lock.locked():
                 time.sleep(0.01)
             with init_lock:
@@ -75,7 +84,7 @@ class WPScanWrapper:
         return self._wpscan(*args)
 
     # Helper method: actually wraps wpscan
-    def _wpscan(self, *args):
+    def _wpscan(self, *args:str) -> Tuple[int, str, str]:
         # WPScan arguments
         cmd = self.wpscan_executable + list(args)
         # Log wpscan command without api token
@@ -87,8 +96,10 @@ class WPScanWrapper:
         wpscan_output, stderr = process.communicate()
         self.processes.remove(process)
         try:
-            wpscan_output = wpscan_output.decode("utf-8")
+            out_decoded = wpscan_output.decode("utf-8")
+            err_decoded = stderr.decode("utf-8")
         except UnicodeDecodeError:
-            wpscan_output = wpscan_output.decode("latin1")
-        return (process.returncode, wpscan_output)
-
+            out_decoded = wpscan_output.decode("latin1")
+            err_decoded = stderr.decode("latin1")
+        finally:
+            return (process.returncode, out_decoded, err_decoded)
