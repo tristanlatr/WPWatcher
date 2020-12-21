@@ -4,7 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-from typing import Optional, BinaryIO, List, Tuple, Mapping, Any
+from typing import Optional, BinaryIO, List, Tuple, Dict, Any
 import threading
 import re
 import os
@@ -39,7 +39,7 @@ DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 class WPWatcherScanner:
     """Scanner class create reports and handles the scan and notification process"""
 
-    def __init__(self, conf:Mapping[str, Any]):
+    def __init__(self, conf:Dict[str, Any]):
 
         # Create (lazy) wpscan link
         self.wpscan:WPScanWrapper = WPScanWrapper(conf["wpscan_path"])
@@ -113,7 +113,7 @@ class WPWatcherScanner:
 
     # Scan process
 
-    def update_report(self, wp_report:WPWatcherReport, last_wp_report:WPWatcherReport) -> None:
+    def update_report(self, wp_report:WPWatcherReport, last_wp_report:Optional[WPWatcherReport]) -> None:
         """Update new report considering last report:
         - Save already fixed issues but not reported yet
         - Fill out fixed issues and last_email datetime
@@ -207,7 +207,7 @@ class WPWatcherScanner:
         except UnicodeEncodeError:
             fpwpout.write(nocolor_output.encode("latin1"))
 
-    def write_wpscan_output(self, wp_report:WPWatcherReport) -> str:
+    def write_wpscan_output(self, wp_report:WPWatcherReport) -> Optional[str]:
         """Write WPScan output to configured place with `wpscan_output_folder` if configured"""
         # Subfolder
         folder = "%s/" % wp_report["status"].lower()
@@ -225,6 +225,8 @@ class WPWatcherScanner:
             with open(wpscan_results_file, "wb") as wpout:
                 self._write_wpscan_output(wp_report, wpout)
                 return wpout.name
+        else:
+            return None
 
 
     def skip_this_site(self, wp_report:WPWatcherReport, last_wp_report:WPWatcherReport) -> bool:
@@ -456,11 +458,12 @@ class WPWatcherScanner:
     def scan_site(self, wp_site:WPWatcherSite, last_wp_report:Optional[WPWatcherReport]=None) -> Optional[WPWatcherReport]:
         """
         Orchestrate the scanning of a site.
-        Return the final wp_report or None if something happened.
+
+        :Return: The scan report or `None` if something happened.
         """
 
         # Init report variables
-        wp_report: Optional[WPWatcherReport] = WPWatcherReport({
+        wp_report: WPWatcherReport = WPWatcherReport({
             "site": wp_site["url"],
             "datetime": datetime.now().strftime(DATE_FORMAT)
         })
@@ -481,8 +484,7 @@ class WPWatcherScanner:
             wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)
 
             if handled:
-                wp_report = wp_report_new
-                return wp_report
+                return wp_report_new
 
             elif not self.interrupting:
                 self._fail_scan(wp_report, "Could not scan site %s \n%s"

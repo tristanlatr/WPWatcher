@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Iterable, Tuple
 from collections import UserDict, UserList
 
-class WPWatcherReport(UserDict):
+class WPWatcherReport(UserDict): # type: ignore [type-arg]
     """ 
     Dict-Like object to store scan results. 
 
@@ -24,12 +24,12 @@ class WPWatcherReport(UserDict):
 
     FIELDS:Iterable[str] = list(DEFAULT_REPORT.keys())
 
-    def __init__(self, *args:Tuple[Any], **kwargs:Dict[str, Any]) -> None:
+    def __init__(self, *args, **kwargs) -> None: # type: ignore [no-untyped-def]
         super().__init__(*args, **kwargs)
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
 
-class WPWatcherReportCollection(UserList):
+class WPWatcherReportCollection(UserList): # type: ignore [type-arg]
     """
     List-Like object to store `WPWatcherReport`s. 
     """

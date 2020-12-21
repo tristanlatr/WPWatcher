@@ -6,7 +6,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 """
 
 # Main program, parse the args, read config and launch scans
-from typing import Mapping
+from typing import Dict, Optional
 import argparse
 import shlex
 import sys
@@ -20,13 +20,10 @@ from wpwatcher.daemon import WPWatcherDaemon
 from wpwatcher.syslogout import WPSyslogOutput
 from wpscan_out_parse import format_results
 
-
-def main(args:argparse.Namespace=None):
+def main() -> None:
     """Main program entrypoint"""
-
     # Parse arguments
-    if not args:
-        args = get_arg_parser().parse_args()
+    args:argparse.Namespace=get_arg_parser().parse_args()
 
     # Init logger with CLi arguments
     init_log(args.verbose, args.quiet)
@@ -49,7 +46,7 @@ def main(args:argparse.Namespace=None):
         wprs(filepath=args.wprs, daemon=args.daemon)
 
     # Read config
-    configuration = WPWatcherConfig(cli_args=args)
+    configuration = WPWatcherConfig.fromcliargs(args)
 
     if args.show:
         # Init WPWatcherDataBase object and dump cli formatted report

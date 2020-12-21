@@ -4,7 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-from typing import Mapping, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 import copy
 import os
 import json
@@ -22,6 +22,7 @@ from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
 from wpwatcher.site import WPWatcherSite
 from wpwatcher.report import WPWatcherReport, WPWatcherReportCollection
+from wpwatcher.config import WPWatcherConfig
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
@@ -47,7 +48,7 @@ class WPWatcher:
     """
 
     # WPWatcher must use a configuration dict
-    def __init__(self, conf:Mapping[str, Any]):
+    def __init__(self, conf:Dict[str, Any]):
         """
         Arguments:
         - `conf`: the configuration dict. Required
@@ -78,7 +79,7 @@ class WPWatcher:
         )
 
         # List of conccurent futures
-        self.futures:List[concurrent.futures.Future] = []
+        self.futures:List[concurrent.futures.Future] = [] # type: ignore [type-arg]
 
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt()
         signal.signal(signal.SIGINT, self.interrupt)
@@ -109,11 +110,11 @@ class WPWatcher:
             if not f.done():
                 f.cancel()
 
-    def interrupt(self, sig=None, frame=None) -> None:
+    def interrupt(self, sig=None, frame=None) -> None: # type: ignore [no-untyped-def]
         """Interrupt sequence"""
         log.error("Interrupting...")
         # If called inside ThreadPoolExecutor, raise Exeception
-        if not isinstance(threading.current_thread(), threading._MainThread):
+        if not isinstance(threading.current_thread(), threading._MainThread): # type: ignore [attr-defined]
             raise InterruptedError()
         # Cancel all scans
         self.cancel_pending_futures()  # future scans
@@ -127,7 +128,7 @@ class WPWatcher:
             pass
 
         # Recover reports from futures results
-        new_reports = []
+        new_reports:WPWatcherReportCollection = WPWatcherReportCollection()
         for f in self.futures:
             if f.done():
                 try:
@@ -142,7 +143,7 @@ class WPWatcher:
 
     def print_scanned_sites_results(self, new_reports:WPWatcherReportCollection) -> None:
         """Print the result summary for the scanned sites"""
-        new_reports = [n for n in new_reports if n]
+        new_reports = WPWatcherReportCollection(n for n in new_reports if n)
         if len(new_reports) > 0:
             log.info(repr(new_reports))
             if self.wp_reports.filepath != "null":
@@ -155,7 +156,7 @@ class WPWatcher:
         else:
             log.info("No reports updated.")
 
-    def scan_site_wrapper(self, wp_site:WPWatcherSite) -> WPWatcherReport:
+    def scan_site_wrapper(self, wp_site:WPWatcherSite) -> Optional[WPWatcherReport]:
         """
         Helper method to wrap the raw scanning process of `WPWatcherScanner.scan_site` and add the following:
         - Find the last report in the database and launch the scan
@@ -217,15 +218,16 @@ class WPWatcher:
             log.error(
                 "No sites configured, please provide wp_sites in config file or use arguments --url URL [URL...] or --urls File path"
             )
-            return (-1, [])
+            return (-1, self.new_reports)
 
-        new_reports = self.run_scans_wrapper(self.wp_sites)
+        self.run_scans_wrapper(self.wp_sites)
+
         # Print results and finish
-        self.print_scanned_sites_results(new_reports)
+        self.print_scanned_sites_results(self.new_reports)
 
-        if not any([r["status"] == "ERROR" for r in new_reports if r]):
+        if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
             log.info("Scans finished successfully.")
-            return (0, new_reports)
+            return (0, self.new_reports)
         else:
             log.info("Scans finished with errors.")
-            return (-1, new_reports)
+            return (-1, self.new_reports)
