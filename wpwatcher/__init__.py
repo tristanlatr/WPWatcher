@@ -8,12 +8,13 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import logging
 import sys
 import os
+from typing import Optional
 
 # Global log handler
 log = logging.getLogger("wpwatcher")
 
 # Setup global stdout logger
-def init_log(verbose=False, quiet=False, logfile=None, nostd=False):
+def init_log(verbose:bool=False, quiet:bool=False, logfile:Optional[str]=None, nostd:str=False) -> logging.Logger:
     format_string = "%(asctime)s - %(levelname)s - %(message)s"
     format_string_cli = "%(levelname)s - %(message)s"
     if verbose:

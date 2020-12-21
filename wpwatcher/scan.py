@@ -4,7 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-from typing import Optional, TextIO, List, Tuple
+from typing import Optional, BinaryIO, List, Tuple, Mapping, Any
 import threading
 import re
 import os
@@ -39,7 +39,7 @@ DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 class WPWatcherScanner:
     """Scanner class create reports and handles the scan and notification process"""
 
-    def __init__(self, conf:dict):
+    def __init__(self, conf:Mapping[str, Any]):
 
         # Create (lazy) wpscan link
         self.wpscan:WPScanWrapper = WPScanWrapper(conf["wpscan_path"])
@@ -50,15 +50,15 @@ class WPWatcherScanner:
         # Toogle if aborting so other errors doesnt get triggerred and exit faster
         self.interrupting:bool = False
         # List of scanned URLs
-        self.scanned_sites:list = []
+        self.scanned_sites:List[Optional[str]] = []
 
         # Save required config options
         self.api_limit_wait:bool= conf["api_limit_wait"]
         self.follow_redirect:bool = conf["follow_redirect"]
         self.wpscan_output_folder:str = conf["wpscan_output_folder"]
-        self.wpscan_args:list = conf["wpscan_args"]
+        self.wpscan_args:List[str] = conf["wpscan_args"]
         self.fail_fast:bool = conf["fail_fast"]
-        self.false_positive_strings:list = conf["false_positive_strings"]
+        self.false_positive_strings:List[str] = conf["false_positive_strings"]
         self.daemon:bool = conf["daemon"]
         self.daemon_loop_sleep:timedelta = conf["daemon_loop_sleep"]
 
@@ -197,7 +197,7 @@ class WPWatcherScanner:
 
 
     @staticmethod
-    def _write_wpscan_output(wp_report:WPWatcherReport, fpwpout:TextIO) -> None:
+    def _write_wpscan_output(wp_report:WPWatcherReport, fpwpout:BinaryIO) -> None:
         """Helper method to write output to file"""
         nocolor_output = re.sub(
             r"(\x1b|\[[0-9][0-9]?m)", "", wp_report["wpscan_output"]
@@ -207,7 +207,7 @@ class WPWatcherScanner:
         except UnicodeEncodeError:
             fpwpout.write(nocolor_output.encode("latin1"))
 
-    def write_wpscan_output(self, wp_report:WPWatcherReport) -> None:
+    def write_wpscan_output(self, wp_report:WPWatcherReport) -> str:
         """Write WPScan output to configured place with `wpscan_output_folder` if configured"""
         # Subfolder
         folder = "%s/" % wp_report["status"].lower()
@@ -224,7 +224,6 @@ class WPWatcherScanner:
             log.info("Saving WPScan output to file %s" % wpscan_results_file)
             with open(wpscan_results_file, "wb") as wpout:
                 self._write_wpscan_output(wp_report, wpout)
-
                 return wpout.name
 
 
@@ -454,14 +453,14 @@ class WPWatcherScanner:
         self.check_fail_fast()
 
 
-    def scan_site(self, wp_site:WPWatcherSite, last_wp_report:WPWatcherReport=None) -> Optional[WPWatcherReport]:
+    def scan_site(self, wp_site:WPWatcherSite, last_wp_report:Optional[WPWatcherReport]=None) -> Optional[WPWatcherReport]:
         """
         Orchestrate the scanning of a site.
         Return the final wp_report or None if something happened.
         """
 
         # Init report variables
-        wp_report: WPWatcherReport = WPWatcherReport({
+        wp_report: Optional[WPWatcherReport] = WPWatcherReport({
             "site": wp_site["url"],
             "datetime": datetime.now().strftime(DATE_FORMAT)
         })

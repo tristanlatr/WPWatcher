@@ -4,7 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-from typing import Union, Optional, Mapping, List, Tuple
+from typing import Iterable, Tuple, Union, Optional, Mapping, List, Dict, Any
 from collections import UserDict
 import configparser
 import os
@@ -105,7 +105,7 @@ smtp_ssl=Yes
     )
 
     # Config default values
-    DEFAULT_CONFIG:dict = {
+    DEFAULT_CONFIG:Dict[str, Any] = {
         "wp_sites": "null",
         "false_positive_strings": "null",
         "wpscan_path": "wpscan",
@@ -143,10 +143,10 @@ smtp_ssl=Yes
         "syslog_kwargs": '{"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}',
     }
 
-    FIELDS:list = DEFAULT_CONFIG.keys()
+    FIELDS:Iterable[str] = list(DEFAULT_CONFIG.keys())
 
     @classmethod
-    def default(cls) -> Mapping:
+    def default(cls) -> Mapping[str, Any]:
         """
         Get the default WPWatcherConfig (from `WPWatcherConfig.DEFAULT_CONFIG` only). 
         """
@@ -155,7 +155,7 @@ smtp_ssl=Yes
         return cls.fromparser(parser)
     
     @classmethod
-    def fromenv(cls) -> Mapping:
+    def fromenv(cls) -> Mapping[str, Any]:
         """
         Get the default WPWatcherConfig (from environement). 
         Look for files: `./wpwatcher.conf` and/or `~/wpwatcher.conf` or under `~/.wpwatcher/` folder.
@@ -170,7 +170,7 @@ smtp_ssl=Yes
             return cls.fromfiles(files)        
 
     @classmethod
-    def fromfiles(cls, files:List[str]) -> Mapping:
+    def fromfiles(cls, files:List[str]) -> Mapping[str, Any]:
         """
         Get config dict from file(s). 
 
@@ -195,7 +195,7 @@ smtp_ssl=Yes
         return WPWatcherConfig.fromparser(parser)
 
     @classmethod
-    def fromstring(cls, string:str) -> Mapping:
+    def fromstring(cls, string:str) -> Mapping[str, Any]:
         """
         Get the config dict from string. 
 
@@ -220,7 +220,7 @@ smtp_ssl=Yes
         return cls.fromparser(parser)
 
     @classmethod
-    def fromparser(cls, parser:configparser.ConfigParser) -> Mapping:
+    def fromparser(cls, parser:configparser.ConfigParser) -> Mapping[str, Any]:
         """
         Get config from ConfigParser, the parser should contain all values. 
         Use `ConfigParser.read_dict(WPWatcherConfig.DEFAULT_CONFIG)`
@@ -228,11 +228,11 @@ smtp_ssl=Yes
         return cls(cls._build_config(parser))
     
     @classmethod
-    def fromcliargs(cls, cliargs:argparse.Namespace) -> Mapping:
+    def fromcliargs(cls, cliargs:argparse.Namespace) -> Mapping[str, Any]:
         """
         Get the config dict from CLI arguments. 
         """
-        config_object:WPWatcherConfig
+        config_object:Mapping[str, Any]
 
         if cliargs.conf:
             config_object = cls.fromfiles(cliargs.conf)
@@ -270,7 +270,7 @@ smtp_ssl=Yes
         
         return config_object
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Get the config representation without passwords, ready for printing. """
         dump_conf = copy.deepcopy(self.data)
         string = ""
@@ -288,7 +288,7 @@ smtp_ssl=Yes
         return string
 
     @staticmethod
-    def _adjust_special_cli_args(conf_args:dict) -> dict:
+    def _adjust_special_cli_args(conf_args:Dict[str, Any]) -> Dict[str, Any]:
         """
         Adjust special CLI arguments types.
 
@@ -317,12 +317,12 @@ smtp_ssl=Yes
         return conf_args
 
     @staticmethod
-    def _build_config(parser:configparser.ConfigParser) -> Mapping:
+    def _build_config(parser:configparser.ConfigParser) -> Mapping[str, Any]:
         """
         
         """
         # Saving config file in right dict format and types - no 'wpwatcher' section, just config options
-        config_dict:dict = {
+        config_dict:Dict[str, Any] = {
             # Configurable with cli arguments
             "wp_sites": WPWatcherConfig._getjson(parser, "wp_sites"),
             "send_email_report": WPWatcherConfig._getbool(parser, "send_email_report"),
@@ -372,7 +372,7 @@ smtp_ssl=Yes
         return config_dict
 
     @staticmethod
-    def _getjson(parser:configparser.ConfigParser, key:str, section="wpwatcher",) -> Union[list, dict]:
+    def _getjson(parser:configparser.ConfigParser, key:str, section:str="wpwatcher",) -> Union[List[Any], Dict[str, Any]]:
         """Return json loaded structure from a configparser object. Empty list if the loaded value is null.
         Arguments:
         - `conf`: configparser object
@@ -389,7 +389,7 @@ smtp_ssl=Yes
             ) from err
 
     @staticmethod
-    def _getbool(parser:configparser.ConfigParser, key:str, section="wpwatcher",) -> bool:
+    def _getbool(parser:configparser.ConfigParser, key:str, section:str="wpwatcher",) -> bool:
         """Return bool value from a configparser object.
         Arguments:
         - `conf`: configparser object
@@ -405,7 +405,7 @@ smtp_ssl=Yes
             ) from err
 
     @staticmethod
-    def _getint(parser:configparser.ConfigParser, key:str, section="wpwatcher",) -> int:
+    def _getint(parser:configparser.ConfigParser, key:str, section:str="wpwatcher",) -> int:
         """Return int value from a configparser object.
         Arguments:
         - `conf`: configparser object
@@ -460,13 +460,11 @@ smtp_ssl=Yes
 
         return WPWatcherConfig.find_files(env, files, WPWatcherConfig.TEMPLATE_FILE, create=create)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:Tuple, **kwargs:Dict[str, Any]) -> None:
         '''
         Init WPWatcherConfig dict. 
 
-        :Parameters:
-        - Same as `dict`
-        - `**kwargs`: Must contain all config fields. 
+        Parameters must contain all config fields. 
 
         :Note: Should not be used directly to create a WPWatcherConfig object.  
                Use class methods instead. 

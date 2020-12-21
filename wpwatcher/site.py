@@ -1,19 +1,19 @@
 from collections import UserDict
 from urllib.parse import urlparse
-
+from typing import Iterable, Dict, Any, Tuple
 
 class WPWatcherSite(UserDict):
 
-    DEFAULT_SITE:dict = {
+    DEFAULT_SITE:Dict[str, Any] = {
         "url": "",
         "email_to": [],
         "false_positive_strings": [],
         "wpscan_args": [],
     }
 
-    FIELDS:list = DEFAULT_SITE.keys()
+    FIELDS:Iterable = list(DEFAULT_SITE.keys())
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:Tuple, **kwargs:Dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
 
         if "url" not in self.data:

@@ -4,7 +4,7 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-from typing import Mapping, List, Tuple
+from typing import Mapping, List, Tuple, Any
 import copy
 import os
 import json
@@ -47,7 +47,7 @@ class WPWatcher:
     """
 
     # WPWatcher must use a configuration dict
-    def __init__(self, conf:Mapping):
+    def __init__(self, conf:Mapping[str, Any]):
         """
         Arguments:
         - `conf`: the configuration dict. Required
@@ -78,14 +78,14 @@ class WPWatcher:
         )
 
         # List of conccurent futures
-        self.futures:list = []
+        self.futures:List[concurrent.futures.Future] = []
 
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt()
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
 
         # new reports
-        self.new_reports = WPWatcherReportCollection()
+        self.new_reports:WPWatcherReportCollection
 
     @staticmethod
     def delete_tmp_wpscan_files() -> None:
@@ -153,7 +153,7 @@ class WPWatcher:
             else:
                 log.info("Local database disabled, no reports updated.")
         else:
-            log.info("No reports.")
+            log.info("No reports updated.")
 
     def scan_site_wrapper(self, wp_site:WPWatcherSite) -> WPWatcherReport:
         """
@@ -184,6 +184,7 @@ class WPWatcher:
         Helper method to deal with :
         - executor, concurent futures
         - Trigger self.interrupt() on InterruptedError (raised if fail fast enabled)
+        - Append result to `self.new_reports` list. 
         """
 
         log.info("Starting scans on %s configured sites" % (len(wp_sites)))
@@ -204,8 +205,12 @@ class WPWatcher:
     def run_scans_and_notify(self) -> Tuple[int, WPWatcherReportCollection]:
         """
         Run WPScan on defined websites and send notifications.
-        :Returns: `tuple (exit code, reports)`
+
+        :Returns: `tuple (exit code, reports)` 
         """
+
+        # reset new reports
+        self.new_reports = WPWatcherReportCollection()
 
         # Check sites are in the config
         if len(self.wp_sites) == 0:

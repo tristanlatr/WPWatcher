@@ -1,7 +1,5 @@
-
+from typing import Dict, Any, List, Iterable, Tuple
 from collections import UserDict, UserList
-
-
 
 class WPWatcherReport(UserDict):
     """ 
@@ -9,7 +7,7 @@ class WPWatcherReport(UserDict):
 
     """
 
-    DEFAULT_REPORT:dict = {
+    DEFAULT_REPORT:Dict[str, Any] = {
         "site":"",
         "status":"",
         "datetime":None,
@@ -24,9 +22,9 @@ class WPWatcherReport(UserDict):
         "wpscan_parser":None,
     }
 
-    FIELDS:list = DEFAULT_REPORT.keys()
+    FIELDS:Iterable[str] = list(DEFAULT_REPORT.keys())
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args:Tuple[Any], **kwargs:Dict[str, Any]) -> None:
         super().__init__(*args, **kwargs)
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])

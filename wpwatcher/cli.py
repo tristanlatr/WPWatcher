@@ -21,11 +21,12 @@ from wpwatcher.syslogout import WPSyslogOutput
 from wpscan_out_parse import format_results
 
 
-def main():
+def main(args:argparse.Namespace=None):
     """Main program entrypoint"""
 
     # Parse arguments
-    args = parse_args()
+    if not args:
+        args = get_arg_parser().parse_args()
 
     # Init logger with CLi arguments
     init_log(args.verbose, args.quiet)
@@ -315,12 +316,6 @@ All options can be missing from config file.""",
         "--show", metavar="Site", help="Inspect a report in the Database"
     )
     return parser
-
-
-def parse_args():
-    parser = get_arg_parser()
-    args = parser.parse_args()
-    return args
 
 
 """Main program if called with wpwatcher/cli.py"""
