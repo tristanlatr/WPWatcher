@@ -458,25 +458,47 @@ smtp_ssl=Yes
 
         return WPWatcherConfig.find_files(env, files, WPWatcherConfig.TEMPLATE_FILE, create=create)
 
-    def __init__(self, *args, **kwargs) -> None: # type: ignore [no-untyped-def]
+    def __init__(self, *args:Any, **kwargs:Any) -> None: 
         '''
         Init WPWatcherConfig dict. 
-
-        Parameters must contain all config fields. 
 
         :Note: Should not be used directly to create a WPWatcherConfig object.  
                Use class methods instead. 
 
         :Raise KeyError: If missing config field from ``**kwargs``. 
+
+        Parameters `"files"` and `"string"` are deprecated since verion 3.0. 
         '''
+        
+        self._files = kwargs.pop("files") if "files" in kwargs else None
+        self._string = kwargs.pop("string") if "string" in kwargs else None
+
         super().__init__(*args, **kwargs)
         # Raise if missing fields
         missing = []
         for key in self.FIELDS:
             if key not in self:
                 missing.append(key)
-        if missing:
+        if self._files or self._string: # Ensure compatibility
+            warnings.warn("WPWatcherConfig() parameters 'files' and 'string' are deprecated since verion WPWatcher 3.0. "
+                "Config should be created from classmethods instead. ", category=DeprecationWarning)
+        elif missing:
             fields = ', '.join(f"'{key}'" for key in missing)
-            raise KeyError(f"Missing config field(s): {fields}. "
-                "From WPWatcher 3.0, WPWatcherConfig should be created from classmethods, i.e. ::"
-                "    config = WPWatcherConfig.fromfiles(['/path/to/wpwatcher.conf'])")
+            raise KeyError(f"Missing config field(s): {fields}. ")
+    
+    def build_config(self) -> Tuple[Dict[str, Any], List[str]]: # Ensure compatibility
+        """
+        WPWatcherConfig.build_config() is deprecated since verion WPWatcher 3.0, config should be created from classmethods. 
+        """
+        warnings.warn("WPWatcherConfig.build_config() is deprecated since verion WPWatcher 3.0, config should be created from classmethods, i.e. "
+            "config = WPWatcherConfig.fromfiles(['/path/to/wpwatcher.conf']). Not from build_config(). ",
+            category=DeprecationWarning)
+        if self._string:
+            return (self.fromstring(self._string), [])
+        elif self._files:
+            return (self.fromfiles(self._files), self._files)
+        else:
+            return (self.fromenv(), [])
+            
+        
+        

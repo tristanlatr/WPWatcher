@@ -16,12 +16,14 @@
   <a href="http://mypy-lang.org/" target="_blank"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></a>
 </p>
 
-Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email and/or syslog.  
-Automate scans and get notified when vulnerabilities, outdated plugins or other risks are found. 
+<p align="center">
+  Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email and/or syslog. 
+  Schedule scans and get notified when vulnerabilities, outdated plugins and other risks are found. 
+</p>
 
 ## Features
   - Scan **multiple sites** with WPScan
-  - **Parse WPScan output** and divide the results in *"Alerts", "Warnings", "Informations" and eventually "Errors"*
+  - **Parse WPScan output** and divide the results in *"Alerts"*, *"Warnings"* and *"Informations"*.  
   - **Handled VulnDB API limit**
   - Define **reporting emails addresses** for every configured site individually and globally ([wiki/Email-reports](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
   - Define **false positives strings** for every configured site individually and globally ([wiki/False-positives](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))

@@ -4,19 +4,19 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-
+from typing import Dict, Any, List
 import socket
 import logging
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
 
 
-class WPSyslogOutput(object):
-    def __init__(self, conf):
+class WPSyslogOutput:
+    def __init__(self, conf:Dict[str, Any]):
         # Keep syslog dependency optionnal by importing at init time
         from rfc5424logging import Rfc5424SysLogHandler
 
-        sh = Rfc5424SysLogHandler(
+        sh:Rfc5424SysLogHandler = Rfc5424SysLogHandler(
             address=(conf["syslog_server"], conf["syslog_port"]),
             socktype=getattr(socket, conf["syslog_stream"]),  # Use TCP or UDP
             appname="WPWatcher",
@@ -40,7 +40,7 @@ class WPSyslogOutput(object):
         "alerts": ("104", "WPScan ALERT", 9),
     }
 
-    def emit_messages(self, wp_report):
+    def emit_messages(self, wp_report:Dict[str, Any]) -> None:
         """
         Sends the CEF syslog messages for the report.
         """
@@ -48,7 +48,7 @@ class WPSyslogOutput(object):
         for m in self.get_messages(wp_report):
             self.syslog.info(m)
 
-    def get_messages(self, wp_report):
+    def get_messages(self, wp_report:Dict[str, Any]) -> List[str]:
         """
         Return a list of CEF formatted messages
         """
@@ -78,7 +78,7 @@ class WPSyslogOutput(object):
                     messages.append(msg)
         return messages
 
-    def emit_test_messages(self):
+    def emit_test_messages(self) -> None:
         wp_report = {
             "site": "https://exemple.com",
             "error": "WPScan Failed ... (TESTING)",

@@ -143,3 +143,10 @@ class T(unittest.TestCase):
         report=scanner.scan_site(WPWatcherSite({'url':'http://localhost:8080'}))
         self.assertEqual(report['status'], 'ERROR')
         self.assertRegex(report['error'], 'does not seem to be running WordPress')
+
+    def test_scan_localhost_error_not_wordpress_old_way(self):
+        # test info, warnings and alerts
+        scanner=WPWatcherScanner(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        report=scanner.scan_site(WPWatcherSite({'url':'http://localhost:8080'}))
+        self.assertEqual(report['status'], 'ERROR')
+        self.assertRegex(report['error'], 'does not seem to be running WordPress')
