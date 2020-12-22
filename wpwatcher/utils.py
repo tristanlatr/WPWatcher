@@ -16,6 +16,11 @@ from wpwatcher import log
 
 # Few static helper methods -------------------
 
+def remove_color(string:str) -> str:
+    """
+    Remove ansi colors from string. 
+    """
+    return re.sub(r"(\x1b|\[[0-9][0-9]?m)", "", string)
 
 def timeout(timeout:float, func:Callable[..., Any], args:Tuple[Any, ...]=(), kwargs:Dict[str, Any]={}) -> Any:
     """Run func with the given timeout.

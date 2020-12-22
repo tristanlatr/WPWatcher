@@ -71,7 +71,7 @@ class WPWatcher:
         log.info(f"WPWatcher configuration:{repr(conf)}")
 
         # Save sites
-        self.wp_sites:List[WPWatcherSite] = [ WPWatcherSite(site_conf) for site_conf in conf["wp_sites"] ]
+        self.wp_sites:List[Dict[str, Any]] = [ WPWatcherSite(site_conf) for site_conf in conf["wp_sites"] ]
 
         # Asynchronous executor
         self.executor:concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(
@@ -140,7 +140,7 @@ class WPWatcher:
         log.info("Scans interrupted.")
         sys.exit(-1)
 
-    def print_scanned_sites_results(self, new_reports:WPWatcherReportCollection) -> None:
+    def print_scanned_sites_results(self, new_reports:List[Dict[str, Any]]) -> None:
         """Print the result summary for the scanned sites"""
         new_reports = WPWatcherReportCollection(n for n in new_reports if n)
         if len(new_reports) > 0:
@@ -154,7 +154,7 @@ class WPWatcher:
         else:
             log.info("No reports updated.")
 
-    def scan_site_wrapper(self, wp_site:WPWatcherSite) -> Optional[WPWatcherReport]:
+    def scan_site_wrapper(self, wp_site:Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Helper method to wrap the raw scanning process of `WPWatcherScanner.scan_site` and add the following:
         - Find the last report in the database and launch the scan
@@ -178,7 +178,7 @@ class WPWatcher:
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))
         return wp_report
 
-    def run_scans_wrapper(self, wp_sites:List[WPWatcherSite]) -> WPWatcherReportCollection:
+    def run_scans_wrapper(self, wp_sites:List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Helper method to deal with :
         - executor, concurent futures
@@ -201,7 +201,7 @@ class WPWatcher:
         self.cancel_pending_futures()
         return self.new_reports
 
-    def run_scans_and_notify(self) -> Tuple[int, WPWatcherReportCollection]:
+    def run_scans_and_notify(self) -> Tuple[int, List[Dict[str, Any]]]:
         """
         Run WPScan on defined websites and send notifications.
 

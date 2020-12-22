@@ -28,7 +28,7 @@ class WPWatcherReport(Dict[str, Any]):
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
 
-class WPWatcherReportCollection(List[WPWatcherReport]):
+class WPWatcherReportCollection(List[Dict[str, Any]]):
     """
     List-Like object to store `WPWatcherReport`s. 
     """
