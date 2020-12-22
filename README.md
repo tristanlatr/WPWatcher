@@ -14,6 +14,9 @@
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
   <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a>
   <a href="http://mypy-lang.org/" target="_blank"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></a>
+  <a href='https://wpwatcher.readthedocs.io/en/latest/'>
+    <img src='https://readthedocs.org/projects/wpwatcher/badge/?version=latest' alt='Documentation Status' />
+  </a>
 </p>
 
 <p align="center">
@@ -25,18 +28,18 @@
   - Scan **multiple sites** with WPScan
   - **Parse WPScan output** and divide the results in *"Alerts"*, *"Warnings"* and *"Informations"*.  
   - **Handled VulnDB API limit**
-  - Define **reporting emails addresses** for every configured site individually and globally ([wiki/Email-reports](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
-  - Define **false positives strings** for every configured site individually and globally ([wiki/False-positives](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
-  - Define **WPScan arguments** for every configured site individually and globally ([wiki/WPScan-configuration](https://github.com/tristanlatr/WPWatcher/wiki/WPScan-configuration))
-  - Send WPScan findings to **Syslog** server ([wiki/Syslog-output](https://github.com/tristanlatr/WPWatcher/wiki/Syslog-output))
+  - Define **reporting emails addresses** for every configured site individually and globally ([docs](https://wpwatcher.readthedocs.io/en/latest/email-reports.html))
+  - Define **false positives strings** for every configured site individually and globally ([docs](https://wpwatcher.readthedocs.io/en/latest/false-positives.html))
+  - Define **WPScan arguments** for every configured site individually and globally ([docs](https://wpwatcher.readthedocs.io/en/latest/wpscan-config.html))
+  - Send WPScan findings to **Syslog** server ([docs](https://wpwatcher.readthedocs.io/en/latest/syslog-output.html))
   - Save raw WPScan output into files
-  - Log file lists all the findings ([wiki/Output](https://github.com/tristanlatr/WPWatcher/wiki/Output))
+  - Log file lists all the findings 
   - Speed up scans using several asynchronous workers
   - **Follow URL redirection** if WPScan fails and propose to ignore main redirect
-  - Scan sites continuously at defined interval and configure script as a linux service ([wiki/Linux-service](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
+  - Scan sites continuously at defined interval and configure script as a linux service ([docs](https://wpwatcher.readthedocs.io/en/latest/linux-service.html))
   - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
   - Keep track of fixed and unfixed issues
-  - Simple library usage ([wiki/Library-usage](https://github.com/tristanlatr/WPWatcher/wiki/Library-usage))
+  - Simple library usage ([docs](https://wpwatcher.readthedocs.io/en/latest/library-usage.html))
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
@@ -51,8 +54,6 @@ python3 -m pip install 'wpwatcher' --upgrade
 *Installs WPWatcher without syslog output support*  
 
 `wpwatcher` should be in your `PATH`.
-
-**[Review the Wiki](https://github.com/tristanlatr/WPWatcher/wiki)** for more documentation.
 
 #### Try it out
 
@@ -77,6 +78,8 @@ wpwatcher --urls sites.txt \
 WPWatcher must read a configuration file to send mail reports.  
 *This exemple assume you have filled your config file with mail server setings*.
 
+[Read The Docs](https://wpwatcher.readthedocs.io/en/latest/) for more informations. 
+
 **Inspect a report in database**
 
 ```bash
@@ -99,7 +102,7 @@ To load the config file by default, move the file to the following location:
   - For Mac/Linux : `$HOME/.wpwatcher/wpwatcher.conf` or `$HOME/wpwatcher.conf`
 
 See:
-**[All configuration options](https://github.com/tristanlatr/WPWatcher/wiki/All-configuration-options)**
+**[All configuration options](https://wpwatcher.readthedocs.io/en/latest/all-options.html)**
 
 ### Configuration exemple
 
@@ -134,6 +137,8 @@ smtp_pass=P@assW0rd
 syslog_server=syslogserver.ca
 syslog_port=514
 ```
+
+[Read The Docs](https://wpwatcher.readthedocs.io/en/latest/) for more informations. 
 
 ### Email reports
 
