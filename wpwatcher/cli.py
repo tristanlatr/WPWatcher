@@ -6,7 +6,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 """
 
 # Main program, parse the args, read config and launch scans
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import argparse
 import shlex
 import sys
@@ -18,6 +18,7 @@ from wpwatcher.core import WPWatcher
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.daemon import WPWatcherDaemon
 from wpwatcher.syslogout import WPSyslogOutput
+from wpwatcher.report import WPWatcherReportCollection
 from wpscan_out_parse import format_results
 
 def main() -> None:
@@ -72,15 +73,15 @@ def main() -> None:
         exit(exit_code)
 
 
-def wprs(filepath=None, daemon=False):
+def wprs(filepath:Optional[str]=None, daemon:bool=False) -> None:
     """Generate JSON file database summary"""
     db = WPWatcherDataBase(filepath, daemon=daemon)
-    sys.stdout.buffer.write(WPWatcher.results_summary(db._data).encode("utf8"))
+    sys.stdout.buffer.write(repr(WPWatcherReportCollection(db._data)).encode("utf8"))
     sys.stdout.flush()
     exit(0)
 
 
-def show(urlpart, filepath=None, daemon=False):
+def show(urlpart:str, filepath:Optional[str]=None, daemon:bool=False) -> None:
     """Inspect a report in database"""
     db = WPWatcherDataBase(filepath, daemon=daemon)
     matching_reports = [r for r in db._data if urlpart in r["site"]]
@@ -98,7 +99,7 @@ def show(urlpart, filepath=None, daemon=False):
             "The following sites match your search: \n".encode("utf8")
         )
         sys.stdout.buffer.write(
-            WPWatcher.results_summary(matching_reports).encode("utf8")
+            repr(WPWatcherReportCollection(matching_reports)).encode("utf8")
         )
         sys.stdout.buffer.write("\nPlease be more specific. \n".encode("utf8"))
     else:
@@ -107,28 +108,28 @@ def show(urlpart, filepath=None, daemon=False):
     exit(0)
 
 
-def verion():
+def verion() -> None:
     """Print version and contributors"""
     log.info(f"Version:\t\t{__version__}")
     log.info(f"Authors:\t\t{__author__}")
     exit(0)
 
 
-def template_conf():
+def template_conf() -> None:
     """Print template configuration"""
     sys.stdout.buffer.write(WPWatcherConfig.TEMPLATE_FILE.encode("utf8"))
     sys.stdout.flush()
     exit(0)
 
 
-def syslog_test(conf):
+def syslog_test(conf:Dict[str, Any]) -> None:
     """Launch the emit_test_messages() method"""
     syslog = WPSyslogOutput(conf)
     syslog.emit_test_messages()
     exit(0)
 
 
-def get_arg_parser():
+def get_arg_parser() -> argparse.ArgumentParser:
     """Parse CLI arguments, arguments can overwrite config file values"""
 
     parser = argparse.ArgumentParser(

@@ -22,7 +22,7 @@ wp_report_lock = threading.Lock()
 class WPWatcherDataBase:
     """Interface to JSON database file. Work to write all reports to file in a thread safe way"""
 
-    def __init__(self, wp_reports_filepath:str="", daemon:bool=False):
+    def __init__(self, wp_reports_filepath:Optional[str]=None, daemon:bool=False):
 
         self.no_local_storage:bool = wp_reports_filepath == "null"
         if not wp_reports_filepath:

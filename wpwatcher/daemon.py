@@ -4,13 +4,13 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+from typing import Dict, Any
 import time
 from wpwatcher import log
 from wpwatcher.core import WPWatcher
 
-
 class WPWatcherDaemon:
-    def __init__(self, conf):
+    def __init__(self, conf:Dict[str, Any]) -> None:
         log.info("Daemon mode selected, looping for ever...")
         # keep data in memory
         wpwatcher = WPWatcher(conf)

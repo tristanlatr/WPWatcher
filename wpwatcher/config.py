@@ -473,7 +473,7 @@ smtp_ssl=Yes
             if key not in self:
                 missing.append(key)
         if self._files or self._string: # Ensure compatibility
-            warnings.warn("WPWatcherConfig() parameters 'files' and 'string' are deprecated since verion WPWatcher 3.0. "
+            warnings.warn("WPWatcherConfig() parameters 'files' and 'string' are deprecated since WPWatcher 3.0. "
                 "Config should be created from classmethods instead. ", category=DeprecationWarning)
         elif missing:
             fields = ', '.join(f"'{key}'" for key in missing)
@@ -481,10 +481,9 @@ smtp_ssl=Yes
     
     def build_config(self) -> Tuple[Dict[str, Any], List[str]]: # Ensure compatibility
         """
-        WPWatcherConfig.build_config() is deprecated since verion WPWatcher 3.0, config should be created from classmethods. 
+        WPWatcherConfig.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead. 
         """
-        warnings.warn("WPWatcherConfig.build_config() is deprecated since verion WPWatcher 3.0, config should be created from classmethods, i.e. "
-            "config = WPWatcherConfig.fromfiles(['/path/to/wpwatcher.conf']). Not from build_config(). ",
+        warnings.warn("WPWatcherConfig.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead. Not from build_config(). ",
             category=DeprecationWarning)
         if self._string:
             return (self.fromstring(self._string), [])
