@@ -1,14 +1,10 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+Email notifications.
 """
 from typing import Dict, Any, List, Optional
 import io
 import re
 import smtplib
-import socket
 import threading
 import time
 from string import Template
@@ -29,7 +25,9 @@ mail_lock = threading.Lock()
 
 
 class WPWatcherNotification:
-    """Send conditions logic + build and send mail reports"""
+    """
+    Handles the email nofification logic. 
+    """
 
     def __init__(self, conf: Dict[str, Any]):
         # store specific mailserver values

@@ -1,13 +1,8 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+Wordpress Watcher core object. 
 """
 from typing import Dict, List, Tuple, Any, Optional
-import copy
 import os
-import json
 import threading
 import shutil
 import concurrent.futures
@@ -21,8 +16,7 @@ from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
 from wpwatcher.site import WPWatcherSite
-from wpwatcher.report import WPWatcherReport, WPWatcherReportCollection
-from wpwatcher.config import WPWatcherConfig
+from wpwatcher.report import WPWatcherReportCollection
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
@@ -31,7 +25,9 @@ DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 class WPWatcher:
     """WPWacther object
 
-    Usage exemple::
+    Usage exemple:
+
+    .. python::
 
         from wpwatcher.config import WPWatcherConfig
         from wpwatcher.core import WPWatcher

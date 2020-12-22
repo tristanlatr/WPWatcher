@@ -2,8 +2,6 @@
 Wordpress Watcher
 Automating WPscan to scan and report vulnerable Wordpress sites
 
-DISCLAIMER - USE AT YOUR OWN RISK.
-
 Project version and meta informations.
 """
 

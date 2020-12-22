@@ -1,8 +1,17 @@
+"""
+Container for a website to be scanned. 
+"""
+
 from urllib.parse import urlparse
-from typing import Iterable, Dict, Any, Tuple
+from typing import Iterable, Dict, Any
 
 
 class WPWatcherSite(Dict[str, Any]):
+    """
+    Dict-Like object to store per site config. 
+
+    >>> site = WPWatcherSite(url="https://exemple.com", wpscan_args=["--verbose"])
+    """
 
     DEFAULT_SITE: Dict[str, Any] = {
         "url": "",

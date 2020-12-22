@@ -1,8 +1,5 @@
 """
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+A few quick static methods. 
 """
 from typing import Iterable, Optional, Tuple, Dict, Any, Callable, List
 import re
@@ -65,7 +62,7 @@ def timeout(
 
 
 def safe_log_wpscan_args(wpscan_args: Iterable[str]) -> List[str]:
-    """Replace --api-token param with *** for safe logging"""
+    """Replace `--api-token` param with `"***"` for safer logging"""
     args = [val.strip() for val in copy.deepcopy(wpscan_args)]
     if "--api-token" in args:
         args[args.index("--api-token") + 1] = "***"

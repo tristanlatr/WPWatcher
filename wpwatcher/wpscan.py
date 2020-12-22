@@ -1,8 +1,5 @@
 """
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+Subprocess level interface to WPScan. 
 """
 from typing import List, Tuple
 import shlex
@@ -19,6 +16,9 @@ init_lock = threading.Lock()
 
 # WPScan helper class -----------
 class WPScanWrapper:
+    """
+    Thread safe WPScan wrapper. 
+    """
     def __init__(self, wpscan_executable: str) -> None:
         """
         :Param wpscan_executable: Path to WPScan executable. Exemple: '/usr/local/rvm/gems/default/wrappers/wpscan'
@@ -70,7 +70,7 @@ class WPScanWrapper:
     def wpscan(self, *args: str) -> Tuple[int, str, str]:
         """
         Run WPScan and return raw results.
-        :Param args: Sequence of arguments to pass to WPScan.
+        :param args: Sequence of arguments to pass to WPScan.
         :Return: `Tuple[Exit code, Output, Stderr]`
         """
         if not self.init_check_done:  # for lazy initiation

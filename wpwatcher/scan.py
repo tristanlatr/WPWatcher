@@ -1,8 +1,5 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+Scanner utility. 
 """
 from typing import Optional, BinaryIO, List, Tuple, Dict, Any
 import threading
@@ -13,7 +10,6 @@ import traceback
 import json
 from smtplib import SMTPException
 from datetime import timedelta, datetime
-from urllib.parse import parse_qsl
 
 from wpscan_out_parse.parser import WPScanJsonParser
 
@@ -30,7 +26,6 @@ from wpwatcher.notification import WPWatcherNotification
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.syslogout import WPSyslogOutput
 from wpwatcher.report import WPWatcherReport
-from wpwatcher.site import WPWatcherSite
 
 # Wait when API limit reached
 API_WAIT_SLEEP = timedelta(hours=24)
@@ -43,7 +38,7 @@ DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
 
 class WPWatcherScanner:
-    """Scanner class create reports and handles the scan and notification process"""
+    """Scanner class create reports and handles the scan and notification process and build report. """
 
     def __init__(self, conf: Dict[str, Any]):
 

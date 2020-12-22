@@ -164,3 +164,7 @@ pytest
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))
 - Tristan Landes
+
+## Disclamer
+
+Use at your own risks.

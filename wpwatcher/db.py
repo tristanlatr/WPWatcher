@@ -1,8 +1,5 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+Interface to JSON file storing scan results. 
 """
 from typing import List, Dict, Any, Optional
 import os

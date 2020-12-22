@@ -1,10 +1,11 @@
+"""
+Containers for scan results data stucture.  
+"""
+
 from typing import Dict, Any, List, Iterable, Tuple
-
-
 class WPWatcherReport(Dict[str, Any]):
     """
     Dict-Like object to store scan results.
-
     """
 
     DEFAULT_REPORT: Dict[str, Any] = {
@@ -32,7 +33,7 @@ class WPWatcherReport(Dict[str, Any]):
 
 class WPWatcherReportCollection(List[Dict[str, Any]]):
     """
-    List-Like object to store `WPWatcherReport`s.
+    List-Like object to store reports. 
     """
 
     def __repr__(self) -> str:

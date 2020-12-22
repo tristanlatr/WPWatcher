@@ -1,8 +1,5 @@
 """
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+Command line arguments and specific options. 
 """
 
 # Main program, parse the args, read config and launch scans

@@ -1,8 +1,5 @@
 """
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+Configuration dict. 
 """
 from typing import Iterable, Tuple, Union, Optional, List, Dict, Any
 import configparser
@@ -17,7 +14,7 @@ from wpwatcher.__version__ import __url__
 from wpwatcher.utils import parse_timedelta, safe_log_wpscan_args
 
 # Configuration handling -------------------------------------------------------
-class WPWatcherConfig(dict):  # type: ignore [type-arg]
+class WPWatcherConfig(Dict[str, Any]): 
     """
     Dict-Like object.
 
@@ -104,7 +101,7 @@ smtp_ssl=Yes
     )
 
     # Config default values
-    DEFAULT_CONFIG: Dict[str, Any] = {
+    DEFAULT_CONFIG: Dict[str, str] = {
         "wp_sites": "null",
         "false_positive_strings": "null",
         "wpscan_path": "wpscan",
@@ -174,9 +171,11 @@ smtp_ssl=Yes
         Get config dict from file(s).
 
         :Parameters:
-        - `files`: List of filenames. Exemple::
+            - `files`: List of filenames. 
+        
+        Exemple:
 
-             conf = WPWatcherConfig.fromfiles(["/home/user/Documents/wpwatcher.conf"])
+        >>> conf = WPWatcherConfig.fromfiles(["/home/user/Documents/wpwatcher.conf"])
         """
         parser: configparser.ConfigParser = configparser.ConfigParser()
         parser.read_dict(dict(wpwatcher=WPWatcherConfig.DEFAULT_CONFIG))
@@ -198,19 +197,21 @@ smtp_ssl=Yes
         Get the config dict from string.
 
         :Parameters:
-        - `string`: Complete configuration string, like ::
+            - `string`: Complete configuration string
 
-                conf = WPWatcherConfig.fromstring('''
-                        wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
-                        send_email_report=No
-                        email_to=["you@domain"]
-                        from_email=WordPressWatcher@domain.com
-                        smtp_server=mailserver.de:587
-                        smtp_auth=Yes
-                        smtp_user=me@domain
-                        smtp_pass=P@assw0rd
-                        smtp_ssl=Yes
-                ''')
+        .. python::
+
+            conf = WPWatcherConfig.fromstring('''
+                    wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
+                    send_email_report=No
+                    email_to=["you@domain"]
+                    from_email=WordPressWatcher@domain.com
+                    smtp_server=mailserver.de:587
+                    smtp_auth=Yes
+                    smtp_user=me@domain
+                    smtp_pass=P@assw0rd
+                    smtp_ssl=Yes
+            ''')
         """
         parser: configparser.ConfigParser = configparser.ConfigParser()
         parser.read_dict(dict(wpwatcher=WPWatcherConfig.DEFAULT_CONFIG))

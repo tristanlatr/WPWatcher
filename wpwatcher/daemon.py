@@ -1,8 +1,5 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+Deamon. 
 """
 from typing import Dict, Any
 import time
@@ -11,6 +8,9 @@ from wpwatcher.core import WPWatcher
 
 
 class WPWatcherDaemon:
+    """
+    Creating the object will trigger infinite scanning loop. 
+    """
     def __init__(self, conf: Dict[str, Any]) -> None:
         log.info("Daemon mode selected, looping for ever...")
         # keep data in memory

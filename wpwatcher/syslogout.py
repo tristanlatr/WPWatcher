@@ -1,8 +1,5 @@
-""""
-Wordpress Watcher
-Automating WPscan to scan and report vulnerable Wordpress sites
-
-DISCLAIMER - USE AT YOUR OWN RISK.
+"""
+CEF Syslog output support. 
 """
 from typing import Dict, Any, List
 import socket
@@ -12,6 +9,9 @@ from wpwatcher.__version__ import __version__
 
 
 class WPSyslogOutput:
+    """
+    Send CEF messages based on reports. 
+    """
     def __init__(self, conf: Dict[str, Any]):
         # Keep syslog dependency optionnal by importing at init time
         from rfc5424logging import Rfc5424SysLogHandler
