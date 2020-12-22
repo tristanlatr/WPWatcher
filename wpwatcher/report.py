@@ -1,43 +1,45 @@
 from typing import Dict, Any, List, Iterable, Tuple
 
+
 class WPWatcherReport(Dict[str, Any]):
-    """ 
-    Dict-Like object to store scan results. 
+    """
+    Dict-Like object to store scan results.
 
     """
 
-    DEFAULT_REPORT:Dict[str, Any] = {
-        "site":"",
-        "status":"",
-        "datetime":None,
-        "last_email":None,
-        "error":"",
-        "infos":[],
-        "warnings":[],
-        "alerts":[],
-        "fixed":[],
-        "summary":{},
-        "wpscan_output":"",
-        "wpscan_parser":None,
+    DEFAULT_REPORT: Dict[str, Any] = {
+        "site": "",
+        "status": "",
+        "datetime": None,
+        "last_email": None,
+        "error": "",
+        "infos": [],
+        "warnings": [],
+        "alerts": [],
+        "fixed": [],
+        "summary": {},
+        "wpscan_output": "",
+        "wpscan_parser": None,
     }
 
-    FIELDS:Iterable[str] = list(DEFAULT_REPORT.keys())
+    FIELDS: Iterable[str] = list(DEFAULT_REPORT.keys())
 
-    def __init__(self, *args, **kwargs) -> None: # type: ignore [no-untyped-def]
+    def __init__(self, *args, **kwargs) -> None:  # type: ignore [no-untyped-def]
         super().__init__(*args, **kwargs)
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
 
+
 class WPWatcherReportCollection(List[Dict[str, Any]]):
     """
-    List-Like object to store `WPWatcherReport`s. 
+    List-Like object to store `WPWatcherReport`s.
     """
 
     def __repr__(self) -> str:
         """
         Get the summary string.
 
-        :Return: Summary table of all sites contained in the collection. 
+        :Return: Summary table of all sites contained in the collection.
                  Columns are: "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
         """
         results = self

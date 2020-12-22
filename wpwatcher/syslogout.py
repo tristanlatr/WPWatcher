@@ -12,15 +12,15 @@ from wpwatcher.__version__ import __version__
 
 
 class WPSyslogOutput:
-    def __init__(self, conf:Dict[str, Any]):
+    def __init__(self, conf: Dict[str, Any]):
         # Keep syslog dependency optionnal by importing at init time
         from rfc5424logging import Rfc5424SysLogHandler
 
-        sh:Rfc5424SysLogHandler = Rfc5424SysLogHandler(
+        sh: Rfc5424SysLogHandler = Rfc5424SysLogHandler(
             address=(conf["syslog_server"], conf["syslog_port"]),
             socktype=getattr(socket, conf["syslog_stream"]),  # Use TCP or UDP
             appname="WPWatcher",
-            **conf["syslog_kwargs"]
+            **conf["syslog_kwargs"],
         )
         self.syslog = logging.getLogger("wpwatcher-syslog")
         self.syslog.setLevel(logging.DEBUG)
@@ -40,7 +40,7 @@ class WPSyslogOutput:
         "alerts": ("104", "WPScan ALERT", 9),
     }
 
-    def emit_messages(self, wp_report:Dict[str, Any]) -> None:
+    def emit_messages(self, wp_report: Dict[str, Any]) -> None:
         """
         Sends the CEF syslog messages for the report.
         """
@@ -48,7 +48,7 @@ class WPSyslogOutput:
         for m in self.get_messages(wp_report):
             self.syslog.info(m)
 
-    def get_messages(self, wp_report:Dict[str, Any]) -> List[str]:
+    def get_messages(self, wp_report: Dict[str, Any]) -> List[str]:
         """
         Return a list of CEF formatted messages
         """

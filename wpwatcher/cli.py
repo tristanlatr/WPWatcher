@@ -21,10 +21,11 @@ from wpwatcher.syslogout import WPSyslogOutput
 from wpwatcher.report import WPWatcherReportCollection
 from wpscan_out_parse import format_results
 
+
 def main() -> None:
     """Main program entrypoint"""
     # Parse arguments
-    args:argparse.Namespace=get_arg_parser().parse_args()
+    args: argparse.Namespace = get_arg_parser().parse_args()
 
     # Init logger with CLi arguments
     init_log(args.verbose, args.quiet)
@@ -73,7 +74,7 @@ def main() -> None:
         exit(exit_code)
 
 
-def wprs(filepath:Optional[str]=None, daemon:bool=False) -> None:
+def wprs(filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Generate JSON file database summary"""
     db = WPWatcherDataBase(filepath, daemon=daemon)
     sys.stdout.buffer.write(repr(WPWatcherReportCollection(db._data)).encode("utf8"))
@@ -81,7 +82,7 @@ def wprs(filepath:Optional[str]=None, daemon:bool=False) -> None:
     exit(0)
 
 
-def show(urlpart:str, filepath:Optional[str]=None, daemon:bool=False) -> None:
+def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Inspect a report in database"""
     db = WPWatcherDataBase(filepath, daemon=daemon)
     matching_reports = [r for r in db._data if urlpart in r["site"]]
@@ -122,7 +123,7 @@ def template_conf() -> None:
     exit(0)
 
 
-def syslog_test(conf:Dict[str, Any]) -> None:
+def syslog_test(conf: Dict[str, Any]) -> None:
     """Launch the emit_test_messages() method"""
     syslog = WPSyslogOutput(conf)
     syslog.emit_test_messages()
@@ -215,9 +216,7 @@ All options can be missing from config file.""",
         help="Sleep 24h if API limit reached",
         action="store_true",
     )
-    parser.add_argument(
-        "--daemon", help="Loop and scan for ever", action="store_true"
-    )
+    parser.add_argument("--daemon", help="Loop and scan for ever", action="store_true")
     parser.add_argument(
         "--daemon_loop_sleep",
         "--loop",
