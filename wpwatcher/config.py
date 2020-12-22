@@ -4,164 +4,32 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
+from typing import Iterable, Tuple, Union, Optional, List, Dict, Any
 import configparser
 import os
 import json
+import argparse
+import shlex
+import copy
+import warnings
 from wpwatcher import log
 from wpwatcher.__version__ import __url__
-from wpwatcher.utils import parse_timedelta
+from wpwatcher.utils import parse_timedelta, safe_log_wpscan_args
 
 # Configuration handling -------------------------------------------------------
-class WPWatcherConfig:
-    '''Init WPWatcherConfig from file or string.
-    Arguments:
-    - `files`: List of filenames. Exemple: ["/home/user/Documents/wpwatcher.conf"]
-    - `string`: Complete configuration string, will NOT read `files` argument. Passed as docstring would be more redable like :
+class WPWatcherConfig(dict):  # type: ignore [type-arg]
+    """
+    Dict-Like object.
 
-            conf = WPWatcherConfig(string="""
-                    wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
-                    send_email_report=No
-                    email_to=["you@domain"]
-                    from_email=WordPressWatcher@domain.com
-                    smtp_server=mailserver.de:587
-                    smtp_auth=Yes
-                    smtp_user=me@domain
-                    smtp_pass=P@assw0rd
-                    smtp_ssl=Yes
-            """)
-    '''
+    Use classmethods to create the config dict.
 
-    def __init__(self, files=None, string=None):
+    Default values are applied to fields if not specified.
 
-        self.files = files if files else []
-        # Init config parser
-        self.parser = configparser.ConfigParser()
-        # Load default configuration
-        self.parser.read_dict({"wpwatcher": self.DEFAULT_CONFIG})
-
-        if string:
-            self.parser.read_string(string)
-        else:
-            if not self.files:
-                self.files = self.find_config_files()
-                if not self.files:
-                    log.info(
-                        "Could not find default config: `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`"
-                    )
-            else:
-                for f in self.files:
-                    try:
-                        with open(f, "r") as fp:
-                            self.parser.read_file(fp)
-                    except (FileNotFoundError, OSError) as err:
-                        raise ValueError(
-                            "Could not read config %s. Make sure the file exists and you have correct access right."
-                            % (f)
-                        ) from err
-
-    def build_config(self):
-        """Parse the config file(s) and return WPWatcher config.
-        Return a tuple (config dict, read files list).
-        The dict returned contain all possible config values. Default values are applied if not specified in the file(s) or string.
-        """
-        # Saving config file in right dict format and types - no 'wpwatcher' section, just config options
-        config_dict = {
-            # Configurable witg cli arguments
-            "wp_sites": self.getjson("wp_sites"),
-            "send_email_report": self.getbool("send_email_report"),
-            "send_errors": self.getbool("send_errors"),
-            "email_to": self.getjson("email_to"),
-            "send_infos": self.getbool("send_infos"),
-            "quiet": self.getbool("quiet"),
-            "verbose": self.getbool("verbose"),
-            "attach_wpscan_output": self.getbool("attach_wpscan_output"),
-            "fail_fast": self.getbool("fail_fast"),
-            "api_limit_wait": self.getbool("api_limit_wait"),
-            "daemon": self.getbool("daemon"),
-            "daemon_loop_sleep": parse_timedelta(
-                self.parser.get("wpwatcher", "daemon_loop_sleep")
-            ),
-            "resend_emails_after": parse_timedelta(
-                self.parser.get("wpwatcher", "resend_emails_after")
-            ),
-            "wp_reports": self.parser.get("wpwatcher", "wp_reports"),
-            "asynch_workers": self.parser.getint("wpwatcher", "asynch_workers"),
-            "log_file": self.parser.get("wpwatcher", "log_file"),
-            "follow_redirect": self.getbool("follow_redirect"),
-            "wpscan_output_folder": self.parser.get(
-                "wpwatcher", "wpscan_output_folder"
-            ),
-            "wpscan_args": self.getjson("wpscan_args"),
-            "scan_timeout": parse_timedelta(
-                self.parser.get("wpwatcher", "scan_timeout")
-            ),
-            "false_positive_strings": self.getjson("false_positive_strings"),
-            # Not configurable with cli arguments
-            "send_warnings": self.getbool("send_warnings"),
-            "email_errors_to": self.getjson("email_errors_to"),
-            "wpscan_path": self.parser.get("wpwatcher", "wpscan_path"),
-            "smtp_server": self.parser.get("wpwatcher", "smtp_server"),
-            "smtp_auth": self.getbool("smtp_auth"),
-            "smtp_user": self.parser.get("wpwatcher", "smtp_user"),
-            "smtp_pass": self.parser.get("wpwatcher", "smtp_pass"),
-            "smtp_ssl": self.getbool("smtp_ssl"),
-            "from_email": self.parser.get("wpwatcher", "from_email"),
-            "use_monospace_font": self.getbool("use_monospace_font"),
-            "syslog_server": self.parser.get("wpwatcher", "syslog_server"),
-            "syslog_port": self.getint("syslog_port"),
-            "syslog_stream": self.parser.get("wpwatcher", "syslog_stream"),
-            "syslog_kwargs": self.getjson("syslog_kwargs"),
-        }
-        return (config_dict, self.files)
-
-    def getjson(self, key):
-        """Return json loaded structure from a configparser object. Empty list if the loaded value is null.
-        Arguments:
-        - `conf`: configparser object
-        - `key`: wpwatcher config key
-        """
-        try:
-            loaded = json.loads(self.parser.get("wpwatcher", key))
-            return loaded if loaded else []
-        except ValueError as err:
-            raise ValueError(
-                "Could not read JSON value in config file for key '{}' and string: '{}'".format(
-                    key, self.parser.get("wpwatcher", key)
-                )
-            ) from err
-
-    def getbool(self, key):
-        """Return bool value from a configparser object.
-        Arguments:
-        - `conf`: configparser object
-        - `key`: wpwatcher config key
-        """
-        try:
-            return self.parser.getboolean("wpwatcher", key)
-        except ValueError as err:
-            raise ValueError(
-                "Could not read boolean value in config file for key '{}' and string '{}'. Must be Yes/No".format(
-                    key, self.parser.get("wpwatcher", key)
-                )
-            ) from err
-
-    def getint(self, key):
-        """Return int value from a configparser object.
-        Arguments:
-        - `conf`: configparser object
-        - `key`: alt_job config key
-        """
-        try:
-            return self.parser.getint("wpwatcher", key)
-        except ValueError as err:
-            raise ValueError(
-                "Could not read int value in config file for key '{}' and string '{}'. Must be an integer".format(
-                    key, self.parser.get("wpwatcher", key)
-                )
-            ) from err
+    If a value is deleted it will probably create a key error using `WPWatcher`.
+    """
 
     # Configuration template -------------------------
-    TEMPLATE_FILE = """[wpwatcher]
+    TEMPLATE_FILE: str = """[wpwatcher]
 # WPWatcher configuration file
 # WordPress Watcher is a Python wrapper for WPScan that manages scans on multiple sites and reports by email
 # Options configurable with CLI args, see 'wpwatcher --help'
@@ -236,7 +104,7 @@ smtp_ssl=Yes
     )
 
     # Config default values
-    DEFAULT_CONFIG = {
+    DEFAULT_CONFIG: Dict[str, Any] = {
         "wp_sites": "null",
         "false_positive_strings": "null",
         "wpscan_path": "wpscan",
@@ -266,7 +134,7 @@ smtp_ssl=Yes
         "asynch_workers": "1",
         "follow_redirect": "No",
         "wpscan_output_folder": "",
-        "scan_timeout": "15m",
+        "scan_timeout": "30m",
         "use_monospace_font": "No",
         "syslog_server": "",
         "syslog_port": "514",
@@ -274,8 +142,294 @@ smtp_ssl=Yes
         "syslog_kwargs": '{"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}',
     }
 
+    FIELDS: Iterable[str] = list(DEFAULT_CONFIG.keys())
+
+    @classmethod
+    def default(cls) -> Dict[str, Any]:
+        """
+        Get the default WPWatcherConfig (from `WPWatcherConfig.DEFAULT_CONFIG` only).
+        """
+        parser: configparser.ConfigParser = configparser.ConfigParser()
+        parser.read_dict(dict(wpwatcher=WPWatcherConfig.DEFAULT_CONFIG))
+        return cls.fromparser(parser)
+
+    @classmethod
+    def fromenv(cls) -> Dict[str, Any]:
+        """
+        Get the default WPWatcherConfig (from environement).
+        Look for files: `./wpwatcher.conf` and/or `~/wpwatcher.conf` or under `~/.wpwatcher/` folder.
+        """
+        files = WPWatcherConfig.find_config_files()
+        if not files:
+            log.info(
+                "Could not find default config: `~/.wpwatcher/wpwatcher.conf`, `~/wpwatcher.conf` or `./wpwatcher.conf`"
+            )
+            return cls.default()
+        else:
+            return cls.fromfiles(files)
+
+    @classmethod
+    def fromfiles(cls, files: List[str]) -> Dict[str, Any]:
+        """
+        Get config dict from file(s).
+
+        :Parameters:
+        - `files`: List of filenames. Exemple::
+
+             conf = WPWatcherConfig.fromfiles(["/home/user/Documents/wpwatcher.conf"])
+        """
+        parser: configparser.ConfigParser = configparser.ConfigParser()
+        parser.read_dict(dict(wpwatcher=WPWatcherConfig.DEFAULT_CONFIG))
+        for f in files:
+            try:
+                with open(f, "r") as fp:
+                    parser.read_file(fp)
+            except (FileNotFoundError, OSError) as err:
+                raise ValueError(
+                    f"Could not read config {f}. Make sure the file exists and you have correct access right."
+                ) from err
+            else:
+                log.info(f"Load config file: {f}")
+        return WPWatcherConfig.fromparser(parser)
+
+    @classmethod
+    def fromstring(cls, string: str) -> Dict[str, Any]:
+        """
+        Get the config dict from string.
+
+        :Parameters:
+        - `string`: Complete configuration string, like ::
+
+                conf = WPWatcherConfig.fromstring('''
+                        wp_sites=   [ {"url":"exemple.com"}, {"url":"exemple2.com"} ]
+                        send_email_report=No
+                        email_to=["you@domain"]
+                        from_email=WordPressWatcher@domain.com
+                        smtp_server=mailserver.de:587
+                        smtp_auth=Yes
+                        smtp_user=me@domain
+                        smtp_pass=P@assw0rd
+                        smtp_ssl=Yes
+                ''')
+        """
+        parser: configparser.ConfigParser = configparser.ConfigParser()
+        parser.read_dict(dict(wpwatcher=WPWatcherConfig.DEFAULT_CONFIG))
+        parser.read_string(string)
+        return cls.fromparser(parser)
+
+    @classmethod
+    def fromparser(cls, parser: configparser.ConfigParser) -> Dict[str, Any]:
+        """
+        Get config from ConfigParser, the parser should contain all values.
+        """
+        return cls(WPWatcherConfig._build_config(parser))
+
+    @classmethod
+    def fromcliargs(cls, cliargs: argparse.Namespace) -> Dict[str, Any]:
+        """
+        Get the config dict from CLI arguments.
+        """
+        config_object: Dict[str, Any]
+
+        if cliargs.conf:
+            config_object = cls.fromfiles(cliargs.conf)
+        else:
+            config_object = cls.fromenv()
+
+        # Figuring the config fields that have been overwritten by the args
+        # The args must have the same name than the config options.
+        cli_conf_args = {}
+        vars_cli_args = vars(cliargs)
+        for k in vars_cli_args:
+            if k in WPWatcherConfig.FIELDS and vars_cli_args[k]:
+                cli_conf_args.update({k: vars_cli_args[k]})
+
+        # Append or init list of urls from file if any
+        if cliargs.wp_sites_list:
+            with open(cliargs.wp_sites_list, "r") as urlsfile:
+                sites = [site.replace("\n", "") for site in urlsfile.readlines()]
+                cli_conf_args["wp_sites"] = (
+                    sites
+                    if "wp_sites" not in cli_conf_args
+                    else cli_conf_args["wp_sites"] + sites
+                )
+
+        cli_conf_args = WPWatcherConfig._adjust_special_cli_args(cli_conf_args)
+
+        # Overwrite or append with conf dict built from CLI Args
+        if cli_conf_args:
+            for k in cli_conf_args:
+                if k == "wpscan_args":
+                    # Make sure to append new WPScan arguments after defaults
+                    config_object[k].extend(cli_conf_args[k])
+                else:
+                    config_object[k] = cli_conf_args[k]
+
+        return config_object
+
+    def __repr__(self) -> str:
+        """Get the config representation without passwords, ready for printing. """
+        dump_conf = copy.deepcopy(self)
+        string = ""
+        for k in dump_conf:
+            v = dump_conf[k]
+            if k == "wpscan_args":
+                v = safe_log_wpscan_args(v)
+            if k == "smtp_pass" and v != "":
+                v = "***"
+            if isinstance(v, (list, dict)):
+                v = json.dumps(v)
+            else:
+                v = str(v)
+            string += f"\n{k:<25}\t=\t{v}"
+        return string
+
     @staticmethod
-    def find_files(env_location, potential_files, default_content="", create=False):
+    def _adjust_special_cli_args(conf_args: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Adjust special CLI arguments types.
+
+        Arguments:
+
+        - 'conf_args': Configuration dict with CLI parsed values only
+        """
+
+        # Adjust special case of urls that are list of dict
+        if "wp_sites" in conf_args:
+            conf_args["wp_sites"] = [{"url": site} for site in conf_args["wp_sites"]]
+
+        # Adjust special case of resend_emails_after
+        if "resend_emails_after" in conf_args:
+            conf_args["resend_emails_after"] = parse_timedelta(
+                conf_args["resend_emails_after"]
+            )
+        # Adjust special case of daemon_loop_sleep
+        if "daemon_loop_sleep" in conf_args:
+            conf_args["daemon_loop_sleep"] = parse_timedelta(
+                conf_args["daemon_loop_sleep"]
+            )
+        # Adjust special case of wpscan_args
+        if "wpscan_args" in conf_args:
+            conf_args["wpscan_args"] = shlex.split(conf_args["wpscan_args"])
+        return conf_args
+
+    @staticmethod
+    def _build_config(parser: configparser.ConfigParser) -> Dict[str, Any]:
+        """"""
+        # Saving config file in right dict format and types - no 'wpwatcher' section, just config options
+        config_dict: Dict[str, Any] = {
+            # Configurable with cli arguments
+            "wp_sites": WPWatcherConfig._getjson(parser, "wp_sites"),
+            "send_email_report": WPWatcherConfig._getbool(parser, "send_email_report"),
+            "send_errors": WPWatcherConfig._getbool(parser, "send_errors"),
+            "email_to": WPWatcherConfig._getjson(parser, "email_to"),
+            "send_infos": WPWatcherConfig._getbool(parser, "send_infos"),
+            "quiet": WPWatcherConfig._getbool(parser, "quiet"),
+            "verbose": WPWatcherConfig._getbool(parser, "verbose"),
+            "attach_wpscan_output": WPWatcherConfig._getbool(
+                parser, "attach_wpscan_output"
+            ),
+            "fail_fast": WPWatcherConfig._getbool(parser, "fail_fast"),
+            "api_limit_wait": WPWatcherConfig._getbool(parser, "api_limit_wait"),
+            "daemon": WPWatcherConfig._getbool(parser, "daemon"),
+            "daemon_loop_sleep": parse_timedelta(
+                parser.get("wpwatcher", "daemon_loop_sleep")
+            ),
+            "resend_emails_after": parse_timedelta(
+                parser.get("wpwatcher", "resend_emails_after")
+            ),
+            "wp_reports": parser.get("wpwatcher", "wp_reports"),
+            "asynch_workers": WPWatcherConfig._getint(parser, "asynch_workers"),
+            "log_file": parser.get("wpwatcher", "log_file"),
+            "follow_redirect": WPWatcherConfig._getbool(parser, "follow_redirect"),
+            "wpscan_output_folder": parser.get("wpwatcher", "wpscan_output_folder"),
+            "wpscan_args": WPWatcherConfig._getjson(parser, "wpscan_args"),
+            "scan_timeout": parse_timedelta(parser.get("wpwatcher", "scan_timeout")),
+            "false_positive_strings": WPWatcherConfig._getjson(
+                parser, "false_positive_strings"
+            ),
+            # Not configurable with cli arguments
+            "send_warnings": WPWatcherConfig._getbool(parser, "send_warnings"),
+            "email_errors_to": WPWatcherConfig._getjson(parser, "email_errors_to"),
+            "wpscan_path": parser.get("wpwatcher", "wpscan_path"),
+            "smtp_server": parser.get("wpwatcher", "smtp_server"),
+            "smtp_auth": WPWatcherConfig._getbool(parser, "smtp_auth"),
+            "smtp_user": parser.get("wpwatcher", "smtp_user"),
+            "smtp_pass": parser.get("wpwatcher", "smtp_pass"),
+            "smtp_ssl": WPWatcherConfig._getbool(parser, "smtp_ssl"),
+            "from_email": parser.get("wpwatcher", "from_email"),
+            "use_monospace_font": WPWatcherConfig._getbool(
+                parser, "use_monospace_font"
+            ),
+            "syslog_server": parser.get("wpwatcher", "syslog_server"),
+            "syslog_port": WPWatcherConfig._getint(parser, "syslog_port"),
+            "syslog_stream": parser.get("wpwatcher", "syslog_stream"),
+            "syslog_kwargs": WPWatcherConfig._getjson(parser, "syslog_kwargs"),
+        }
+        return config_dict
+
+    @staticmethod
+    def _getjson(
+        parser: configparser.ConfigParser,
+        key: str,
+        section: str = "wpwatcher",
+    ) -> Union[List[Any], Dict[str, Any]]:
+        """Return json loaded structure from a configparser object. Empty list if the loaded value is null.
+        Arguments:
+        - `conf`: configparser object
+        - `key`: config key
+        """
+        try:
+            loaded = json.loads(parser.get(section, key))
+            return loaded if loaded else []
+        except ValueError as err:
+            raise ValueError(
+                f"Could not read JSON value in config file for key '{key}' and string: '{parser.get(section, key)}'"
+            ) from err
+
+    @staticmethod
+    def _getbool(
+        parser: configparser.ConfigParser,
+        key: str,
+        section: str = "wpwatcher",
+    ) -> bool:
+        """Return bool value from a configparser object.
+        Arguments:
+        - `conf`: configparser object
+        - `key`: config key
+        """
+        try:
+            return parser.getboolean(section, key)
+        except ValueError as err:
+            raise ValueError(
+                f"Could not read boolean value in config file for key '{key}' and string '{parser.get(section, key)}'. Must be Yes/No"
+            ) from err
+
+    @staticmethod
+    def _getint(
+        parser: configparser.ConfigParser,
+        key: str,
+        section: str = "wpwatcher",
+    ) -> int:
+        """Return int value from a configparser object.
+        Arguments:
+        - `conf`: configparser object
+        - `key`: config key
+        """
+        try:
+            return parser.getint(section, key)
+        except ValueError as err:
+            raise ValueError(
+                f"Could not read int value in config file for key '{key}' and string '{parser.get(section, key)}'. Must be an integer"
+            ) from err
+
+    @staticmethod
+    def find_files(
+        env_location: List[str],
+        potential_files: List[str],
+        default_content: str = "",
+        create: bool = False,
+    ) -> List[str]:
         """Find existent files based on folders name and file names.
 
         Arguments:
@@ -300,16 +454,64 @@ smtp_ssl=Yes
             os.makedirs(os.path.dirname(potential_paths[0]), exist_ok=True)
             with open(potential_paths[0], "w") as config_file:
                 config_file.write(default_content)
-            log.info("Init new file: %s" % (p))
+            log.info(f"Init new file: {potential_paths[0]}")
             existent_files.append(potential_paths[0])
         return existent_files
 
     @staticmethod
-    def find_config_files(create=False):
+    def find_config_files(create: bool = False) -> List[str]:
         """
         Returns the location of existing `wpwatcher.conf` file at `./wpwatcher.conf` and/or `~/wpwatcher.conf` or under `~/.wpwatcher/` folder
         """
         files = [".wpwatcher/wpwatcher.conf", "wpwatcher.conf"]
         env = ["HOME", "XDG_CONFIG_HOME", "APPDATA", "PWD"]
 
-        return WPWatcherConfig.find_files(env, files, WPWatcherConfig.TEMPLATE_FILE)
+        return WPWatcherConfig.find_files(
+            env, files, WPWatcherConfig.TEMPLATE_FILE, create=create
+        )
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Init WPWatcherConfig dict.
+
+        :Note: Should not be used directly to create a WPWatcherConfig object.
+               Use class methods instead.
+
+        :Raise KeyError: If missing config field from ``**kwargs``.
+
+        Parameters `"files"` and `"string"` are deprecated since verion 3.0.
+        """
+
+        self._files = kwargs.pop("files") if "files" in kwargs else None
+        self._string = kwargs.pop("string") if "string" in kwargs else None
+
+        super().__init__(*args, **kwargs)
+        # Raise if missing fields
+        missing = []
+        for key in self.FIELDS:
+            if key not in self:
+                missing.append(key)
+        if self._files or self._string:  # Ensure compatibility
+            warnings.warn(
+                "WPWatcherConfig() parameters 'files' and 'string' are deprecated since WPWatcher 3.0. "
+                "Config should be created from classmethods instead. ",
+                category=DeprecationWarning,
+            )
+        elif missing:
+            fields = ", ".join(f"'{key}'" for key in missing)
+            raise KeyError(f"Missing config field(s): {fields}. ")
+
+    def build_config(self) -> Tuple[Dict[str, Any], List[str]]:  # Ensure compatibility
+        """
+        WPWatcherConfig.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead.
+        """
+        warnings.warn(
+            "WPWatcherConfig.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead. Not from build_config(). ",
+            category=DeprecationWarning,
+        )
+        if self._string:
+            return (self.fromstring(self._string), [])
+        elif self._files:
+            return (self.fromfiles(self._files), self._files)
+        else:
+            return (self.fromenv(), [])

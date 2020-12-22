@@ -116,19 +116,19 @@ fail_fast=Yes
         executor.submit(asyncore.loop)
 
         # Init WPWatcher
-        w1 = WPWatcher(WPWatcherConfig(string=CONFIG1).build_config()[0])
+        w1 = WPWatcher(WPWatcherConfig.fromstring(CONFIG1))
 
         # Run scans
         res1=w1.run_scans_and_notify()
 
         # Init WPWatcher
-        w2 = WPWatcher(WPWatcherConfig(string=CONFIG2).build_config()[0])
+        w2 = WPWatcher(WPWatcherConfig.fromstring(CONFIG2))
 
         # Run scans
         res2=w2.run_scans_and_notify()
 
         # Init WPWatcher
-        w3 = WPWatcher(WPWatcherConfig(string=CONFIG3).build_config()[0])
+        w3 = WPWatcher(WPWatcherConfig.fromstring(CONFIG3))
 
         # Run scans
         res3=w3.run_scans_and_notify()

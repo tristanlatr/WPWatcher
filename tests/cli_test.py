@@ -2,12 +2,13 @@ import unittest
 import tempfile
 import os
 from datetime import timedelta
-from wpwatcher.cli import WPWatcherCLI
+from wpwatcher.cli import get_arg_parser
+from wpwatcher.config import WPWatcherConfig
 
 class T(unittest.TestCase):
 
     def test_build_config_cli(self):
-        parser = WPWatcherCLI.get_arg_parser()
+        parser = get_arg_parser()
 
         tmp=tempfile.NamedTemporaryFile('w', delete=False)
             
@@ -29,7 +30,7 @@ class T(unittest.TestCase):
                 '--format cli'
             ])
 
-        wpwatcher_configuration = WPWatcherCLI.build_config_cli(args)
+        wpwatcher_configuration = WPWatcherConfig.fromcliargs(args)
 
         self.assertEqual(
             wpwatcher_configuration.get('wp_sites'), [{"url":"site1.ca"}, {"url":"site2.ca"}, {"url":"site10.com"}, {"url":"site11.org"}, {"url":"site12.fr"}])

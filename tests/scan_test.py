@@ -6,6 +6,7 @@ import concurrent.futures
 from wpwatcher.core import WPWatcher
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.config import WPWatcherConfig
+from wpwatcher.site import WPWatcherSite
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
@@ -34,7 +35,7 @@ class T(unittest.TestCase):
     
     def test_update_report(self):
         # Init Scanner
-        scanner = WPWatcherScanner(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
+        scanner = WPWatcherScanner(WPWatcherConfig.fromstring(DEFAULT_CONFIG))
         for s in WP_SITES:
             old={
                     "site": s['url'],
@@ -93,7 +94,7 @@ class T(unittest.TestCase):
                     "wpscan_output":""
                 }
             
-            scanner.update_report(new,old,s)
+            scanner.update_report(new, old)
             print(new)
             print(expected)
             self.assertEqual(new, expected, "There is an issue with fixed issues feature: the expected report do not match the report returned by update_report()")
@@ -101,7 +102,7 @@ class T(unittest.TestCase):
     def test_wpscan_output_folder(self):
         RESULTS_FOLDER="./results/"
         WPSCAN_OUTPUT_CONFIG = DEFAULT_CONFIG+"\nwpscan_output_folder=%s"%RESULTS_FOLDER
-        scanner=WPWatcherScanner(WPWatcherConfig(string=WPSCAN_OUTPUT_CONFIG).build_config()[0])
+        scanner=WPWatcherScanner(WPWatcherConfig.fromstring(WPSCAN_OUTPUT_CONFIG))
         self.assertTrue(os.path.isdir(RESULTS_FOLDER),"WPscan results folder doesn't seem to have been init")
         for s in WP_SITES:
             report={
@@ -138,7 +139,14 @@ class T(unittest.TestCase):
 
     def test_scan_localhost_error_not_wordpress(self):
         # test info, warnings and alerts
+        scanner=WPWatcherScanner(WPWatcherConfig.fromstring(DEFAULT_CONFIG))
+        report=scanner.scan_site(WPWatcherSite({'url':'http://localhost:8080'}))
+        self.assertEqual(report['status'], 'ERROR')
+        self.assertRegex(report['error'], 'does not seem to be running WordPress')
+
+    def test_scan_localhost_error_not_wordpress_old_way(self):
+        # test info, warnings and alerts
         scanner=WPWatcherScanner(WPWatcherConfig(string=DEFAULT_CONFIG).build_config()[0])
-        report=scanner.scan_site(WPWatcher.format_site({'url':'http://localhost:8080'}))
+        report=scanner.scan_site(WPWatcherSite({'url':'http://localhost:8080'}))
         self.assertEqual(report['status'], 'ERROR')
         self.assertRegex(report['error'], 'does not seem to be running WordPress')

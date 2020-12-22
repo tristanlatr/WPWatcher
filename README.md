@@ -13,15 +13,17 @@
   <a href="https://codecov.io/gh/tristanlatr/WPWatcher" target="_blank"><img src="https://codecov.io/gh/tristanlatr/WPWatcher/branch/master/graph/badge.svg"></a>
   <a href="https://pypi.org/project/WPWatcher/" target="_blank"><img src="https://badge.fury.io/py/wpwatcher.svg"></a>
   <a href="https://codeclimate.com/github/tristanlatr/WPWatcher" target="_blank"><img src="https://codeclimate.com/github/tristanlatr/WPWatcher/badges/gpa.svg"></a>
-
+  <a href="http://mypy-lang.org/" target="_blank"><img src="http://www.mypy-lang.org/static/mypy_badge.svg"></a>
 </p>
 
-Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email.  
-Automate scans and get notified when vulnerabilities, outdated plugins or other risks are found. 
+<p align="center">
+  Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email and/or syslog. 
+  Schedule scans and get notified when vulnerabilities, outdated plugins and other risks are found. 
+</p>
 
 ## Features
   - Scan **multiple sites** with WPScan
-  - **Parse WPScan output** and divide the results in *"Alerts", "Warnings", "Informations" and eventually "Errors"*
+  - **Parse WPScan output** and divide the results in *"Alerts"*, *"Warnings"* and *"Informations"*.  
   - **Handled VulnDB API limit**
   - Define **reporting emails addresses** for every configured site individually and globally ([wiki/Email-reports](https://github.com/tristanlatr/WPWatcher/wiki/Email-reports))
   - Define **false positives strings** for every configured site individually and globally ([wiki/False-positives](https://github.com/tristanlatr/WPWatcher/wiki/False-positives))
@@ -34,11 +36,11 @@ Automate scans and get notified when vulnerabilities, outdated plugins or other 
   - Scan sites continuously at defined interval and configure script as a linux service ([wiki/Linux-service](https://github.com/tristanlatr/WPWatcher/wiki/Linux-service))
   - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
   - Keep track of fixed and unfixed issues
-  - Simple library usage ([wiki/Library-usage](https://github.com/tristanlatr/WPWatcher/wiki/Library-usage))
+  - Simple library usage ([wiki/Library-usage](https://github.com/tristanlatr/WPWatcher/wiki/Library-usage)) (Breaking changes in v3.0)
 
 ## Prerequisites 
   - [WPScan](http://wpscan.org/) (itself requires Ruby and some libraries).   
-  - Python 3
+  - Python 3.6 or later
 
 ## Install
 #### With PyPi (stable)

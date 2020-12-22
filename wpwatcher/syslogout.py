@@ -4,23 +4,23 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 
 DISCLAIMER - USE AT YOUR OWN RISK.
 """
-
+from typing import Dict, Any, List
 import socket
 import logging
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
 
 
-class WPSyslogOutput(object):
-    def __init__(self, conf):
+class WPSyslogOutput:
+    def __init__(self, conf: Dict[str, Any]):
         # Keep syslog dependency optionnal by importing at init time
         from rfc5424logging import Rfc5424SysLogHandler
 
-        sh = Rfc5424SysLogHandler(
+        sh: Rfc5424SysLogHandler = Rfc5424SysLogHandler(
             address=(conf["syslog_server"], conf["syslog_port"]),
             socktype=getattr(socket, conf["syslog_stream"]),  # Use TCP or UDP
             appname="WPWatcher",
-            **conf["syslog_kwargs"]
+            **conf["syslog_kwargs"],
         )
         self.syslog = logging.getLogger("wpwatcher-syslog")
         self.syslog.setLevel(logging.DEBUG)
@@ -40,15 +40,15 @@ class WPSyslogOutput(object):
         "alerts": ("104", "WPScan ALERT", 9),
     }
 
-    def emit_messages(self, wp_report):
+    def emit_messages(self, wp_report: Dict[str, Any]) -> None:
         """
         Sends the CEF syslog messages for the report.
         """
-        log.debug("Sending Syslog messages for site {}".format(wp_report["site"]))
+        log.debug(f"Sending Syslog messages for site {wp_report['site']}")
         for m in self.get_messages(wp_report):
             self.syslog.info(m)
 
-    def get_messages(self, wp_report):
+    def get_messages(self, wp_report: Dict[str, Any]) -> List[str]:
         """
         Return a list of CEF formatted messages
         """
@@ -60,7 +60,7 @@ class WPSyslogOutput(object):
             items = wp_report[v] if isinstance(wp_report[v], list) else [wp_report[v]]
             for msg_data in items:
                 if msg_data:
-                    log.debug("Message data: {}".format(msg_data))
+                    log.debug(f"Message data: {msg_data}")
                     c = CEFEvent()
                     # WPWatcher related fields
                     c.set_prefix("deviceVendor", self.DEVICE_VENDOR)
@@ -74,11 +74,11 @@ class WPSyslogOutput(object):
                     c.set_field("message", msg_data[:1022])
                     c.set_field("sourceHostName", wp_report["site"][:1022])
                     msg = c.build_cef()
-                    log.debug("Message CEF: {}".format(msg))
+                    log.debug(f"Message CEF: {msg}")
                     messages.append(msg)
         return messages
 
-    def emit_test_messages(self):
+    def emit_test_messages(self) -> None:
         wp_report = {
             "site": "https://exemple.com",
             "error": "WPScan Failed ... (TESTING)",

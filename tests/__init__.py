@@ -1,8 +1,7 @@
 import json
-from wpwatcher.core import WPWatcher
 
-WP_SITES=[ WPWatcher.format_site(s) for s in [ {"url":"exemple.com"},
-              {"url":"exemple2.com"}  ] ]
+WP_SITES=[ {"url":"exemple.com"},
+              {"url":"exemple2.com"}  ]
 
 DEFAULT_CONFIG="""
 [wpwatcher]
