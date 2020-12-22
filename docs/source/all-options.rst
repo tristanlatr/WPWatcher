@@ -9,236 +9,236 @@ All configuration options
     - Accepted values in CLI argument
     - Default value
 
-  * - `wpscan_path`
+  * - ``wpscan_path``
     - Strings
     - NA
     - NA
-    - `wpscan`
+    - ``wpscan``
 
-  * - `wpscan_args` 
+  * - ``wpscan_args`` 
     - Json string 
-    - `--wpargs "WPScan arguments"` 
+    - ``--wpargs "WPScan arguments"`` 
     - String 
-    - `--random-user-agent --format json` 
+    - ``--random-user-agent --format json`` 
   
-  * - `wp_sites` 
+  * - ``wp_sites`` 
     - Json string (Fully configurable) 
-    - `--url URL [URL...]`
+    - ``--url URL [URL...]``
     - Strings 
     - None 
     
-  * - Load `wp_sites` URLs from file 
+  * - Load ``wp_sites`` URLs from file 
     - NA 
-    - `--urls Path` 
+    - ``--urls Path`` 
     - String 
     - None 
     
-  * - `false_positive_strings` 
+  * - ``false_positive_strings`` 
     - Json string 
-    - `--fpstr String [String...]` 
+    - ``--fpstr String [String...]`` 
     - Strings 
     - None 
     
-  * - `send_email_report` 
+  * - ``send_email_report`` 
     - Boolean Yes/No 
-    - `--send` 
+    - ``--send`` 
     - No value 
     - No 
     
-  * - `email_to` 
+  * - ``email_to`` 
     - Json string 
-    - `--email_to Email [Email ...]`
+    - ``--email_to Email [Email ...]``
     - Strings 
     - No one 
     
-  * - `email_errors_to` 
+  * - ``email_errors_to`` 
     - Json string 
     - NA 
     - NA 
-    - Same as `email_to` 
+    - Same as ``email_to`` 
     
-  * - `send_infos` 
+  * - ``send_infos`` 
     - Boolean Yes /No 
-    - `--infos` 
+    - ``--infos`` 
     - No value 
     - No 
     
-  * - `send_warnings` 
+  * - ``send_warnings`` 
     - Boolean Yes/No 
     - NA 
     - NA 
     - Yes 
     
-  * - `send_errors` 
+  * - ``send_errors`` 
     - Boolean Yes/No 
-    - `--errors` 
+    - ``--errors`` 
     - No value 
     - No 
     
-  * - `attach_wpscan_output` 
+  * - ``attach_wpscan_output`` 
     - Boolean Yes/No 
-    - `--attach` 
+    - ``--attach`` 
     - No value 
     - No 
     
-  * - `resend_emails_after` 
+  * - ``resend_emails_after`` 
     - String 
-    - `--resend String` 
+    - ``--resend String`` 
     - String 
-    - `0s` 
+    - ``0s`` 
     
-  * - `api_limit_wait` 
+  * - ``api_limit_wait`` 
     - Boolean Yes/No 
-    - `--wait` 
+    - ``--wait`` 
     - No value 
     - No
     
-  * - `daemon` 
+  * - ``daemon`` 
     - Boolean Yes/No 
-    - `--daemon` 
+    - ``--daemon`` 
     - No value 
     - No 
     
-  * - `daemon_loop_sleep` 
+  * - ``daemon_loop_sleep`` 
     - String 
-    - `--loop` 
+    - ``--loop`` 
     - String 
-    - `0s` 
+    - ``0s`` 
     
-  * - `log_file` 
+  * - ``log_file`` 
     - String 
-    - `--log Path` 
+    - ``--log Path`` 
     - String 
     - None 
     
-  * - `quiet` 
+  * - ``quiet`` 
     - Boolean Yes/No 
-    - `--quiet` 
+    - ``--quiet`` 
     - No value 
     - No 
     
-  * - `verbose` 
+  * - ``verbose`` 
     - Boolean Yes/No 
-    - `--verbose` 
+    - ``--verbose`` 
     - No value 
     - No 
     
-  * - `wpscan_output_folder` 
+  * - ``wpscan_output_folder`` 
     - String 
-    - `--wpout Path` 
+    - ``--wpout Path`` 
     - String 
     - None 
     
-  * - `wp_reports` 
+  * - ``wp_reports`` 
     - String 
-    - `--reports Path` 
+    - ``--reports Path`` 
     - String 
-    - `~/.wpwatcher/wp_reports.json` 
+    - ``~/.wpwatcher/wp_reports.json`` 
     
-  * - `fail_fast` 
+  * - ``fail_fast`` 
     - Boolean Yes/No 
-    - `--ff` 
+    - ``--ff`` 
     - No value 
     - No 
     
-  * - `asynch_workers` 
+  * - ``asynch_workers`` 
     - Int 
-    - `--workers Number` 
+    - ``--workers Number`` 
     - Int 
     - 1 
     
-  * - `follow_redirect` 
+  * - ``follow_redirect`` 
     - Boolean Yes/No 
-    - `--follow` 
+    - ``--follow`` 
     - No value 
     - No 
     
-  * - `scan_timeout` 
+  * - ``scan_timeout`` 
     - String
     - NA 
     - NA 
-    - `15m` 
+    - ``15m`` 
     
-  * - `from_email` 
+  * - ``from_email`` 
     - String 
     - NA 
     - NA 
     - None 
     
-  * - `smtp_server` 
+  * - ``smtp_server`` 
     - String 
     - NA 
     - NA 
     - None 
     
-  * - `smtp_ssl` 
+  * - ``smtp_ssl`` 
     - Boolean Yes/No 
     - NA 
     - NA 
     - No 
     
-  * - `smtp_auth` 
+  * - ``smtp_auth`` 
     - String 
     - NA 
     - NA 
     - No 
     
-  * - `smtp_user` 
+  * - ``smtp_user`` 
     - String 
     - NA 
     - NA 
     - None 
     
-  * - `smtp_pass` 
+  * - ``smtp_pass`` 
     - String 
     - NA 
     - NA 
     - None 
     
-  * - `use_monospace_font` 
+  * - ``use_monospace_font`` 
     - Boolean 
-    - `--monospace` 
+    - ``--monospace`` 
     - No value 
     - No 
     
-  * - `syslog_server` 
+  * - ``syslog_server`` 
     - String 
     - NA 
     - NA 
     - None 
     
-  * - `syslog_port` 
+  * - ``syslog_port`` 
     - Int 
     - NA 
     - NA 
     - 514 
     
-  * - `syslog_stream` 
+  * - ``syslog_stream`` 
     - String 
     - NA 
     - NA 
-    - `SOCK_STREAM` (TCP) 
+    - ``SOCK_STREAM`` (TCP) 
     
-  * - `syslog_kwargs` 
+  * - ``syslog_kwargs`` 
     - Json String 
     - NA 
     - NA 
-    - `{"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}` 
+    - ``{"enterprise_id":42, "msg_as_utf8":true, "utc_timestamp":true}`` 
     
   * - Test syslog 
     - NA 
-    - `--syslog_test` 
+    - ``--syslog_test`` 
     - No value 
     - No 
     
   * - Dump database summary 
     - NA 
-    - `--wprs` 
+    - ``--wprs`` 
     - File path or None 
     - None 
     
   * - Inspect a report in database 
     - NA 
-    - `--show` 
+    - ``--show`` 
     - String 
     - None
