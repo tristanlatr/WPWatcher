@@ -1,7 +1,7 @@
 """
 Scanner utility. 
 """
-from typing import Optional, BinaryIO, List, Tuple, Dict, Any
+from typing import Optional, BinaryIO, List, Tuple, Dict, Any, Union
 import threading
 import re
 import os
@@ -11,7 +11,7 @@ import json
 from smtplib import SMTPException
 from datetime import timedelta, datetime
 
-from wpscan_out_parse.parser import WPScanJsonParser
+from wpscan_out_parse.parser import WPScanJsonParser, WPScanCliParser
 
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
@@ -345,7 +345,7 @@ class WPWatcherScanner:
             return (wp_report, False)
 
     def _load_parser_results(
-        self, parser: WPScanJsonParser, wp_report: Dict[str, Any]
+        self, parser: Union[WPScanJsonParser, WPScanCliParser], wp_report: Dict[str, Any]
     ) -> None:
         results = parser.get_results()
         # Save WPScan result dict
@@ -392,25 +392,34 @@ class WPWatcherScanner:
 
         try:
             # Use wpscan_out_parse module
-            parser = WPScanJsonParser(
-                json.loads(wp_report["wpscan_output"]),
-                self.false_positive_strings
-                + wp_site["false_positive_strings"]
-                + ["No WPVulnDB API Token given"],
-            )
-            wp_report["wpscan_parser"] = parser
-            self._load_parser_results(parser, wp_report)
+            try:
+                parser = WPScanJsonParser(
+                    json.loads(wp_report["wpscan_output"]),
+                    self.false_positive_strings
+                    + wp_site["false_positive_strings"] 
+                    + ["No WPVulnDB API Token given", "No WPScan API Token given"]
+                )
+            except ValueError as err:
+                parser = WPScanCliParser(
+                    wp_report["wpscan_output"],
+                    self.false_positive_strings
+                    + wp_site["false_positive_strings"]
+                    + ["No WPVulnDB API Token given", "No WPScan API Token given"]
+                )
+            finally:
+                wp_report["wpscan_parser"] = parser
+                self._load_parser_results(parser, wp_report)
 
         except Exception as err:
             raise RuntimeError(
-                f"Could not parse WPScan output for site {wp_site['url']}"
+                f"Could not parse WPScan output for site {wp_site['url']}\nOutput:\n{wp_report['wpscan_output']}"
             ) from err
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
         if wpscan_exit_code in [0, 5]:
             return wp_report
 
-        # Quick return if interrupting and/or if user cacelled scans
+        # Quick return if interrupting and/or if user cancelled scans
         if self.interrupting or wpscan_exit_code in [2, -2, -9]:
             return None
 
