@@ -38,7 +38,7 @@ def main() -> None:
 
     if args.version:
         # Print and exit
-        verion()
+        version()
 
     if args.wprs != False:
         # Init WPWatcherDataBase object and dump reports
@@ -106,7 +106,7 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
     exit(0)
 
 
-def verion() -> None:
+def version() -> None:
     """Print version and contributors"""
     log.info(f"Version:\t\t{__version__}")
     log.info(f"Authors:\t\t{__author__}")

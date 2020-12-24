@@ -43,10 +43,11 @@ False positives can also be applied to all websites at once.
 
 Use cases: 
 - You want to ignore all "Potential Vulnerability" (i.e. don't worry about the vulnerabilities found when WPScan can't determine plugin version).
-- You want to ignore all "Upload directory has listing enabled" warnings or other hard-coded warnings
+- You want to ignore all "Upload directory has listing enabled" warnings or other hard-coded warnings.
 
-Note: WPScan No WPVulnDB API Token given warning is automatically ignored.
+**Note**: "No WPScan API Token given" warning is automatically ignored.
+
 ```ini
-false_positive_strings=[]
+false_positive_strings=["No WPScan API Token given, as a result vulnerability data has not been output."]
 ```
-Pass value to arguments: `--fpstr String [String ...]`
+Or pass values by arguments: `--fpstr String [String ...]`

@@ -23,7 +23,7 @@ DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher:
-    """WPWacther object
+    """WPWatcher object
 
     Usage exemple:
 
@@ -197,7 +197,7 @@ class WPWatcher:
         self.cancel_pending_futures()
         return self.new_reports
 
-    def run_scans_and_notify(self) -> Tuple[int, List[Dict[str, Any]]]:
+    def run_scans(self) -> Tuple[int, List[Dict[str, Any]]]:
         """
         Run WPScan on defined websites and send notifications.
 
@@ -225,3 +225,5 @@ class WPWatcher:
         else:
             log.info("Scans finished with errors.")
             return (-1, self.new_reports)
+
+    run_scans_and_notify = run_scans

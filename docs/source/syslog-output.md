@@ -5,14 +5,15 @@
 ```bash
 python3 -m pip install 'wpwatcher[syslog]'
 ```
-*Installs WPWatcher with syslog output support*   
-Syslog feature uses  `rfc5424-logging-handler` and `cefevent`.  
+*Installs WPWatcher with syslog output support*.
+
+Syslog feature uses library `rfc5424-logging-handler` and `cefevent`.  
 
 ## Configure
 
-Configuration:
-
 ```ini
+[wpwatcher]
+
 # Syslog settings
 
 # Your syslog server

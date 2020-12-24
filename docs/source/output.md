@@ -10,30 +10,6 @@ Log file and stdout outputs are **easily grepable** with the following log level
 
 In addition to log messages, the readable report, and raw WPScan output can be printed with `--verbose`.
 
-## Inspect reports in database
-
-Table-like dump of the `Status`, `Last scan`, `Last email`, `Issues` count and `Problematic component(s)` of all your scanned sites.  
-
-Load default database
-
-    wpwatcher --wprs
-
-Load specific file
-
-    wpwatcher --wprs ~/.wpwatcher/wp_reports.json
-
-<details><summary><b>See exemple</b></summary>
-<p>
-
-![WPWatcher Report summary](https://raw.githubusercontent.com/tristanlatr/WPWatcher/master/screens/reports-summary-wprs.png "WPWatcher Reports summary")
-
-</p>
-</details>
-
-## Inspect a specific report in database
-
-    wpwatcher --show <site>
-
 ## Output configuration
 
 - Local log file

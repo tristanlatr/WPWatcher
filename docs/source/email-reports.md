@@ -9,10 +9,10 @@ Setup mail server settings and turn on `send_email_report` in the config file or
 One report is generated per site and the reports are sent individually when finished scanning a website.  
 Email notification can have 5 status: 
 
-**`ALERT`**: You have a vulnerable Wordpress, theme or plugin.  
-**`WARNING`**: You have an outdated Wordpress, theme or plugin. Not necessarily vulnerable but more risky.  
-**`INFO`**: WPScan did not find any issues with your site.   
-**`ERROR`**: WPScan failed.   
+- **`ALERT`**: You have a vulnerable Wordpress, theme or plugin.  
+- **`WARNING`**: You have an outdated Wordpress, theme or plugin. Not necessarily vulnerable but more risky.  
+- **`INFO`**: WPScan did not find any issues with your site.   
+- **`ERROR`**: WPScan failed.   
 
 Alerts, Warnings and Infos might differ whether you're using cli or json format.
 
@@ -111,3 +111,8 @@ resend_emails_after=3d
 attach_wpscan_output=No
 ```
 
+## Screenss
+
+![WPWatcher Report List](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report-list.png "WPWatcher Report")
+
+![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report.png "WPWatcher Report")

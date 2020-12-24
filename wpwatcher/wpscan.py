@@ -70,8 +70,10 @@ class WPScanWrapper:
     def wpscan(self, *args: str) -> Tuple[int, str, str]:
         """
         Run WPScan and return raw results.
+        
         :param args: Sequence of arguments to pass to WPScan.
-        :Return: `Tuple[Exit code, Output, Stderr]`
+        
+        :returns: `Tuple[Exit code, Output, Stderr]`
         """
         if not self.init_check_done:  # for lazy initiation
             while init_lock.locked():
