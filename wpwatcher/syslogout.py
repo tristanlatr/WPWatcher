@@ -8,7 +8,7 @@ from wpwatcher import log
 from wpwatcher.__version__ import __version__
 
 
-class WPSyslogOutput:
+class SyslogOutput:
     """
     Send CEF messages based on reports. 
     """

@@ -1,7 +1,7 @@
 
 
-Quick start
-===========
+Quickstart
+==========
 
 Prerequisites 
 ^^^^^^^^^^^^^

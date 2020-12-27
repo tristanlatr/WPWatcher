@@ -3,9 +3,9 @@ import smtpd
 import asyncore
 import concurrent.futures
 from . import DEFAULT_CONFIG, WP_SITES
-from wpwatcher.notification import WPWatcherNotification
+from wpwatcher.email import EmailSender
 from wpwatcher.core import WPWatcher
-from wpwatcher.config import WPWatcherConfig
+from wpwatcher.config import Config
 
 class T(unittest.TestCase):
 
@@ -24,7 +24,7 @@ class T(unittest.TestCase):
     def test_send_report(self):
            
         # Init WPWatcher
-        wpwatcher = WPWatcher(WPWatcherConfig.fromstring(DEFAULT_CONFIG+"\nattach_wpscan_output=Yes"))
+        wpwatcher = WPWatcher(Config.fromstring(DEFAULT_CONFIG+"\nattach_wpscan_output=Yes"))
 
 
         print(wpwatcher.__dict__)
@@ -51,7 +51,7 @@ class T(unittest.TestCase):
                 "wpscan_output":"This is real%s"%(s)
             }
 
-            wpwatcher.scanner.mail.send_report(report, email_to='test', wpscan_command= 'just testing')
+            wpwatcher.scanner.mail._send_report(report, email_to='test', wpscan_command= 'just testing')
 
             # self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             # self.assertNotEqual(report['last_email'], None)
@@ -60,6 +60,6 @@ class T(unittest.TestCase):
         # test send_errors, send_infos, send_warnings, resend_emails_after, email_errors_to
         # Init WPWatcher
         CONFIG=DEFAULT_CONFIG+"\nsend_infos=Yes\nsend_errors=Yes\nsend_warnings=No"
-        wpwatcher = WPWatcher(WPWatcherConfig.fromstring(CONFIG))
+        wpwatcher = WPWatcher(Config.fromstring(CONFIG))
         # wpwatcher.scanner.mail
         # TODO

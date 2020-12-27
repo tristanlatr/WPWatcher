@@ -31,6 +31,7 @@ class WPScanWrapper:
         """
         :param wpscan_executable: Path to WPScan executable. 
                                   Exemple: ``'/usr/local/rvm/gems/default/wrappers/wpscan'``
+        :param scan_timeout: Timeout
         """
         self.processes: List[subprocess.Popen[bytes]] = []
         "List of running WPScan processes"
@@ -151,7 +152,7 @@ class WPScanWrapper:
             except TimeoutError as err:
                 process.kill()
                 # Raise error
-                err_str = f"WPScan process '{safe_log_wpscan_args(str(a) for a in process.args)}' timed out after {self._scan_timeout.total_seconds()} seconds. Setup 'scan_timeout' to allow more time. "
+                err_str = f"WPScan process '{safe_log_wpscan_args(cmd)}' timed out after {self._scan_timeout.total_seconds()} seconds. Setup 'scan_timeout' to allow more time. "
                 raise RuntimeError(err_str) from err
         else:
             stdout, stderr = process.communicate()

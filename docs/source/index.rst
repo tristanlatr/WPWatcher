@@ -7,7 +7,7 @@ Schedule scans and get notified when vulnerabilities, outdated plugins and other
 .. toctree::
    :maxdepth: 6
 
-   quick-start
+   quickstart
    all-options
    wpscan-config
    email-reports
@@ -20,4 +20,3 @@ Schedule scans and get notified when vulnerabilities, outdated plugins and other
    linux-service
    schedule-scans-with-cron
    library-usage
-

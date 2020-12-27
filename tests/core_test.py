@@ -3,27 +3,27 @@ import os
 import shlex
 from . import DEFAULT_CONFIG
 from wpwatcher.core import WPWatcher
-from wpwatcher.config import WPWatcherConfig
-from wpwatcher.scan import WPWatcherScanner
-from wpwatcher.notification import WPWatcherNotification
+from wpwatcher.config import Config
+from wpwatcher.scan import Scanner
+from wpwatcher.email import EmailSender
 from wpwatcher.wpscan import WPScanWrapper
 
 class T(unittest.TestCase):
     
     def test_interrupt(self):
-        wpwatcher=WPWatcher(WPWatcherConfig.fromstring(DEFAULT_CONFIG))
+        wpwatcher=WPWatcher(Config.fromstring(DEFAULT_CONFIG))
 
         with self.assertRaises(SystemExit):
             wpwatcher.interrupt()
 
     def test_init_wpwatcher(self):
         # Init deafult watcher
-        wpwatcher=WPWatcher(WPWatcherConfig.fromstring(DEFAULT_CONFIG))
+        wpwatcher=WPWatcher(Config.fromstring(DEFAULT_CONFIG))
 
-        self.assertEqual(type(wpwatcher.scanner), WPWatcherScanner, "WPWatcherScanner doesn't seem to have been initialized")
-        self.assertEqual(type(wpwatcher.scanner.mail), WPWatcherNotification, "WPWatcherNotification doesn't seem to have been initialized")
+        self.assertEqual(type(wpwatcher.scanner), Scanner, "Scanner doesn't seem to have been initialized")
+        self.assertEqual(type(wpwatcher.scanner.mail), EmailSender, "EmailSender doesn't seem to have been initialized")
         self.assertEqual(type(wpwatcher.scanner.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
-        self.assertEqual(shlex.split(WPWatcherConfig.fromstring(DEFAULT_CONFIG)['wpscan_path']), wpwatcher.scanner.wpscan._wpscan_executable, "WPScan path seems to be wrong")
+        self.assertEqual(shlex.split(Config.fromstring(DEFAULT_CONFIG)['wpscan_path']), wpwatcher.scanner.wpscan._wpscan_executable, "WPScan path seems to be wrong")
 
     def test_asynch_exec(self):
         # test max number of threads respected
