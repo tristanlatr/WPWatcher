@@ -1,21 +1,25 @@
 # Other features
 
-## Exit if WPScan failed.  
+
+## Fail fast
+
+You might want to use this option when you're setting up and configuring the script. Abort scans if WPScan fails, useful to troubleshoot.
+
 Default behaviour is to log error, continue scans and return non zero status code when all scans are over
 ```ini
 fail_fast=No
 ```
 Overwrite with arguments: `--ff`
-## Reports database file.  
-If missing, will figure out a place based on your environment to store the database.  
-Use `null` keyword to disable the storage of the Json database file and turn off the tracking of the fixed issues.  
-```ini
-wp_reports=/home/user/.wpwatcher/wp_reports.json
-```
-Overwrite with arguments: `--reports File path`
-## Number of asynchronous workers
-Speed up the scans. Default to `1`, synchronous iterating. 
+
+## Asynchronous workers
+
+You can use asynchronous workers to speed up the scans. 
+
+Default to `1`. 
+
 ```ini
 asynch_workers=5
 ```
 Overwrite with arguments: `--workers Number`
+
+**Warning**: Using too many asynchronous workers (let's say, more than 5) can lead to incomplete WPScan reports since the token limit might be reach much faster and affect multiple scans concurrently. Unexpected behaviour can happend. 

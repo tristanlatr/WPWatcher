@@ -18,7 +18,7 @@ import concurrent.futures
 
 from wpwatcher.wpscan import WPScanWrapper
 from wpwatcher.core import WPWatcher
-from wpwatcher.config import WPWatcherConfig
+from wpwatcher.config import Config
 
 # WORDPRESS SITES SOURCE LIST FILE
 SOURCE="https://gist.githubusercontent.com/ahmadawais/e6cd20acdc4f7ad304a3e90ad44a663c/raw/ca95a83bc6e45f018189f8f73bc0b73d310a31f7/wordpress-sites.csv"
@@ -116,19 +116,19 @@ fail_fast=Yes
         executor.submit(asyncore.loop)
 
         # Init WPWatcher
-        w1 = WPWatcher(WPWatcherConfig.fromstring(CONFIG1))
+        w1 = WPWatcher(Config.fromstring(CONFIG1))
 
         # Run scans
         res1=w1.run_scans_and_notify()
 
         # Init WPWatcher
-        w2 = WPWatcher(WPWatcherConfig.fromstring(CONFIG2))
+        w2 = WPWatcher(Config.fromstring(CONFIG2))
 
         # Run scans
         res2=w2.run_scans_and_notify()
 
         # Init WPWatcher
-        w3 = WPWatcher(WPWatcherConfig.fromstring(CONFIG3))
+        w3 = WPWatcher(Config.fromstring(CONFIG3))
 
         # Run scans
         res3=w3.run_scans_and_notify()

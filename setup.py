@@ -23,9 +23,9 @@ setup(
     license             =   ABOUT['__license__'],
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
-    install_requires    =   ['wpscan-out-parse>=1.8.1'],
+    install_requires    =   ['wpscan-out-parse>=1.8.1', 'filelock'],
     extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent'],
-                             'docs': ["Sphinx", "sphinx_rtd_theme", "pydoctor"], 
-                             'dev': ["pytest", "tox"]},
+                             'docs': ["Sphinx", "sphinx_rtd_theme", "recommonmark", "pydoctor"], 
+                             'dev': ["pytest", "pytest-cov", "codecov", "coverage", "tox", "mypy"]},
     keywords            =   ABOUT['__keywords__'],
 )

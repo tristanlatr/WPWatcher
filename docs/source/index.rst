@@ -1,24 +1,18 @@
-.. WPWatcher documentation master file, created by
-   sphinx-quickstart on Tue Dec 22 14:36:39 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to WPWatcher's documentation!
+===================================== 
 
-Index
-=====
-
-**Welcome to WPWatcher's documentation!**
+Wordpress Watcher is a wrapper for WPScan that manages scans on multiple sites and reports by email and/or syslog. 
+Schedule scans and get notified when vulnerabilities, outdated plugins and other risks are found.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 6
 
-   self
-   README <https://github.com/tristanlatr/WPWatcher#wpwatcher>
-   notes
+   quickstart
+   all-options
    wpscan-config
    email-reports
    false-positives
-   all-options
+   reports-db
    output
    syslog-output
    other-features

@@ -49,7 +49,23 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "alabaster"
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+html_theme_options = {
+    'show_powered_by': False,
+    'github_user': 'tristanlatr',
+    'github_repo': 'WPWatcher',
+    'github_banner': True,
+    'github_type': 'star',
+    'note_bg': '#FFF59C',
+    'page_width': '80%',
+    'sidebar_width': '20%',
+    'logo': 'logo.png',
+    'description': 'Automating WPScan to scan and report vulnerable Wordpress sites',
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -69,7 +85,13 @@ pydoctor_args = [
     '--quiet',
     '--make-html',
     f'--html-viewsource-base=https://github.com/tristanlatr/WPWatcher/tree/{_git_reference}',
-    '--project-url=https://github.com/tristanlatr/WPWatcher#wpwatcher',
+    '--project-url=https://github.com/tristanlatr/WPWatcher',
     f'--project-base-dir={_pydoctor_root}',
     '--intersphinx=https://docs.python.org/3/objects.inv',
 ]
+
+# Intersphinx
+
+intersphinx_mapping = {
+    'wpwatcher': ('https://wpwatcher.readthedocs.io/en/latest/api/', None),
+}

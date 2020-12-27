@@ -1,10 +1,10 @@
 Library usage
 =============
 
-- Init config dict from file with ``WPWatcherConfig.fromfiles()`` method. 
+- Init config dict from file with :py:meth:`wpwatcher:wpwatcher.config.WPWatcherConfig.fromfiles` method (or other classmethods). 
 - Customize the config if you want, you can overwrite any config values  
-- Create a ``WPWatcher`` object with your desired configuration  
-- Call ``run_scans_and_notify()`` method. Return a `tuple (exit code, reports)`. 
+- Create a :py:class:`wpwatcher:wpwatcher.core.WPWatcher` object with your desired configuration  
+- Call :py:meth:`wpwatcher:wpwatcher.core.WPWatcher.run_scans` method. It returns a ``tuple (exit code, reports)``. 
 
 .. code:: python
 
@@ -17,10 +17,11 @@ Library usage
                     'wpscan_args': ['--stealthy']
                 })
     watcher = WPWatcher(config)
-    exit_code, reports = watcher.run_scans_and_notify()
+    exit_code, reports = watcher.run_scans()
     for r in reports:
         print("%s\t\t%s"%( r['site'], r['status'] ))
 
 .. toctree::
 
-    api/index
+    api/classIndex
+

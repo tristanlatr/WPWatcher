@@ -6,11 +6,13 @@ from urllib.parse import urlparse
 from typing import Iterable, Dict, Any
 
 
-class WPWatcherSite(Dict[str, Any]):
+class Site(Dict[str, Any]):
     """
-    Dict-Like object to store per site config. 
+    Dict-Like object to store site config. 
 
-    >>> site = WPWatcherSite(url="https://exemple.com", wpscan_args=["--verbose"])
+    >>> Site(url="exemple.com", wpscan_args=["--verbose"])
+    {'url': 'http://exemple.com', 'wpscan_args': ['--verbose'], 'email_to': [], 'false_positive_strings': []}
+    
     """
 
     DEFAULT_SITE: Dict[str, Any] = {

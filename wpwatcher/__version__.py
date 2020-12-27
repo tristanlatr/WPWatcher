@@ -5,9 +5,9 @@ Automating WPscan to scan and report vulnerable Wordpress sites
 Project version and meta informations.
 """
 
-__version__ = "2.4.8"
+__version__ = "3.0.dev"
 __title__ = "wpwatcher"
-__description__ = "WordPress Watcher - Automating WPScan to scan and report vulnerable Wordpress sites"
+__description__ = "WPWatcher - Automating WPScan to scan and report vulnerable Wordpress sites"
 __author__ = "Florian Roth, Tristan Landes"
 __author_email__ = ""
 __license__ = "Apache License 2.0"

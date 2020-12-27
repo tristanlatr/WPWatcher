@@ -3,7 +3,7 @@ import tempfile
 import os
 from datetime import timedelta
 from wpwatcher.cli import get_arg_parser
-from wpwatcher.config import WPWatcherConfig
+from wpwatcher.config import Config
 
 class T(unittest.TestCase):
 
@@ -30,7 +30,7 @@ class T(unittest.TestCase):
                 '--format cli'
             ])
 
-        wpwatcher_configuration = WPWatcherConfig.fromcliargs(args)
+        wpwatcher_configuration = Config.fromcliargs(args)
 
         self.assertEqual(
             wpwatcher_configuration.get('wp_sites'), [{"url":"site1.ca"}, {"url":"site2.ca"}, {"url":"site10.com"}, {"url":"site11.org"}, {"url":"site12.fr"}])
@@ -38,6 +38,6 @@ class T(unittest.TestCase):
         self.assertIsInstance(wpwatcher_configuration.get('daemon_loop_sleep'), timedelta)
         self.assertIsInstance(wpwatcher_configuration.get('resend_emails_after'), timedelta)
         
-        self.assertEqual(wpwatcher_configuration.get('wpscan_args'), ["--random-user-agent", "--format", "json", "--format", "cli"])
+        self.assertEqual(wpwatcher_configuration.get('wpscan_args'), ["--random-user-agent", "--format", "json", "--cache-ttl", "0", "--format", "cli"])
         
         os.remove(tmp.name)

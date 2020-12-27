@@ -20,11 +20,7 @@ from wpwatcher.utils import get_valid_filename
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
-# Sendmail call will be done one at a time not over load server and create connection errors
-mail_lock = threading.Lock()
-
-
-class WPWatcherNotification:
+class EmailSender:
     """
     Handles the email nofification logic. 
     """
@@ -53,6 +49,9 @@ class WPWatcherNotification:
 
         self.use_monospace_font: bool = conf["use_monospace_font"]
 
+        # Sendmail call will be done one at a time not over load server and create connection errors
+        self._mail_lock = threading.Lock()
+
     def notify(
         self,
         wp_site: Dict[str, Any],
@@ -60,14 +59,14 @@ class WPWatcherNotification:
         last_wp_report: Optional[Dict[str, Any]],
         wpscan_command: str,
     ) -> bool:
-        """Notify recipients if match conditions"""
+        """Email recipients if match `should_notify` conditions"""
         if self.should_notify(wp_report, last_wp_report):
-            self._notify(wp_site, wp_report, wpscan_command)
+            self.send_report(wp_site, wp_report, wpscan_command)
             return True
         else:
             return False
 
-    def send_mail(self, message: MIMEMultipart, to: List[str]) -> None:
+    def _send_mail(self, message: MIMEMultipart, email_to: List[str]) -> None:
         """Raw sendmail"""
         # Connecting and sending
         self.server = smtplib.SMTP(self.smtp_server)
@@ -79,11 +78,11 @@ class WPWatcherNotification:
         if self.smtp_auth:
             self.server.login(self.smtp_user, self.smtp_pass)
         # Send Email
-        self.server.sendmail(self.from_email, to, message.as_string())
+        self.server.sendmail(self.from_email, email_to, message.as_string())
         self.server.quit()
 
     # Send email report with status and timestamp
-    def send_report(
+    def _send_report(
         self, wp_report: Dict[str, Any], email_to: List[str], wpscan_command: str
     ) -> None:
         """Build MIME message based on report and call send_mail"""
@@ -125,13 +124,9 @@ class WPWatcherNotification:
             )
             # Attach the report
             message.attach(part)
-            log.info(f"{wpscan_report_filename} attached")
-        else:
-            log.info(
-                "No file attached, set attach_wpscan_output=Yes or use --attach to attach WPScan output to emails"
-            )
-        # # Connecting and sending
-        self.send_mail(message, email_to)
+        
+        # Connecting and sending
+        self._send_mail(message, email_to)
         log.info(f"Email sent: {message['Subject']} to {email_to}")
 
     def should_notify(
@@ -190,7 +185,7 @@ class WPWatcherNotification:
 
         return should
 
-    def _notify(
+    def send_report(
         self, wp_site: Dict[str, Any], wp_report: Dict[str, Any], wpscan_command: str
     ) -> bool:
         """Sending the report"""
@@ -206,11 +201,11 @@ class WPWatcherNotification:
             )
             return False
 
-        while mail_lock.locked():
+        while self._mail_lock.locked():
             time.sleep(0.01)
 
-        with mail_lock:
-            self.send_report(wp_report, to, wpscan_command)
+        with self._mail_lock:
+            self._send_report(wp_report, to, wpscan_command)
             return True
 
     @staticmethod

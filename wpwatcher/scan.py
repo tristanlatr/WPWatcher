@@ -1,17 +1,16 @@
 """
 Scanner utility. 
 """
-from typing import Optional, BinaryIO, List, Tuple, Dict, Any
+from typing import Optional, BinaryIO, List, Tuple, Dict, Any, Union
 import threading
 import re
 import os
-import time
 import traceback
 import json
 from smtplib import SMTPException
 from datetime import timedelta, datetime
 
-from wpscan_out_parse.parser import WPScanJsonParser
+from wpscan_out_parse.parser import WPScanJsonParser, WPScanCliParser
 
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
@@ -19,33 +18,33 @@ from wpwatcher.utils import (
     get_valid_filename,
     safe_log_wpscan_args,
     oneline,
-    timeout,
     remove_color,
 )
-from wpwatcher.notification import WPWatcherNotification
+from wpwatcher.email import EmailSender
 from wpwatcher.wpscan import WPScanWrapper
-from wpwatcher.syslogout import WPSyslogOutput
-from wpwatcher.report import WPWatcherReport
+from wpwatcher.syslogout import SyslogOutput
+from wpwatcher.report import Report
+from wpwatcher.site import Site
+from wpwatcher.config import Config
 
 # Wait when API limit reached
 API_WAIT_SLEEP = timedelta(hours=24)
 
-# Send kill signal after X seconds when cancelling
-INTERRUPT_TIMEOUT = 5
+
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
 
-class WPWatcherScanner:
-    """Scanner class create reports and handles the scan and notification process and build report. """
+class Scanner:
+    """Scanner class create reports and handles the scan process. """
 
-    def __init__(self, conf: Dict[str, Any]):
+    def __init__(self, conf: Config):
 
         # Create (lazy) wpscan link
-        self.wpscan: WPScanWrapper = WPScanWrapper(conf["wpscan_path"])
+        self.wpscan: WPScanWrapper = WPScanWrapper(conf["wpscan_path"], conf["scan_timeout"])
         # Init mail client
-        self.mail: WPWatcherNotification = WPWatcherNotification(conf)
+        self.mail: EmailSender = EmailSender(conf)
         # Storing the Event object to wait for api limit to be reset and cancel the waiting enventually
         self.api_wait: threading.Event = threading.Event()
         # Toogle if aborting so other errors doesnt get triggerred and exit faster
@@ -63,9 +62,6 @@ class WPWatcherScanner:
         self.daemon: bool = conf["daemon"]
         self.daemon_loop_sleep: timedelta = conf["daemon_loop_sleep"]
 
-        # Scan timeout
-        self.scan_timeout: timedelta = conf["scan_timeout"]
-
         # Init wpscan output folder
         if self.wpscan_output_folder:
             os.makedirs(self.wpscan_output_folder, exist_ok=True)
@@ -80,42 +76,25 @@ class WPWatcherScanner:
             )
             os.makedirs(os.path.join(self.wpscan_output_folder, "info/"), exist_ok=True)
 
-        self.syslog: Optional[WPSyslogOutput] = None
+        self.syslog: Optional[SyslogOutput] = None
         if conf["syslog_server"]:
-            self.syslog = WPSyslogOutput(conf)
+            self.syslog = SyslogOutput(conf)
+        
 
-    def check_fail_fast(self) -> None:
-        """Fail fast, triger InterruptedError if fail_fast and not already interrupting."""
-        if self.fail_fast and not self.interrupting:
-            raise InterruptedError()
-
-    def cancel_scans(self) -> None:
+    def interrupt(self) -> None:
         """
-        Send SIGTERM to all WPScan processes.
+        Call `WPScanWrapper.interrupt`. 
         Escape api limit wait if the program is sleeping.
         """
         self.interrupting = True
-        # Send ^C to all WPScan not finished
-        for p in self.wpscan.processes:
-            p.terminate()
-        # Wait for all processes to finish , kill after timeout
-        try:
-            timeout(INTERRUPT_TIMEOUT, self.wait_all_wpscan_process)
-        except TimeoutError:
-            for p in self.wpscan.processes:
-                p.kill()
+        self.wpscan.interrupt()
         # Unlock api wait
         self.api_wait.set()
-
-    def wait_all_wpscan_process(self) -> None:
-        """Wait all WPScan processes. To be called with timeout() function"""
-        while len(self.wpscan.processes) > 0:
-            time.sleep(0.5)
 
     # Scan process
 
     def update_report(
-        self, wp_report: Dict[str, Any], last_wp_report: Optional[Dict[str, Any]]
+        self, wp_report: Report, last_wp_report: Optional[Report]
     ) -> None:
         """Update new report considering last report:
         - Save already fixed issues but not reported yet
@@ -149,8 +128,8 @@ class WPWatcherScanner:
 
     def add_unfixed_warnings(
         self,
-        wp_report: Dict[str, Any],
-        last_wp_report: Dict[str, Any],
+        wp_report: Report,
+        last_wp_report: Report,
         unfixed_items: List[str],
         issue_type: str,
     ) -> None:
@@ -188,7 +167,7 @@ class WPWatcherScanner:
                         ] += f"Warning: This issue is unfixed since {last_wp_report['datetime']}"
 
     def get_fixed_n_unfixed_issues(
-        self, wp_report: Dict[str, Any], last_wp_report: Dict[str, Any], issue_type: str
+        self, wp_report: Report, last_wp_report: Report, issue_type: str
     ) -> Tuple[List[str], List[str]]:
         """Return list of fixed issue texts to include in mails"""
         fixed_issues = []
@@ -208,17 +187,15 @@ class WPWatcherScanner:
         return fixed_issues, unfixed_issues
 
     @staticmethod
-    def _write_wpscan_output(wp_report: Dict[str, Any], fpwpout: BinaryIO) -> None:
+    def _write_wpscan_output(wp_report: Report, fpwpout: BinaryIO) -> None:
         """Helper method to write output to file"""
-        nocolor_output = re.sub(
-            r"(\x1b|\[[0-9][0-9]?m)", "", wp_report["wpscan_output"]
-        )
+        nocolor_output = remove_color(wp_report["wpscan_output"])
         try:
             fpwpout.write(nocolor_output.encode("utf-8"))
         except UnicodeEncodeError:
-            fpwpout.write(nocolor_output.encode("latin1"))
+            fpwpout.write(nocolor_output.encode("latin1", errors='replace'))
 
-    def write_wpscan_output(self, wp_report: Dict[str, Any]) -> Optional[str]:
+    def write_wpscan_output(self, wp_report: Report) -> Optional[str]:
         """Write WPScan output to configured place with `wpscan_output_folder` if configured"""
         # Subfolder
         folder = f"{wp_report['status'].lower()}/"
@@ -239,7 +216,7 @@ class WPWatcherScanner:
             return None
 
     def skip_this_site(
-        self, wp_report: Dict[str, Any], last_wp_report: Dict[str, Any]
+        self, wp_report: Report, last_wp_report: Report
     ) -> bool:
         """Return true if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`"""
         if (
@@ -255,7 +232,7 @@ class WPWatcherScanner:
             return True
         return False
 
-    def log_report_results(self, wp_report: Dict[str, Any]) -> None:
+    def log_report_results(self, wp_report: Report) -> None:
         """Print WPScan findings"""
         for info in wp_report["infos"]:
             log.info(oneline(f"** WPScan INFO {wp_report['site']} ** {info}"))
@@ -266,7 +243,7 @@ class WPWatcherScanner:
         for alert in wp_report["alerts"]:
             log.critical(oneline(f"** WPScan ALERT {wp_report['site']} ** {alert}"))
 
-    def fill_report_status(self, wp_report: Dict[str, Any]) -> None:
+    def fill_report_status(self, wp_report: Report) -> None:
         """Fill Report status according to the number of items n alerts, watnings, infos, errors and fixed"""
         if len(wp_report["error"]) > 0:
             wp_report["status"] = "ERROR"
@@ -278,8 +255,7 @@ class WPWatcherScanner:
             wp_report["status"] = "INFO"
 
     def handle_wpscan_err_api_wait(
-        self, wp_site: Dict[str, Any]
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+        self, wp_site: Site ) -> Tuple[Optional[Report], bool]:
         """
         Sleep 24 hours with asynchronous event.
         Ensure wpscan update next time wpscan() is called.
@@ -289,9 +265,7 @@ class WPWatcherScanner:
         log.info(
             f"API limit has been reached after {len(self.scanned_sites)} sites, sleeping {API_WAIT_SLEEP} and continuing the scans..."
         )
-        self.wpscan.init_check_done = (
-            False  # will re-trigger wpscan update next time wpscan() is called
-        )
+
         self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
         if self.interrupting:
             return (None, True)
@@ -300,8 +274,8 @@ class WPWatcherScanner:
         return (new_report, new_report != None)
 
     def handle_wpscan_err_follow_redirect(
-        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any]
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+        self, wp_site: Site, wp_report: Report
+    ) -> Tuple[Optional[Report], bool]:
         """Parse URL in WPScan output and relaunch scan.
         Return a `tuple (wp_report or None , Bool error handled?)`
         """
@@ -323,8 +297,8 @@ class WPWatcherScanner:
             return (wp_report, False)
 
     def handle_wpscan_err(
-        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any]
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+        self, wp_site: Site, wp_report: Report
+    ) -> Tuple[Optional[Report], bool]:
         """Handle API limit and Follow redirection errors based on output strings.
         Return a `tuple (wp_report or None , Bool error handled?)`
         """
@@ -344,31 +318,9 @@ class WPWatcherScanner:
         else:
             return (wp_report, False)
 
-    def _load_parser_results(
-        self, parser: WPScanJsonParser, wp_report: Dict[str, Any]
-    ) -> None:
-        results = parser.get_results()
-        # Save WPScan result dict
-        (
-            wp_report["infos"],
-            wp_report["warnings"],
-            wp_report["alerts"],
-            wp_report["summary"],
-        ) = (
-            results["infos"],
-            results["warnings"],
-            results["alerts"],
-            results["summary"],
-        )
-        # Including error if not None
-        if results["error"]:
-            if wp_report["error"]:
-                wp_report["error"] += "\n\n"
-            wp_report["error"] += results["error"]
-
-    def _wpscan_site(
-        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def _scan_site(
+        self, wp_site: Site, wp_report: Report
+    ) -> Optional[Report]:
         """
         Handled WPScan scanning , parsing, errors and reporting.
         Returns filled wp_report, None if interrupted or killed.
@@ -384,88 +336,66 @@ class WPWatcherScanner:
         log.info(f"Scanning site {wp_site['url']}")
 
         # Launch WPScan
-        wpscan_exit_code, wp_report["wpscan_output"], stderr = self.wpscan.wpscan(
+        wpscan_process = self.wpscan.wpscan(
             *wpscan_arguments
         )
+        wp_report["wpscan_output"] = wpscan_process.stdout
+
         log.debug(f"WPScan raw output:\n{wp_report['wpscan_output']}")
         log.debug("Parsing WPScan output")
 
         try:
             # Use wpscan_out_parse module
-            parser = WPScanJsonParser(
-                json.loads(wp_report["wpscan_output"]),
-                self.false_positive_strings
-                + wp_site["false_positive_strings"]
-                + ["No WPVulnDB API Token given"],
-            )
-            wp_report["wpscan_parser"] = parser
-            self._load_parser_results(parser, wp_report)
+            try:
+                parser = WPScanJsonParser(
+                    json.loads(wp_report["wpscan_output"]),
+                    self.false_positive_strings
+                    + wp_site["false_positive_strings"] 
+                    + ["No WPVulnDB API Token given", "No WPScan API Token given"]
+                )
+            except ValueError as err:
+                parser = WPScanCliParser(
+                    wp_report["wpscan_output"],
+                    self.false_positive_strings
+                    + wp_site["false_positive_strings"]
+                    + ["No WPVulnDB API Token given", "No WPScan API Token given"]
+                )
+            finally:
+                wp_report.load_parser(parser)
 
         except Exception as err:
             raise RuntimeError(
-                f"Could not parse WPScan output for site {wp_site['url']}"
+                f"Could not parse WPScan output for site {wp_site['url']}\nOutput:\n{wp_report['wpscan_output']}"
             ) from err
 
         # Exit code 0: all ok. Exit code 5: Vulnerable. Other exit code are considered as errors
-        if wpscan_exit_code in [0, 5]:
+        if wpscan_process.returncode in [0, 5]:
             return wp_report
 
-        # Quick return if interrupting and/or if user cacelled scans
-        if self.interrupting or wpscan_exit_code in [2, -2, -9]:
+        # Quick return if interrupting and/or if user cancelled scans
+        if self.interrupting or wpscan_process.returncode in [2, -2, -9]:
             return None
 
         # Other errors codes : 127, etc, simply raise error
-        err_str = f"WPScan failed with exit code {wpscan_exit_code}. \nArguments: {safe_log_wpscan_args(wpscan_arguments)}. \nOutput: \n{remove_color(wp_report['wpscan_output'])}\nError: \n{stderr}"
+        err_str = f"WPScan failed with exit code {wpscan_process.returncode}. \nArguments: {safe_log_wpscan_args(wpscan_arguments)}. \nOutput: \n{remove_color(wp_report['wpscan_output'])}\nError: \n{wpscan_process.stderr}"
         raise RuntimeError(err_str)
 
-    def wpscan_site(
-        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Timeout wrapper arround `WPWatcherScanner._wpscan_site()`.
-        Launch WPScan.
-        Returns filled wp_report or None.
-        Can raise `RuntimeError` if any errors.
-        """
-        try:
-            wp_report_new = timeout(
-                self.scan_timeout.total_seconds(),
-                self._wpscan_site,
-                args=(wp_site, wp_report),
-            )
-            if wp_report_new:
-                wp_report.update(wp_report_new)
-            else:
-                return None
-        except TimeoutError as err:
-            # Kill process
-            for p in self.wpscan.processes:
-                if (wp_site["url"] in p.args) and not p.returncode:
-                    log.info(
-                        f"Killing WPScan process {safe_log_wpscan_args(str(a) for a in p.args)}"
-                    )
-                    p.kill()
-            # Raise error
-            err_str = f"Timeout scanning site {wp_site['url']} after {self.scan_timeout.total_seconds()} seconds. Setup scan_timeout in config file to allow more time. "
-            raise RuntimeError(err_str) from err
-        return wp_report
 
-    def _fail_scan(self, wp_report: Dict[str, Any], err_str: str) -> None:
+    def _fail_scan(self, wp_report: Report, err_str: str) -> None:
         """
-        Common manipulations when a scan fail. This will not stop the scan
-        process unless --fail_fast if enabled.
+        Common manipulations when a scan fail. This will not stop the scans
+        unless --fail_fast if enabled.
+
+        Triger InterruptedError if fail_fast and not already interrupting.
         """
         log.error(err_str)
-        if wp_report["error"]:
-            wp_report["error"] += "\n\n"
-        wp_report["error"] += err_str
-        wp_report["status"] = "ERROR"
-        # Fail fast
-        self.check_fail_fast()
+        wp_report.fail(err_str)
+        if self.fail_fast and not self.interrupting:
+            raise InterruptedError()
 
     def scan_site(
-        self, wp_site: Dict[str, Any], last_wp_report: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, wp_site: Site, last_wp_report: Optional[Report] = None
+    ) -> Optional[Report]:
         """
         Orchestrate the scanning of a site.
 
@@ -473,7 +403,7 @@ class WPWatcherScanner:
         """
 
         # Init report variables
-        wp_report: WPWatcherReport = WPWatcherReport(
+        wp_report: Report = Report(
             {"site": wp_site["url"], "datetime": datetime.now().strftime(DATE_FORMAT)}
         )
 
@@ -484,7 +414,7 @@ class WPWatcherScanner:
         # Launch WPScan
         try:
             # If report is None, return None right away
-            if not self.wpscan_site(wp_site, wp_report):
+            if not self._scan_site(wp_site, wp_report):
                 return None
 
         except RuntimeError:
@@ -520,16 +450,12 @@ class WPWatcherScanner:
             )
         )
 
-        # Print parsed readable Alerts, Warnings, etc as they will appear in email reports
-        log.debug(
-            f"{WPWatcherNotification.build_message(wp_report, wpscan_command=wpscan_command)}\n"
-        )
-
         try:
 
             # Notify recepients if match triggers
             if self.mail.notify(
-                wp_site, wp_report, last_wp_report, wpscan_command=wpscan_command
+                wp_site, wp_report, 
+                last_wp_report, wpscan_command=wpscan_command
             ):
                 # Store report time
                 wp_report["last_email"] = wp_report["datetime"]

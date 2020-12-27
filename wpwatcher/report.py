@@ -2,8 +2,9 @@
 Containers for scan results data stucture.  
 """
 
-from typing import Dict, Any, List, Iterable, Tuple
-class WPWatcherReport(Dict[str, Any]):
+from typing import Dict, Any, List, Iterable, Union, Optional
+from wpscan_out_parse.parser.base import _Parser
+class Report(Dict[str, Any]):
     """
     Dict-Like object to store scan results.
     """
@@ -30,8 +31,42 @@ class WPWatcherReport(Dict[str, Any]):
         for key in self.FIELDS:
             self.setdefault(key, self.DEFAULT_REPORT[key])
 
+    def fail(self, reason: str) -> None:
+        """
+        Mark the scan as failed. 
+        """
+        if self["error"]:
+            self["error"] += "\n\n"
+        self["error"] += reason
+        self["status"] = "ERROR"
 
-class WPWatcherReportCollection(List[Dict[str, Any]]):
+    def load_parser(self, parser: _Parser) -> None:
+        """
+        Load parser results into the report. 
+        """
+        # Save parser object
+        self["wpscan_parser"] = parser
+        
+        # Save WPScan result dict
+        results = parser.get_results()
+        (
+            self["infos"],
+            self["warnings"],
+            self["alerts"],
+            self["summary"],
+        ) = (
+            results["infos"],
+            results["warnings"],
+            results["alerts"],
+            results["summary"],
+        )
+
+        # Including error if not None
+        if results["error"]:
+            self.fail(results["error"])
+
+
+class ReportCollection(List[Report]):
     """
     List-Like object to store reports. 
     """

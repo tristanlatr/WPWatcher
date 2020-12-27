@@ -1,7 +1,7 @@
 """
 Wordpress Watcher core object. 
 """
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Dict, Iterable, List, Sequence, Tuple, Any, Optional
 import os
 import threading
 import shutil
@@ -11,19 +11,20 @@ import signal
 import sys
 
 
-from wpwatcher import log, init_log
-from wpwatcher.db import WPWatcherDataBase
-from wpwatcher.scan import WPWatcherScanner
+from wpwatcher import log, _init_log
+from wpwatcher.db import DataBase
+from wpwatcher.scan import Scanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
-from wpwatcher.site import WPWatcherSite
-from wpwatcher.report import WPWatcherReportCollection
+from wpwatcher.site import Site
+from wpwatcher.report import ReportCollection, Report
+from wpwatcher.config import Config
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
 # WPWatcher class ---------------------------------------------------------------------
 class WPWatcher:
-    """WPWacther object
+    """WPWatcher object
 
     Usage exemple:
 
@@ -44,31 +45,31 @@ class WPWatcher:
     """
 
     # WPWatcher must use a configuration dict
-    def __init__(self, conf: Dict[str, Any]):
+    def __init__(self, conf: Config):
         """
         Arguments:
         - `conf`: the configuration dict. Required
         """
         # (Re)init logger with config
-        init_log(verbose=conf["verbose"], quiet=conf["quiet"], logfile=conf["log_file"])
+        _init_log(verbose=conf["verbose"], quiet=conf["quiet"], logfile=conf["log_file"])
 
-        self.delete_tmp_wpscan_files()
+        self._delete_tmp_wpscan_files()
 
         # Init DB interface
-        self.wp_reports: WPWatcherDataBase = WPWatcherDataBase(conf["wp_reports"])
+        self.wp_reports: DataBase = DataBase(filepath=conf["wp_reports"], daemon=conf['daemon'])
 
         # Update config before passing it to WPWatcherScanner
         conf.update({"wp_reports": self.wp_reports.filepath})
 
         # Init scanner
-        self.scanner: WPWatcherScanner = WPWatcherScanner(conf)
+        self.scanner: Scanner = Scanner(conf)
 
         # Dump config
-        log.info(f"WPWatcher configuration:{repr(conf)}")
+        log.info(f"Configuration:{repr(conf)}")
 
         # Save sites
-        self.wp_sites: List[Dict[str, Any]] = [
-            WPWatcherSite(site_conf) for site_conf in conf["wp_sites"]
+        self.wp_sites: List[Site] = [
+            Site(site_conf) for site_conf in conf["wp_sites"]
         ]
 
         # Asynchronous executor
@@ -84,10 +85,10 @@ class WPWatcher:
         signal.signal(signal.SIGTERM, self.interrupt)
 
         # new reports
-        self.new_reports: WPWatcherReportCollection
+        self.new_reports: ReportCollection
 
     @staticmethod
-    def delete_tmp_wpscan_files() -> None:
+    def _delete_tmp_wpscan_files() -> None:
         """Delete temp wpcan files"""
         # Try delete temp files.
         if os.path.isdir("/tmp/wpscan"):
@@ -99,7 +100,7 @@ class WPWatcher:
                     f"Could not delete temp WPScan files in /tmp/wpscan/\n{traceback.format_exc()}"
                 )
 
-    def cancel_pending_futures(self) -> None:
+    def _cancel_pending_futures(self) -> None:
         """Cancel all asynchronous jobs"""
         for f in self.futures:
             if not f.done():
@@ -111,10 +112,10 @@ class WPWatcher:
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):  # type: ignore [attr-defined]
             raise InterruptedError()
+        
         # Cancel all scans
-        self.cancel_pending_futures()  # future scans
-        # Wait all scans finished
-        self.scanner.cancel_scans()  # running scans
+        self._cancel_pending_futures()  # future scans
+        self.scanner.interrupt()  # running scans
 
         # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try:
@@ -123,7 +124,7 @@ class WPWatcher:
             pass
 
         # Recover reports from futures results
-        new_reports: WPWatcherReportCollection = WPWatcherReportCollection()
+        new_reports = ReportCollection()
         for f in self.futures:
             if f.done():
                 try:
@@ -132,13 +133,13 @@ class WPWatcher:
                     pass
 
         # Display results and quit
-        self.print_scanned_sites_results(new_reports)
+        self.print_new_reports_results(new_reports)
         log.info("Scans interrupted.")
         sys.exit(-1)
 
-    def print_scanned_sites_results(self, new_reports: List[Dict[str, Any]]) -> None:
+    def print_new_reports_results(self, new_reports: ReportCollection) -> None:
         """Print the result summary for the scanned sites"""
-        new_reports = WPWatcherReportCollection(n for n in new_reports if n)
+        new_reports = ReportCollection(n for n in new_reports if n)
         if len(new_reports) > 0:
             log.info(repr(new_reports))
             if self.wp_reports.filepath != "null":
@@ -150,9 +151,9 @@ class WPWatcher:
         else:
             log.info("No reports updated.")
 
-    def scan_site_wrapper(self, wp_site: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def scan_site(self, wp_site: Site) -> Optional[Report]:
         """
-        Helper method to wrap the raw scanning process of `WPWatcherScanner.scan_site` and add the following:
+        Helper method to wrap the scanning process of `WPWatcherScanner.scan_site` and add the following:
         - Find the last report in the database and launch the scan
         - Write it in DB after scan.
         - Print progress bar
@@ -161,22 +162,25 @@ class WPWatcher:
         Return one report
         """
 
-        last_wp_report = self.wp_reports.find_last_wp_report({"site": wp_site["url"]})
+        last_wp_report = self.wp_reports.find(Report(site=wp_site["url"]))
 
         # Launch scanner
         wp_report = self.scanner.scan_site(wp_site, last_wp_report)
+        
         # Save report in global instance database and to file when a site has been scanned
         if wp_report:
-            self.wp_reports.update_and_write_wp_reports([wp_report])
+            self.wp_reports.write([wp_report])
         else:
             log.info(f"No report saved for site {wp_site['url']}")
+        
         # Print progress
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))
         return wp_report
 
-    def run_scans_wrapper(self, wp_sites: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _run_scans(self, wp_sites: List[Site]) -> ReportCollection:
         """
         Helper method to deal with :
+
         - executor, concurent futures
         - Trigger self.interrupt() on InterruptedError (raised if fail fast enabled)
         - Append result to `self.new_reports` list.
@@ -184,7 +188,7 @@ class WPWatcher:
 
         log.info(f"Starting scans on {len(wp_sites)} configured sites")
         for wp_site in wp_sites:
-            self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site))
+            self.futures.append(self.executor.submit(self.scan_site, wp_site))
         for f in self.futures:
             try:
                 self.new_reports.append(f.result())
@@ -194,10 +198,10 @@ class WPWatcher:
             except concurrent.futures.CancelledError:
                 pass
         # Ensure everything is down
-        self.cancel_pending_futures()
+        self._cancel_pending_futures()
         return self.new_reports
 
-    def run_scans_and_notify(self) -> Tuple[int, List[Dict[str, Any]]]:
+    def run_scans(self) -> Tuple[int, ReportCollection]:
         """
         Run WPScan on defined websites and send notifications.
 
@@ -205,7 +209,7 @@ class WPWatcher:
         """
 
         # reset new reports
-        self.new_reports = WPWatcherReportCollection()
+        self.new_reports = ReportCollection()
 
         # Check sites are in the config
         if len(self.wp_sites) == 0:
@@ -214,10 +218,14 @@ class WPWatcher:
             )
             return (-1, self.new_reports)
 
-        self.run_scans_wrapper(self.wp_sites)
+        self.wp_reports.open()
+        try:
+            self._run_scans(self.wp_sites)
+        finally:
+            self.wp_reports.close()
 
         # Print results and finish
-        self.print_scanned_sites_results(self.new_reports)
+        self.print_new_reports_results(self.new_reports)
 
         if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
             log.info("Scans finished successfully.")
@@ -225,3 +233,5 @@ class WPWatcher:
         else:
             log.info("Scans finished with errors.")
             return (-1, self.new_reports)
+
+    # run_scans_and_notify = run_scans

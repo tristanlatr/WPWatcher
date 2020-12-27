@@ -7,15 +7,15 @@ from typing import Dict, Optional, Any
 import argparse
 import shlex
 import sys
-from wpwatcher import log, init_log
+from wpwatcher import log, _init_log
 from wpwatcher.__version__ import __version__, __author__, __url__
 from wpwatcher.utils import parse_timedelta
-from wpwatcher.config import WPWatcherConfig
+from wpwatcher.config import Config
 from wpwatcher.core import WPWatcher
-from wpwatcher.db import WPWatcherDataBase
-from wpwatcher.daemon import WPWatcherDaemon
-from wpwatcher.syslogout import WPSyslogOutput
-from wpwatcher.report import WPWatcherReportCollection
+from wpwatcher.db import DataBase
+from wpwatcher.daemon import Daemon
+from wpwatcher.syslogout import SyslogOutput
+from wpwatcher.report import ReportCollection
 from wpscan_out_parse import format_results
 
 
@@ -25,7 +25,7 @@ def main() -> None:
     args: argparse.Namespace = get_arg_parser().parse_args()
 
     # Init logger with CLi arguments
-    init_log(args.verbose, args.quiet)
+    _init_log(args.verbose, args.quiet)
 
     # If template conf , print and exit
     if args.template_conf:
@@ -38,14 +38,14 @@ def main() -> None:
 
     if args.version:
         # Print and exit
-        verion()
+        version()
 
     if args.wprs != False:
         # Init WPWatcherDataBase object and dump reports
         wprs(filepath=args.wprs, daemon=args.daemon)
 
     # Read config
-    configuration = WPWatcherConfig.fromcliargs(args)
+    configuration = Config.fromcliargs(args)
 
     if args.show:
         # Init WPWatcherDataBase object and dump cli formatted report
@@ -62,28 +62,28 @@ def main() -> None:
     # If daemon lopping
     if configuration["daemon"]:
         # Run 4 ever
-        WPWatcherDaemon(configuration)
+        Daemon(configuration)
     else:
         # Run scans and quit
         # Create main object
         wpwatcher = WPWatcher(configuration)
-        exit_code, _ = wpwatcher.run_scans_and_notify()
+        exit_code, _ = wpwatcher.run_scans()
         exit(exit_code)
 
 
 def wprs(filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Generate JSON file database summary"""
-    db = WPWatcherDataBase(filepath, daemon=daemon)
-    sys.stdout.buffer.write(repr(WPWatcherReportCollection(db._data)).encode("utf8"))
+    db = DataBase(filepath, daemon=daemon)
+    sys.stdout.buffer.write(repr(db).encode("utf8"))
     sys.stdout.flush()
     exit(0)
 
 
 def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Inspect a report in database"""
-    db = WPWatcherDataBase(filepath, daemon=daemon)
-    matching_reports = [r for r in db._data if urlpart in r["site"]]
-    eq_reports = [r for r in db._data if urlpart == r["site"]]
+    db = DataBase(filepath, daemon=daemon)
+    matching_reports = [r for r in db if urlpart in r["site"]]
+    eq_reports = [r for r in db if urlpart == r["site"]]
     if len(eq_reports):
         sys.stdout.buffer.write(
             format_results(eq_reports[0], format="cli").encode("utf8")
@@ -97,7 +97,7 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
             "The following sites match your search: \n".encode("utf8")
         )
         sys.stdout.buffer.write(
-            repr(WPWatcherReportCollection(matching_reports)).encode("utf8")
+            repr(ReportCollection(matching_reports)).encode("utf8")
         )
         sys.stdout.buffer.write("\nPlease be more specific. \n".encode("utf8"))
     else:
@@ -106,7 +106,7 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
     exit(0)
 
 
-def verion() -> None:
+def version() -> None:
     """Print version and contributors"""
     log.info(f"Version:\t\t{__version__}")
     log.info(f"Authors:\t\t{__author__}")
@@ -115,14 +115,14 @@ def verion() -> None:
 
 def template_conf() -> None:
     """Print template configuration"""
-    sys.stdout.buffer.write(WPWatcherConfig.TEMPLATE_FILE.encode("utf8"))
+    sys.stdout.buffer.write(Config.TEMPLATE_FILE.encode("utf8"))
     sys.stdout.flush()
     exit(0)
 
 
-def syslog_test(conf: Dict[str, Any]) -> None:
+def syslog_test(conf: Config) -> None:
     """Launch the emit_test_messages() method"""
-    syslog = WPSyslogOutput(conf)
+    syslog = SyslogOutput(conf)
     syslog.emit_test_messages()
     exit(0)
 
