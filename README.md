@@ -44,7 +44,7 @@
 
 ## Documentation
 
-[Read The Docs](https://wpwatcher.readthedocs.io/en/latest/) for more informations.  
+[Read The Docs](https://wpwatcher.readthedocs.io/en/latest/).  
 
 ## Usage exemple
 
