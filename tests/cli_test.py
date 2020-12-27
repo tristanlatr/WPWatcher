@@ -38,6 +38,6 @@ class T(unittest.TestCase):
         self.assertIsInstance(wpwatcher_configuration.get('daemon_loop_sleep'), timedelta)
         self.assertIsInstance(wpwatcher_configuration.get('resend_emails_after'), timedelta)
         
-        self.assertEqual(wpwatcher_configuration.get('wpscan_args'), ["--random-user-agent", "--format", "json", "--format", "cli"])
+        self.assertEqual(wpwatcher_configuration.get('wpscan_args'), ["--random-user-agent", "--format", "json", "--cache-ttl", "0", "--format", "cli"])
         
         os.remove(tmp.name)

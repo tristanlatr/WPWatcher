@@ -106,7 +106,7 @@ smtp_ssl=Yes
         "false_positive_strings": "null",
         "wpscan_path": "wpscan",
         "log_file": "",
-        "wpscan_args": """["--random-user-agent", "--format", "json"]""",
+        "wpscan_args": """["--random-user-agent", "--format", "json", "--cache-ttl", "0"]""",
         "send_email_report": "No",
         "send_errors": "No",
         "email_to": "null",
@@ -441,11 +441,16 @@ smtp_ssl=Yes
         """
         potential_paths = []
         existent_files = []
+
+        env_loc_exists = False
         # build potential_paths of config file
         for env_var in env_location:
             if env_var in os.environ:
+                env_loc_exists = True
                 for file_path in potential_files:
                     potential_paths.append(os.path.join(os.environ[env_var], file_path))
+        if not env_loc_exists:
+            raise RuntimeError(f"Cannot find any of the env locations {env_location}. ")
         # If file exist, add to list
         for p in potential_paths:
             if os.path.isfile(p):
