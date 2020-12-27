@@ -43,7 +43,7 @@ class WPScanWrapper:
         self._lazy_last_db_update: Optional[datetime] = self._NO_VAL
 
 
-    def wpscan(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def wpscan(self, *args: str) -> subprocess.CompletedProcess: # type: ignore [type-arg]
         """
         Run WPScan and return process results. Automatically update WPScan database. 
         
@@ -135,7 +135,7 @@ class WPScanWrapper:
 
 
     # Helper method: actually wraps wpscan
-    def _wpscan(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def _wpscan(self, *args: str) -> subprocess.CompletedProcess: # type: ignore [type-arg]
         # WPScan arguments
         cmd = self._wpscan_executable + list(args)
         # Log wpscan command without api token
