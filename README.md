@@ -1,8 +1,10 @@
 
-<h1 align="center">WPWatcher</h1>
+<h1 align="center">  
+  <img src="https://github.com/tristanlatr/WPWatcher/raw/master/docs/source/_static/logo.png" width="250" height="250"/>
+</h1>
 
 <p align="center">
-  Automating <a href="https://wpscan.org/" title="homepage" target="_blank">WPScan</a> to scan and report vulnerable Wordpress sites
+  WPWatcher - Automating <a href="https://wpscan.org/" title="homepage" target="_blank">WPScan</a> to scan and report vulnerable Wordpress sites
   <br>
 </p>
 
@@ -25,7 +27,7 @@
 ## Features
 
   - Scan **multiple sites** with WPScan
-  - **Parse WPScan output** and divide the results in *"Alerts"*, *"Warnings"* and *"Informations"*.  
+  - **Parse WPScan output** and divide the results in *"Alerts"*, *"Warnings"* and *"Informations"*  
   - **Handled VulnDB API limit**
   - Define **reporting emails addresses** for every configured site individually and globally 
   - Define **false positives strings** for every configured site individually and globally 
@@ -36,7 +38,7 @@
   - Speed up scans using several asynchronous workers
   - **Follow URL redirection** if WPScan fails and propose to ignore main redirect
   - Scan sites continuously at defined interval and configure script as a linux service 
-  - Additionnal alerts depending of finding type (SQL dump, etc.)  ([match list](https://github.com/tristanlatr/wpscan_out_parse#additionnal-alerts-strings))
+  - Additionnal alerts depending of finding type (SQL dump, etc.)  
   - Keep track of fixed and unfixed issues
   - Simple library usage 
 
@@ -44,23 +46,24 @@
 
 [Read The Docs](https://wpwatcher.readthedocs.io/en/latest/) for more informations.  
 
-## Questions ?
-If you have any questions, please create a new issue.
+## Usage exemple
 
-## Contribute
-If you like the project and think you could help with making it better, there are many ways you can do it:
+Scan two sites, add WPScan arguments, follow URL redirection and email report to recepients. If you reach your API limit, it will wait and continue 24h later.
 
-- Create new issue for new feature proposal or a bug
-- Implement existing issues
-- Help with improving the documentation
-- Spread a word about the project to your collegues, friends, blogs or any other channels
-- Any other things you could imagine
-- Any contribution would be of great help
-
-## Running tests
+```bash
+wpwatcher --url exemple.com exemple1.com \
+  --wpscan_args "--force --stealthy --api-token <TOKEN>" \
+  --follow_redirect --api_limit_wait \
+  --send --infos --email_to you@office.ca me@office.ca
 ```
-pytest
-```
+
+WPWatcher must read a configuration file to send mail reports. This exemple assume you have filled your config file with mail server setings.
+
+## Emails
+
+Sample email report.
+
+![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report.png "WPWatcher Report")
 
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))

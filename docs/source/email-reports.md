@@ -66,7 +66,7 @@ send_errors=No
 
 Recipients can be configured globally and on a per site basis
 
-#### Global recipients
+### Global recipients
 ```ini
 # Configuration file: reports recipients
 
@@ -79,7 +79,7 @@ email_to=["securityalerts@domain.com"]
 email_errors_to=["admins@domain.com"]
 ```
 
-#### Per site recipients
+### Per site recipients
 ```ini
 # Configuration file: sites
 
@@ -110,9 +110,3 @@ resend_emails_after=3d
 # Overwrite with arguments: `--attach`
 attach_wpscan_output=No
 ```
-
-## Screenss
-
-![WPWatcher Report List](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report-list.png "WPWatcher Report")
-
-![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report.png "WPWatcher Report")

@@ -3,7 +3,7 @@
 ## Install syslog library  
 
 ```bash
-python3 -m pip install 'wpwatcher[syslog]'
+pip install -U 'wpwatcher[syslog]'
 ```
 *Installs WPWatcher with syslog output support*.
 
@@ -12,10 +12,6 @@ Syslog feature uses library `rfc5424-logging-handler` and `cefevent`.
 ## Configure
 
 ```ini
-[wpwatcher]
-
-# Syslog settings
-
 # Your syslog server
 syslog_server=syslogserver.ca
 syslog_port=514

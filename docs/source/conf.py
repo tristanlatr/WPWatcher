@@ -63,6 +63,7 @@ html_theme_options = {
     'note_bg': '#FFF59C',
     'page_width': '80%',
     'sidebar_width': '20%',
+    'logo': 'logo.png',
     'description': 'Automating WPScan to scan and report vulnerable Wordpress sites',
 }
 
