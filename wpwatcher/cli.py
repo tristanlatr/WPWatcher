@@ -7,7 +7,7 @@ from typing import Dict, Optional, Any
 import argparse
 import shlex
 import sys
-from wpwatcher import log, init_log
+from wpwatcher import log, _init_log
 from wpwatcher.__version__ import __version__, __author__, __url__
 from wpwatcher.utils import parse_timedelta
 from wpwatcher.config import WPWatcherConfig
@@ -25,7 +25,7 @@ def main() -> None:
     args: argparse.Namespace = get_arg_parser().parse_args()
 
     # Init logger with CLi arguments
-    init_log(args.verbose, args.quiet)
+    _init_log(args.verbose, args.quiet)
 
     # If template conf , print and exit
     if args.template_conf:

@@ -23,7 +23,7 @@ class T(unittest.TestCase):
         self.assertEqual(type(wpwatcher.scanner), WPWatcherScanner, "WPWatcherScanner doesn't seem to have been initialized")
         self.assertEqual(type(wpwatcher.scanner.mail), WPWatcherNotification, "WPWatcherNotification doesn't seem to have been initialized")
         self.assertEqual(type(wpwatcher.scanner.wpscan), WPScanWrapper, "WPScanWrapper doesn't seem to have been initialized")
-        self.assertEqual(shlex.split(WPWatcherConfig.fromstring(DEFAULT_CONFIG)['wpscan_path']), wpwatcher.scanner.wpscan.wpscan_executable, "WPScan path seems to be wrong")
+        self.assertEqual(shlex.split(WPWatcherConfig.fromstring(DEFAULT_CONFIG)['wpscan_path']), wpwatcher.scanner.wpscan._wpscan_executable, "WPScan path seems to be wrong")
 
     def test_asynch_exec(self):
         # test max number of threads respected
