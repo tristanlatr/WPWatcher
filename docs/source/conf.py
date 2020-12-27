@@ -13,8 +13,7 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-import pathlib
-import subprocess
+
 
 # -- Project information -----------------------------------------------------
 from wpwatcher.__version__ import __version__
@@ -31,7 +30,6 @@ version = __version__
 extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.intersphinx", 
-    "pydoctor.sphinx_ext.build_apidocs",
     "recommonmark", 
 ]
 
@@ -71,27 +69,3 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-
-# Pydoctor
-
-_pydoctor_root = pathlib.Path(__file__).parent.parent.parent
-_git_reference = subprocess.getoutput("git rev-parse HEAD")
-pydoctor_args = [
-    '--html-output={outdir}/api',
-    '--project-name=WPWatcher',
-    '--docformat=restructuredtext',
-    f'{_pydoctor_root}/wpwatcher',
-    '--quiet',
-    '--make-html',
-    f'--html-viewsource-base=https://github.com/tristanlatr/WPWatcher/tree/{_git_reference}',
-    '--project-url=https://github.com/tristanlatr/WPWatcher',
-    f'--project-base-dir={_pydoctor_root}',
-    '--intersphinx=https://docs.python.org/3/objects.inv',
-]
-
-# Intersphinx
-
-intersphinx_mapping = {
-    'wpwatcher': ('https://wpwatcher.readthedocs.io/en/latest/api/', None),
-}

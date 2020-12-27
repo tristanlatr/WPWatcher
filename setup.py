@@ -25,7 +25,7 @@ setup(
     long_description_content_type   =   "text/markdown",
     install_requires    =   ['wpscan-out-parse>=1.8.1', 'filelock'],
     extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent'],
-                             'docs': ["Sphinx", "sphinx_rtd_theme", "recommonmark", "pydoctor"], 
+                             'docs': ["Sphinx", "sphinx_rtd_theme", "recommonmark"], 
                              'dev': ["pytest", "pytest-cov", "codecov", "coverage", "tox", "mypy"]},
     keywords            =   ABOUT['__keywords__'],
 )
