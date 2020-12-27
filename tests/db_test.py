@@ -47,14 +47,16 @@ class T(unittest.TestCase):
         ]
 
         db=WPWatcherDataBase()
+        db.open()
         db.update_and_write_wp_reports(reports)
+        db.close()
 
         # Test internal _data gets updated after update_and_write_wp_reports() method
         for r in reports:
             self.assertIn(r, db._data, "The report do not seem to have been saved into WPWatcher.wp_report list")
 
         # Test write method
-        wrote_db=db.build_wp_reports(db.filepath)
+        wrote_db=db._build_db(db.filepath)
         with open(db.filepath,'r') as dbf:
             wrote_db_alt=json.load(dbf)
         for r in reports:

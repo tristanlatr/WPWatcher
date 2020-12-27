@@ -9,12 +9,11 @@ import threading
 from wpwatcher import log
 from wpwatcher.config import WPWatcherConfig
 
+from filelock import FileLock, Timeout
+
 # Database default files
 DEFAULT_REPORTS = ".wpwatcher/wp_reports.json"
 DEFAULT_REPORTS_DAEMON = ".wpwatcher/wp_reports.daemon.json"
-# Writing into the database file is thread safe
-wp_report_lock = threading.Lock()
-
 
 class WPWatcherDataBase:
     """Interface to JSON database file. Work to write all reports to file in a thread safe way"""
@@ -25,8 +24,24 @@ class WPWatcherDataBase:
         if not wp_reports_filepath:
             wp_reports_filepath = self.find_wp_reports_file(daemon=daemon)
         self.filepath = wp_reports_filepath
-        self._data = self.build_wp_reports(self.filepath)
+        self._data = self._build_db(self.filepath)
 
+        # Writing into the database file is thread safe
+        self._wp_report_lock: threading.Lock = threading.Lock()
+
+        # Only once instance of WPWatcher can use a database file at a time. 
+        self._wp_report_file_lock: FileLock = FileLock(f"{self.filepath}.lock")
+        
+
+    def open(self) -> None:
+        """
+        Acquire the file lock for the DB file. 
+        """
+        try:
+            self._wp_report_file_lock.acquire(timeout=1)
+        except Timeout as err:
+            raise RuntimeError(f"Could not use the database file '{self.filepath}' because another instance of WPWatcher is using it. ") from err
+        log.debug(f"Acquired lock file '{self.filepath}.lock'")
         try:
             self.update_and_write_wp_reports(self._data)
         except:
@@ -35,6 +50,13 @@ class WPWatcherDataBase:
             )
             raise
 
+    def close(self) -> None:
+        """
+        Release the file lock
+        """
+        self._wp_report_file_lock.release()
+        log.debug(f"Released lock file '{self.filepath}.lock'")
+
     @staticmethod
     def find_wp_reports_file(daemon: bool = False) -> str:
         files = [DEFAULT_REPORTS] if not daemon else [DEFAULT_REPORTS_DAEMON]
@@ -42,7 +64,7 @@ class WPWatcherDataBase:
         return WPWatcherConfig.find_files(env, files, "[]", create=True)[0]
 
     # Read wp_reports database
-    def build_wp_reports(self, filepath: str) -> List[Dict[str, Any]]:
+    def _build_db(self, filepath: str) -> List[Dict[str, Any]]:
         """Load reports database and return the complete structure"""
         wp_reports: List[Dict[str, Any]] = []
         if self.no_local_storage:
@@ -68,6 +90,10 @@ class WPWatcherDataBase:
         """Update the sites that have been scanned based on the report list.
         Keep same report order add append new sites at the bottom.
         Return None if wp_reports is null"""
+
+        if not self._wp_report_file_lock.is_locked:
+            raise RuntimeError("The file lock must be acquired before updating data. ")
+
         if not new_wp_report_list:
             return
 
@@ -83,12 +109,12 @@ class WPWatcherDataBase:
         # Write to file if not null
         if not self.no_local_storage:
             # Write method thread safe
-            while wp_report_lock.locked():
+            while self._wp_report_lock.locked():
                 time.sleep(0.01)
-            wp_report_lock.acquire()
+            self._wp_report_lock.acquire()
             with open(self.filepath, "w") as reportsfile:
                 json.dump(self._data, reportsfile, indent=4)
-                wp_report_lock.release()
+                self._wp_report_lock.release()
 
     def find_last_wp_report(
         self, wp_report: Dict[str, Any]

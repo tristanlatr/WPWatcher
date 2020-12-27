@@ -11,7 +11,7 @@ import signal
 import sys
 
 
-from wpwatcher import log, init_log
+from wpwatcher import log, _init_log
 from wpwatcher.db import WPWatcherDataBase
 from wpwatcher.scan import WPWatcherScanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
@@ -50,7 +50,7 @@ class WPWatcher:
         - `conf`: the configuration dict. Required
         """
         # (Re)init logger with config
-        init_log(verbose=conf["verbose"], quiet=conf["quiet"], logfile=conf["log_file"])
+        _init_log(verbose=conf["verbose"], quiet=conf["quiet"], logfile=conf["log_file"])
 
         self.delete_tmp_wpscan_files()
 
@@ -64,7 +64,7 @@ class WPWatcher:
         self.scanner: WPWatcherScanner = WPWatcherScanner(conf)
 
         # Dump config
-        log.info(f"WPWatcher configuration:{repr(conf)}")
+        log.info(f"Configuration:{repr(conf)}")
 
         # Save sites
         self.wp_sites: List[Dict[str, Any]] = [
@@ -111,10 +111,10 @@ class WPWatcher:
         # If called inside ThreadPoolExecutor, raise Exeception
         if not isinstance(threading.current_thread(), threading._MainThread):  # type: ignore [attr-defined]
             raise InterruptedError()
+        
         # Cancel all scans
         self.cancel_pending_futures()  # future scans
-        # Wait all scans finished
-        self.scanner.cancel_scans()  # running scans
+        self.scanner.interrupt()  # running scans
 
         # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
         try:
@@ -132,11 +132,11 @@ class WPWatcher:
                     pass
 
         # Display results and quit
-        self.print_scanned_sites_results(new_reports)
+        self.print_new_reports_results(new_reports)
         log.info("Scans interrupted.")
         sys.exit(-1)
 
-    def print_scanned_sites_results(self, new_reports: List[Dict[str, Any]]) -> None:
+    def print_new_reports_results(self, new_reports: List[Dict[str, Any]]) -> None:
         """Print the result summary for the scanned sites"""
         new_reports = WPWatcherReportCollection(n for n in new_reports if n)
         if len(new_reports) > 0:
@@ -150,9 +150,9 @@ class WPWatcher:
         else:
             log.info("No reports updated.")
 
-    def scan_site_wrapper(self, wp_site: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def scan_site(self, wp_site: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Helper method to wrap the raw scanning process of `WPWatcherScanner.scan_site` and add the following:
+        Helper method to wrap the scanning process of `WPWatcherScanner.scan_site` and add the following:
         - Find the last report in the database and launch the scan
         - Write it in DB after scan.
         - Print progress bar
@@ -174,7 +174,7 @@ class WPWatcher:
         print_progress_bar(len(self.scanner.scanned_sites), len(self.wp_sites))
         return wp_report
 
-    def run_scans_wrapper(self, wp_sites: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _run_scans(self, wp_sites: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Helper method to deal with :
         - executor, concurent futures
@@ -184,7 +184,7 @@ class WPWatcher:
 
         log.info(f"Starting scans on {len(wp_sites)} configured sites")
         for wp_site in wp_sites:
-            self.futures.append(self.executor.submit(self.scan_site_wrapper, wp_site))
+            self.futures.append(self.executor.submit(self.scan_site, wp_site))
         for f in self.futures:
             try:
                 self.new_reports.append(f.result())
@@ -214,10 +214,14 @@ class WPWatcher:
             )
             return (-1, self.new_reports)
 
-        self.run_scans_wrapper(self.wp_sites)
+        self.wp_reports.open()
+        try:
+            self._run_scans(self.wp_sites)
+        finally:
+            self.wp_reports.close()
 
         # Print results and finish
-        self.print_scanned_sites_results(self.new_reports)
+        self.print_new_reports_results(self.new_reports)
 
         if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
             log.info("Scans finished successfully.")
