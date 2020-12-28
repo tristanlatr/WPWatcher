@@ -8,7 +8,7 @@ DISCLAIMER - USE AT YOUR OWN RISK.
 import logging
 import sys
 import os
-from typing import Optional, Protocol
+from typing import Optional
 
 log = logging.getLogger("wpwatcher")
 "Log handler"
