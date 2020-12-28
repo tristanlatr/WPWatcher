@@ -40,7 +40,6 @@
   - Scan sites continuously at defined interval and configure script as a linux service 
   - Additionnal alerts depending of finding type (SQL dump, etc.)  
   - Keep track of fixed and unfixed issues
-  - Simple library usage 
 
 ## Documentation
 

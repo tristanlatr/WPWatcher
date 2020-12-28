@@ -19,4 +19,3 @@ Schedule scans and get notified when vulnerabilities, outdated plugins and other
    docker
    linux-service
    schedule-scans-with-cron
-   library-usage
