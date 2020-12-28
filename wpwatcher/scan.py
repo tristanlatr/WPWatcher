@@ -10,7 +10,7 @@ import json
 from smtplib import SMTPException
 from datetime import timedelta, datetime
 
-from wpscan_out_parse.parser import WPScanJsonParser, WPScanCliParser
+from wpscan_out_parse import WPScanJsonParser, WPScanCliParser
 
 from wpwatcher import log
 from wpwatcher.__version__ import __version__
@@ -27,10 +27,6 @@ from wpwatcher.report import ScanReport
 from wpwatcher.site import Site
 from wpwatcher.config import Config
 
-# Wait when API limit reached
-API_WAIT_SLEEP = timedelta(hours=24)
-
-
 
 # Date format used everywhere
 DATE_FORMAT = "%Y-%m-%dT%H-%M-%S"
@@ -42,19 +38,21 @@ class Scanner:
     def __init__(self, conf: Config):
 
         # Create (lazy) wpscan link
-        self.wpscan: WPScanWrapper = WPScanWrapper(conf["wpscan_path"], conf["scan_timeout"])
+        self.wpscan = WPScanWrapper(
+            wpscan_path=conf["wpscan_path"], 
+            scan_timeout=conf["scan_timeout"],
+            api_limit_wait=conf["api_limit_wait"],
+            follow_redirect=conf["follow_redirect"], )
+
         # Init mail client
         self.mail: EmailSender = EmailSender(conf)
-        # Storing the Event object to wait for api limit to be reset and cancel the waiting enventually
-        self.api_wait: threading.Event = threading.Event()
+        
         # Toogle if aborting so other errors doesnt get triggerred and exit faster
         self.interrupting: bool = False
         # List of scanned URLs
         self.scanned_sites: List[Optional[str]] = []
 
         # Save required config options
-        self.api_limit_wait: bool = conf["api_limit_wait"]
-        self.follow_redirect: bool = conf["follow_redirect"]
         self.wpscan_output_folder: str = conf["wpscan_output_folder"]
         self.wpscan_args: List[str] = conf["wpscan_args"]
         self.fail_fast: bool = conf["fail_fast"]
@@ -84,12 +82,9 @@ class Scanner:
     def interrupt(self) -> None:
         """
         Call `WPScanWrapper.interrupt`. 
-        Escape api limit wait if the program is sleeping.
         """
         self.interrupting = True
         self.wpscan.interrupt()
-        # Unlock api wait
-        self.api_wait.set()
 
     # Scan process
 
@@ -149,70 +144,6 @@ class Scanner:
             log.warning(oneline(f"** WPScan WARNING {wp_report['site']} ** {warning}"))
         for alert in wp_report["alerts"]:
             log.critical(oneline(f"** WPScan ALERT {wp_report['site']} ** {alert}"))
-
-    def handle_wpscan_err_api_wait(
-        self, wp_site: Site ) -> Tuple[Optional[ScanReport], bool]:
-        """
-        Sleep 24 hours with asynchronous event.
-        Ensure wpscan update next time wpscan() is called.
-        Return a `tuple (wp_report or None , Bool error handled?)`
-        If interrupting, return (None, True). True not to trigger errors.
-        """
-        log.info(
-            f"API limit has been reached after {len(self.scanned_sites)} sites, sleeping {API_WAIT_SLEEP} and continuing the scans..."
-        )
-
-        self.api_wait.wait(API_WAIT_SLEEP.total_seconds())
-        if self.interrupting:
-            return (None, True)
-
-        new_report = self.scan_site(wp_site)
-        return (new_report, new_report != None)
-
-    def handle_wpscan_err_follow_redirect(
-        self, wp_site: Site, wp_report: ScanReport
-    ) -> Tuple[Optional[ScanReport], bool]:
-        """Parse URL in WPScan output and relaunch scan.
-        Return a `tuple (wp_report or None , Bool error handled?)`
-        """
-        url = re.findall(
-            r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+",
-            wp_report["wpscan_output"].split("The URL supplied redirects to")[1],
-        )
-
-        if len(url) == 1:
-            wp_site["url"] = url[0].strip()
-            log.info(f"Following redirection to {wp_site['url']}")
-            new_report = self.scan_site(wp_site)
-            return (new_report, new_report != None)
-
-        else:
-            err_str = "Could not parse the URL to follow in WPScan output after words 'The URL supplied redirects to'"
-            log.error(err_str)
-            wp_report["error"] += err_str
-            return (wp_report, False)
-
-    def handle_wpscan_err(
-        self, wp_site: Site, wp_report: ScanReport
-    ) -> Tuple[Optional[ScanReport], bool]:
-        """Handle API limit and Follow redirection errors based on output strings.
-        Return a `tuple (wp_report or None , Bool error handled?)`
-        """
-        if (
-            "API limit has been reached" in str(wp_report["wpscan_output"])
-            and self.api_limit_wait
-        ):
-            return self.handle_wpscan_err_api_wait(wp_site)
-
-        # Handle Following redirection
-        elif (
-            "The URL supplied redirects to" in str(wp_report["wpscan_output"])
-            and self.follow_redirect
-        ):
-            return self.handle_wpscan_err_follow_redirect(wp_site, wp_report)
-
-        else:
-            return (wp_report, False)
 
     def _scan_site(
         self, wp_site: Site, wp_report: ScanReport
@@ -284,7 +215,7 @@ class Scanner:
 
         Triger InterruptedError if fail_fast and not already interrupting.
         """
-        log.error(err_str)
+        
         wp_report.fail(err_str)
         if self.fail_fast and not self.interrupting:
             raise InterruptedError()
@@ -315,20 +246,10 @@ class Scanner:
 
         except RuntimeError:
 
-            # Try to handle error and return, will recall scan_site()
-            wp_report_new, handled = self.handle_wpscan_err(wp_site, wp_report)
-
-            if handled:
-                return wp_report_new
-
-            elif not self.interrupting:
-                self._fail_scan(
-                    wp_report,
-                    f"Could not scan site {wp_site['url']} \n{traceback.format_exc()}",
-                )
-
-            else:
-                return None
+            self._fail_scan(
+                wp_report,
+                f"Could not scan site {wp_site['url']} \n{traceback.format_exc()}",
+            )
 
 
         # Updating report entry with data from last scan
@@ -364,14 +285,7 @@ class Scanner:
                 f"Could not send mail report for site {wp_site['url']}\n{traceback.format_exc()}",
             )
 
-        # Discard wpscan_output from report
-        if "wpscan_output" in wp_report:
-            del wp_report["wpscan_output"]
-
-        # Discard wpscan_parser from report
-        if "wpscan_parser" in wp_report:
-            del wp_report["wpscan_parser"]
-
+        
         # Send syslog if self.syslog is not None
         if self.syslog:
             try:
@@ -384,5 +298,14 @@ class Scanner:
 
         # Save scanned site
         self.scanned_sites.append(wp_site["url"])
+
+        # Discard wpscan_output from report
+        if "wpscan_output" in wp_report:
+            del wp_report["wpscan_output"]
+
+        # Discard wpscan_parser from report
+        if "wpscan_parser" in wp_report:
+            del wp_report["wpscan_parser"]
+
 
         return wp_report

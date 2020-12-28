@@ -76,7 +76,7 @@ class T(unittest.TestCase):
 
             expected=ScanReport({
                     "site": s['url'],
-                    "status": "",
+                    "status": "WARNING",
                     "datetime": "2020-04-10T16-00-00",
                     "last_email": "2020-04-08T16-05-17",
                     "error": '',

@@ -8,6 +8,22 @@ from wpscan_out_parse.parser.base import _Parser
 class ScanReport(Dict[str, Any]):
     """
     Dict-Like object to store and process scan results.
+
+    Keys:
+
+    - "site"
+    - "status"
+    - "datetime"
+    - "last_email"
+    - "error"
+    - "infos"
+    - "warnings"
+    - "alerts"
+    - "fixed"
+    - "summary"
+    - "wpscan_output"
+    - "wpscan_parser"
+
     """
 
     DEFAULT_REPORT: Dict[str, Any] = {
@@ -36,8 +52,7 @@ class ScanReport(Dict[str, Any]):
         """
         Mark the scan as failed. 
         """
-        if not reason:
-            raise ValueError("Scan failure 'reason' cannot be empty")
+        log.error(reason)
         if self["error"]:
             self["error"] += "\n\n"
         self["error"] += reason
@@ -66,14 +81,16 @@ class ScanReport(Dict[str, Any]):
         # Including error if not None
         if results["error"]:
             self.fail(results["error"])
+        
+        self.status()
 
-    def __getitem__(self, k: str) -> Any:
-        if k == "status":
-            return self._status()
+    def __getitem__(self, key: str) -> Any:
+        if key == "status":
+            return self.status()
         else:
-            return super().__getitem__(k)
+            return super().__getitem__(key)
 
-    def _status(self) -> str:
+    def status(self) -> str:
         """Get report status. """
         status = ""
         if len(self["error"]) > 0:
@@ -84,6 +101,7 @@ class ScanReport(Dict[str, Any]):
             status = "ALERT"
         else:
             status = "INFO"
+        self['status'] = status
         return status
 
     def update_report(self, last_wp_report: Optional['ScanReport']) -> None:
