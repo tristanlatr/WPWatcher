@@ -9,7 +9,7 @@ import time
 import threading
 from wpwatcher import log
 from wpwatcher.config import Config
-from wpwatcher.report import Report, ReportCollection
+from wpwatcher.report import ScanReport, ReportCollection
 
 from filelock import FileLock, Timeout
 
@@ -82,7 +82,7 @@ class DataBase(ReportCollection):
             try:
                 with open(filepath, "r") as reportsfile:
                     wp_reports.extend(
-                        Report(item) for item in json.load(reportsfile)
+                        ScanReport(item) for item in json.load(reportsfile)
                     )
                 log.info(f"Load wp_reports database: {filepath}")
             except Exception:
@@ -95,7 +95,7 @@ class DataBase(ReportCollection):
         return wp_reports
 
     def write(
-        self, wp_reports: Optional[Iterable[Report]] = None
+        self, wp_reports: Optional[Iterable[ScanReport]] = None
     ) -> bool:
         """
         Write the reports to the database. 
@@ -130,12 +130,12 @@ class DataBase(ReportCollection):
         else:
             return False
 
-    def find(self, wp_report: Report) -> Optional[Report]:
+    def find(self, wp_report: ScanReport) -> Optional[ScanReport]:
         """
         Find the pre-existing report if any.
         """
         last_wp_reports = [r for r in self if r["site"] == wp_report["site"]]
-        last_wp_report: Optional[Report]
+        last_wp_report: Optional[ScanReport]
         if len(last_wp_reports) > 0:
             last_wp_report = last_wp_reports[0]
         else:

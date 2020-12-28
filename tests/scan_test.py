@@ -7,6 +7,7 @@ from wpwatcher.core import WPWatcher
 from wpwatcher.scan import Scanner
 from wpwatcher.config import Config
 from wpwatcher.site import Site
+from wpwatcher.report import ScanReport
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
@@ -37,7 +38,7 @@ class T(unittest.TestCase):
         # Init Scanner
         scanner = Scanner(Config.fromstring(DEFAULT_CONFIG))
         for s in WP_SITES:
-            old={
+            old=ScanReport({
                     "site": s['url'],
                     "status": "WARNING",
                     "datetime": "2020-04-08T16-05-16",
@@ -53,9 +54,9 @@ class T(unittest.TestCase):
                     "fixed": ["This issue was fixed"],
                     "summary":None,
                     "wpscan_output":""
-                }
+                })
             parser = WPScanJsonParser(data={})
-            new={
+            new=ScanReport({
                     "site": s['url'],
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
@@ -71,9 +72,9 @@ class T(unittest.TestCase):
                     "summary":None,
                     "wpscan_parser": parser,
                     "wpscan_output":""
-                }
+                })
 
-            expected={
+            expected=ScanReport({
                     "site": s['url'],
                     "status": "",
                     "datetime": "2020-04-10T16-00-00",
@@ -92,12 +93,10 @@ class T(unittest.TestCase):
                     "summary":None,
                     "wpscan_parser": parser,
                     "wpscan_output":""
-                }
+                })
             
-            scanner.update_report(new, old)
-            print(new)
-            print(expected)
-            self.assertEqual(new, expected, "There is an issue with fixed issues feature: the expected report do not match the report returned by update_report()")
+            new.update_report(old)
+            self.assertEqual(dict(new), dict(expected), "There is an issue with fixed issues feature: the expected report do not match the report returned by update_report()")
 
     def test_wpscan_output_folder(self):
         RESULTS_FOLDER="./results/"

@@ -14,7 +14,7 @@ from wpwatcher.config import Config
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import DataBase
 from wpwatcher.daemon import Daemon
-from wpwatcher.syslogout import SyslogOutput
+from wpwatcher.syslog import SyslogOutput
 from wpwatcher.report import ReportCollection
 from wpscan_out_parse import format_results
 

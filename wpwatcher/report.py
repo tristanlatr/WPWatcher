@@ -2,11 +2,12 @@
 Containers for scan results data stucture.  
 """
 
-from typing import Dict, Any, List, Iterable, Union, Optional
+from typing import Dict, Any, List, Iterable, Tuple, Optional, overload
+from wpwatcher import log
 from wpscan_out_parse.parser.base import _Parser
-class Report(Dict[str, Any]):
+class ScanReport(Dict[str, Any]):
     """
-    Dict-Like object to store scan results.
+    Dict-Like object to store and process scan results.
     """
 
     DEFAULT_REPORT: Dict[str, Any] = {
@@ -35,10 +36,11 @@ class Report(Dict[str, Any]):
         """
         Mark the scan as failed. 
         """
+        if not reason:
+            raise ValueError("Scan failure 'reason' cannot be empty")
         if self["error"]:
             self["error"] += "\n\n"
         self["error"] += reason
-        self["status"] = "ERROR"
 
     def load_parser(self, parser: _Parser) -> None:
         """
@@ -65,8 +67,117 @@ class Report(Dict[str, Any]):
         if results["error"]:
             self.fail(results["error"])
 
+    def __getitem__(self, k: str) -> Any:
+        if k == "status":
+            return self._status()
+        else:
+            return super().__getitem__(k)
 
-class ReportCollection(List[Report]):
+    def _status(self) -> str:
+        """Get report status. """
+        status = ""
+        if len(self["error"]) > 0:
+            status = "ERROR"
+        elif len(self["warnings"]) > 0 and len(self["alerts"]) == 0:
+            status = "WARNING"
+        elif len(self["alerts"]) > 0:
+            status = "ALERT"
+        else:
+            status = "INFO"
+        return status
+
+    def update_report(self, last_wp_report: Optional['ScanReport']) -> None:
+        """
+        Update the report considering last report.
+        """
+        if last_wp_report:
+            # Save already fixed issues but not reported yet
+            self["fixed"] = last_wp_report["fixed"]
+
+            # Fill out last_email datetime if any
+            if last_wp_report["last_email"]:
+                self["last_email"] = last_wp_report["last_email"]
+
+            # Fill out fixed issues if the scan is not an error
+            if self["status"] != "ERROR":
+                fixed, unfixed = self._get_fixed_n_unfixed_issues(
+                    last_wp_report, issue_type="alerts"
+                )
+                self["fixed"].extend(fixed)
+                self._add_unfixed_warnings(
+                    last_wp_report, unfixed, issue_type="alerts"
+                )
+
+                fixed, unfixed = self._get_fixed_n_unfixed_issues(
+                    last_wp_report, issue_type="warnings"
+                )
+                self["fixed"].extend(fixed)
+                self._add_unfixed_warnings(
+                    last_wp_report, unfixed, issue_type="warnings"
+                )
+
+    def _add_unfixed_warnings(
+        self,
+        last_wp_report: 'ScanReport',
+        unfixed_items: List[str],
+        issue_type: str,
+    ) -> None:
+        """
+        A line will be added at the end of the warning like:
+        "Warning: This issue is unfixed since {date}"
+        """
+
+        for unfixed_item in unfixed_items:
+            try:
+                # Get unfixd issue
+                issue_index = [
+                    alert.splitlines()[0] for alert in self[issue_type]
+                ].index(unfixed_item.splitlines()[0])
+            except ValueError as e:
+                log.error(e)
+            else:
+                self[issue_type][issue_index] += "\n"
+                try:
+                    # Try to get older issue if it exists
+                    older_issue_index = [
+                        alert.splitlines()[0] for alert in last_wp_report[issue_type]
+                    ].index(unfixed_item.splitlines()[0])
+                except ValueError as e:
+                    log.error(e)
+                else:
+                    older_warn_last_line = last_wp_report[issue_type][
+                        older_issue_index
+                    ].splitlines()[-1]
+                    if "Warning: This issue is unfixed" in older_warn_last_line:
+                        self[issue_type][issue_index] += older_warn_last_line
+                    else:
+                        self[issue_type][
+                            issue_index
+                        ] += f"Warning: This issue is unfixed since {last_wp_report['datetime']}"
+
+    def _get_fixed_n_unfixed_issues(
+        self, last_wp_report: 'ScanReport', issue_type: str
+    ) -> Tuple[List[str], List[str]]:
+        """Return list of fixed issue texts to include in mails"""
+        fixed_issues = []
+        unfixed_issues = []
+        for last_alert in last_wp_report[issue_type]:
+            if (self["wpscan_parser"] and 
+            not self["wpscan_parser"].is_false_positive(last_alert) ):
+
+                if last_alert.splitlines()[0] not in [
+                    alert.splitlines()[0] for alert in self[issue_type]
+                ]:
+                    fixed_issues.append(
+                        f'Issue regarding component "{last_alert.splitlines()[0]}" has been fixed since the last scan.'
+                    )
+                else:
+                    unfixed_issues.append(last_alert)
+
+        return fixed_issues, unfixed_issues
+
+
+class ReportCollection(List[ScanReport]):
     """
     List-Like object to store reports. 
     """

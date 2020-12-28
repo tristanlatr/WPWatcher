@@ -2,7 +2,7 @@ import unittest
 import json
 from wpwatcher.config import Config
 from wpwatcher.db import DataBase
-from wpwatcher.report import Report, ReportCollection
+from wpwatcher.report import ScanReport, ReportCollection
 from . import WP_SITES, DEFAULT_CONFIG
 
 class T(unittest.TestCase):
@@ -19,7 +19,7 @@ class T(unittest.TestCase):
         
         # Test Reports database 
         reports = [
-            Report({
+            ScanReport({
                 "site": "exemple.com",
                 "status": "WARNING",
                 "datetime": "2020-04-08T16-05-16",
@@ -34,7 +34,7 @@ class T(unittest.TestCase):
                 "alerts": [],
                 "fixed": []
             }),
-            Report({
+            ScanReport({
                 "site": "exemple2.com",
                 "status": "INFO",
                 "datetime": "2020-04-08T16-05-16",
@@ -58,9 +58,9 @@ class T(unittest.TestCase):
             self.assertIn(r, db, "The report do not seem to have been saved into WPWatcher.wp_report list")
 
         # Test write method
-        wrote_db=ReportCollection(Report(item) for item in db._build_db(db.filepath))
+        wrote_db=ReportCollection(ScanReport(item) for item in db._build_db(db.filepath))
         with open(db.filepath,'r') as dbf:
-            wrote_db_alt=ReportCollection(Report(item) for item in json.load(dbf))
+            wrote_db_alt=ReportCollection(ScanReport(item) for item in json.load(dbf))
         for r in reports:
             self.assertIn(r, list(wrote_db), "The report do not seem to have been saved into db file")
             self.assertIn(r, list(wrote_db_alt), "The report do not seem to have been saved into db file (directly read with json.load)")
