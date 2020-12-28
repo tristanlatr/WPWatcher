@@ -16,7 +16,7 @@ from wpwatcher.db import DataBase
 from wpwatcher.scan import Scanner
 from wpwatcher.utils import safe_log_wpscan_args, print_progress_bar, timeout
 from wpwatcher.site import Site
-from wpwatcher.report import ReportCollection, Report
+from wpwatcher.report import ReportCollection, ScanReport
 from wpwatcher.config import Config
 
 # Date format used everywhere
@@ -124,22 +124,22 @@ class WPWatcher:
             pass
 
         # Recover reports from futures results
-        new_reports = ReportCollection()
+        self.new_reports = ReportCollection()
         for f in self.futures:
             if f.done():
                 try:
-                    new_reports.append(f.result())
+                    self.new_reports.append(f.result())
                 except Exception:
                     pass
 
         # Display results and quit
-        self.print_new_reports_results(new_reports)
+        self._print_new_reports_results()
         log.info("Scans interrupted.")
         sys.exit(-1)
 
-    def print_new_reports_results(self, new_reports: ReportCollection) -> None:
+    def _print_new_reports_results(self) -> None:
         """Print the result summary for the scanned sites"""
-        new_reports = ReportCollection(n for n in new_reports if n)
+        new_reports = ReportCollection(n for n in self.new_reports if n)
         if len(new_reports) > 0:
             log.info(repr(new_reports))
             if self.wp_reports.filepath != "null":
@@ -151,7 +151,7 @@ class WPWatcher:
         else:
             log.info("No reports updated.")
 
-    def scan_site(self, wp_site: Site) -> Optional[Report]:
+    def scan_site(self, wp_site: Site) -> Optional[ScanReport]:
         """
         Helper method to wrap the scanning process of `WPWatcherScanner.scan_site` and add the following:
         - Find the last report in the database and launch the scan
@@ -162,7 +162,7 @@ class WPWatcher:
         Return one report
         """
 
-        last_wp_report = self.wp_reports.find(Report(site=wp_site["url"]))
+        last_wp_report = self.wp_reports.find(ScanReport(site=wp_site["url"]))
 
         # Launch scanner
         wp_report = self.scanner.scan_site(wp_site, last_wp_report)
@@ -225,7 +225,7 @@ class WPWatcher:
             self.wp_reports.close()
 
         # Print results and finish
-        self.print_new_reports_results(self.new_reports)
+        self._print_new_reports_results()
 
         if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
             log.info("Scans finished successfully.")

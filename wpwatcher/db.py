@@ -9,7 +9,7 @@ import time
 import threading
 from wpwatcher import log
 from wpwatcher.config import Config
-from wpwatcher.report import Report, ReportCollection
+from wpwatcher.report import ScanReport, ReportCollection
 
 from filelock import FileLock, Timeout
 
@@ -17,22 +17,26 @@ from filelock import FileLock, Timeout
 DEFAULT_REPORTS = ".wpwatcher/wp_reports.json"
 DEFAULT_REPORTS_DAEMON = ".wpwatcher/wp_reports.daemon.json"
 
-class DataBase(ReportCollection):
+class DataBase:
     """
     Interface to JSON database file. 
     Write all reports in a thread safe way. 
     """
 
-    def __init__(self, *args:Any, filepath: Optional[str] = None, daemon: bool = False, **kwargs:Any):
-        super().__init__(*args, **kwargs)
+    def __repr__(self) -> str:
+        return repr(self._data)
+
+    def __init__(self, filepath: Optional[str] = None, daemon: bool = False):
 
         if not filepath:
             filepath = self._find_db_file(daemon=daemon)
 
         self.no_local_storage: bool = filepath == "null"
+        "True if the DB is disabled"
         self.filepath = filepath
 
-        self.extend(self._build_db(self.filepath))
+        self._data = ReportCollection()
+        self._data.extend(self._build_db(self.filepath))
 
         # Writing into the database file is thread safe
         self._wp_report_lock: threading.Lock = threading.Lock()
@@ -82,7 +86,7 @@ class DataBase(ReportCollection):
             try:
                 with open(filepath, "r") as reportsfile:
                     wp_reports.extend(
-                        Report(item) for item in json.load(reportsfile)
+                        ScanReport(item) for item in json.load(reportsfile)
                     )
                 log.info(f"Load wp_reports database: {filepath}")
             except Exception:
@@ -95,28 +99,29 @@ class DataBase(ReportCollection):
         return wp_reports
 
     def write(
-        self, wp_reports: Optional[Iterable[Report]] = None
+        self, wp_reports: Optional[Iterable[ScanReport]] = None
     ) -> bool:
         """
         Write the reports to the database. 
-        :returns: `True` if the reports have been successfully written. 
+
+        Returns `True` if the reports have been successfully written. 
         """
 
         if not self._wp_report_file_lock.is_locked:
             raise RuntimeError("The file lock must be acquired before writing data. ")
 
         if not wp_reports:
-            wp_reports = self
+            wp_reports = self._data
 
         for newr in wp_reports:
             new = True
-            for r in self:
+            for r in self._data:
                 if r["site"] == newr["site"]:
-                    self[self.index(r)] = newr
+                    self._data[self._data.index(r)] = newr
                     new = False
                     break
             if new:
-                self.append(newr)
+                self._data.append(newr)
         # Write to file if not null
         if not self.no_local_storage:
             # Write method thread safe
@@ -124,18 +129,18 @@ class DataBase(ReportCollection):
                 time.sleep(0.01)
             self._wp_report_lock.acquire()
             with open(self.filepath, "w") as reportsfile:
-                json.dump(self, reportsfile, indent=4)
+                json.dump(self._data, reportsfile, indent=4)
                 self._wp_report_lock.release()
             return True
         else:
             return False
 
-    def find(self, wp_report: Report) -> Optional[Report]:
+    def find(self, wp_report: ScanReport) -> Optional[ScanReport]:
         """
         Find the pre-existing report if any.
         """
-        last_wp_reports = [r for r in self if r["site"] == wp_report["site"]]
-        last_wp_report: Optional[Report]
+        last_wp_reports = [r for r in self._data if r["site"] == wp_report["site"]]
+        last_wp_report: Optional[ScanReport]
         if len(last_wp_reports) > 0:
             last_wp_report = last_wp_reports[0]
         else:

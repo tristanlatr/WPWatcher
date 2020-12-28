@@ -14,7 +14,7 @@ from wpwatcher.config import Config
 from wpwatcher.core import WPWatcher
 from wpwatcher.db import DataBase
 from wpwatcher.daemon import Daemon
-from wpwatcher.syslogout import SyslogOutput
+from wpwatcher.syslog import SyslogOutput
 from wpwatcher.report import ReportCollection
 from wpscan_out_parse import format_results
 
@@ -82,8 +82,8 @@ def wprs(filepath: Optional[str] = None, daemon: bool = False) -> None:
 def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Inspect a report in database"""
     db = DataBase(filepath, daemon=daemon)
-    matching_reports = [r for r in db if urlpart in r["site"]]
-    eq_reports = [r for r in db if urlpart == r["site"]]
+    matching_reports = [r for r in db._data if urlpart in r["site"]]
+    eq_reports = [r for r in db._data if urlpart == r["site"]]
     if len(eq_reports):
         sys.stdout.buffer.write(
             format_results(eq_reports[0], format="cli").encode("utf8")
