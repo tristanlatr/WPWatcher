@@ -3,7 +3,7 @@ Command line arguments and specific options.
 """
 
 # Main program, parse the args, read config and launch scans
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List, Sequence, Text
 import argparse
 import shlex
 import sys
@@ -19,10 +19,10 @@ from wpwatcher.report import ReportCollection
 from wpscan_out_parse import format_results
 
 
-def main() -> None:
+def main(_args: Optional[Sequence[Text]] = None) -> None:
     """Main program entrypoint"""
     # Parse arguments
-    args: argparse.Namespace = get_arg_parser().parse_args()
+    args: argparse.Namespace = get_arg_parser().parse_args(_args)
 
     # Init logger with CLi arguments
     _init_log(args.verbose, args.quiet)
@@ -33,7 +33,7 @@ def main() -> None:
 
     # Print "banner"
     log.info(
-        "WPWatcher -  Automating WPscan to scan and report vulnerable Wordpress sites"
+        "WPWatcher - Automating WPscan to scan and report vulnerable Wordpress sites"
     )
 
     if args.version:
@@ -74,8 +74,7 @@ def main() -> None:
 def wprs(filepath: Optional[str] = None, daemon: bool = False) -> None:
     """Generate JSON file database summary"""
     db = DataBase(filepath, daemon=daemon)
-    sys.stdout.buffer.write(repr(db).encode("utf8"))
-    sys.stdout.flush()
+    print(repr(db))
     exit(0)
 
 
@@ -85,23 +84,23 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
     matching_reports = [r for r in db._data if urlpart in r["site"]]
     eq_reports = [r for r in db._data if urlpart == r["site"]]
     if len(eq_reports):
-        sys.stdout.buffer.write(
-            format_results(eq_reports[0], format="cli").encode("utf8")
+        print(
+            format_results(eq_reports[0], format="cli")
         )
     elif len(matching_reports) == 1:
-        sys.stdout.buffer.write(
-            format_results(matching_reports[0], format="cli").encode("utf8")
+        print(
+            format_results(matching_reports[0], format="cli")
         )
     elif len(matching_reports) > 1:
-        sys.stdout.buffer.write(
-            "The following sites match your search: \n".encode("utf8")
+        print(
+            "The following sites match your search: \n"
         )
-        sys.stdout.buffer.write(
-            repr(ReportCollection(matching_reports)).encode("utf8")
+        print(
+            repr(ReportCollection(matching_reports))
         )
-        sys.stdout.buffer.write("\nPlease be more specific. \n".encode("utf8"))
+        print("\nPlease be more specific. \n")
     else:
-        sys.stdout.buffer.write("No report found".encode("utf8"))
+        print("No report found")
         exit(1)
     exit(0)
 
@@ -115,8 +114,7 @@ def version() -> None:
 
 def template_conf() -> None:
     """Print template configuration"""
-    sys.stdout.buffer.write(Config.TEMPLATE_FILE.encode("utf8"))
-    sys.stdout.flush()
+    print(Config.TEMPLATE_FILE)
     exit(0)
 
 
