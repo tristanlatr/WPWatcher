@@ -1,6 +1,6 @@
 
 <h1 align="center">  
-  <img src="https://github.com/tristanlatr/WPWatcher/raw/master/docs/source/_static/logo.png" width="250" />
+  <img src="https://wpwatcher.readthedocs.io/en/latest/_static/logo.png" width="250" />
 </h1>
 
 <p align="center">
