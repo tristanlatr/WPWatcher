@@ -42,4 +42,4 @@ wpwatcher -c testing.conf --syslog_test
 ```
 Will send 5 test events, one per possible event type (`WPScan ALERT`, `WPScan WARNING`, `WPScan INFO`, `WPScan issue FIXED` and `WPScan ERROR`).  
 
-Syslog sender code is [here](https://github.com/tristanlatr/WPWatcher/blob/master/wpwatcher/syslogout.py)
+Syslog sender code is [here](https://github.com/tristanlatr/WPWatcher/blob/master/wpwatcher/syslog.py)
