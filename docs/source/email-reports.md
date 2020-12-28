@@ -110,3 +110,7 @@ resend_emails_after=3d
 # Overwrite with arguments: `--attach`
 attach_wpscan_output=No
 ```
+
+## Sample email report
+
+![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/docs/source/_static/wpwatcher-report.png "WPWatcher Report")

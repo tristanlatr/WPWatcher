@@ -32,7 +32,7 @@ Load specific file
 <details><summary><b>See exemple</b></summary>
 <p>
 
-![WPWatcher Report summary](https://raw.githubusercontent.com/tristanlatr/WPWatcher/master/screens/reports-summary-wprs.png "WPWatcher Reports summary")
+![WPWatcher Report summary](https://wpwatcher.readthedocs.io/en/latest/_static/reports-summary-wprs.png "WPWatcher Reports summary")
 
 </p>
 </details>

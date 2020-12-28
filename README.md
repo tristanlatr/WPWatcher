@@ -62,7 +62,7 @@ WPWatcher must read a configuration file to send mail reports. This exemple assu
 
 Sample email report.
 
-![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/screens/wpwatcher-report.png "WPWatcher Report")
+![WPWatcher Report](https://github.com/tristanlatr/WPWatcher/raw/master/docs/source/_static/wpwatcher-report.png "WPWatcher Report")
 
 ## Authors
 - Florian Roth (Original author of [WPWatcher v0.2](https://github.com/Neo23x0/WPWatcher))
