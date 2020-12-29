@@ -57,8 +57,6 @@ class Scanner:
         self.wpscan_args: List[str] = conf["wpscan_args"]
         self.fail_fast: bool = conf["fail_fast"]
         self.false_positive_strings: List[str] = conf["false_positive_strings"]
-        self.daemon: bool = conf["daemon"]
-        self.daemon_loop_sleep: timedelta = conf["daemon_loop_sleep"]
 
         # Init wpscan output folder
         if self.wpscan_output_folder:
@@ -82,6 +80,8 @@ class Scanner:
     def interrupt(self) -> None:
         """
         Call `WPScanWrapper.interrupt`. 
+
+        This do NOT raise SystemExit. 
         """
         self.interrupting = True
         self.wpscan.interrupt()
@@ -117,23 +117,7 @@ class Scanner:
         else:
             return None
 
-    def skip_this_site(
-        self, wp_report: ScanReport, last_wp_report: ScanReport
-    ) -> bool:
-        """Return true if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`"""
-        if (
-            self.daemon
-            and datetime.strptime(wp_report["datetime"], DATE_FORMAT)
-            - datetime.strptime(last_wp_report["datetime"], DATE_FORMAT)
-            < self.daemon_loop_sleep
-        ):
-            log.info(
-                f"Daemon skipping site {wp_report['site']} because already scanned in the last {self.daemon_loop_sleep}"
-            )
-            self.scanned_sites.append(None)
-            return True
-        return False
-
+    
     def log_report_results(self, wp_report: ScanReport) -> None:
         """Print WPScan findings"""
         for info in wp_report["infos"]:
@@ -233,10 +217,6 @@ class Scanner:
         wp_report: ScanReport = ScanReport(
             {"site": wp_site["url"], "datetime": datetime.now().strftime(DATE_FORMAT)}
         )
-
-        # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
-        if last_wp_report and self.skip_this_site(wp_report, last_wp_report):
-            return None
 
         # Launch WPScan
         try:

@@ -30,16 +30,16 @@ class WPWatcher:
 
     .. python::
 
-        from wpwatcher.config import WPWatcherConfig
+        from wpwatcher.config import Config
         from wpwatcher.core import WPWatcher
-        config = WPWatcherConfig.fromenv()
+        config = Config.fromenv()
         config.update({ 'send_infos':   True,
                         'wp_sites':     [   {'url':'exemple1.com'},
                                             {'url':'exemple2.com'}  ],
                         'wpscan_args': ['--format', 'json', '--stealthy']
                     })
         watcher = WPWatcher(config)
-        exit_code, reports = watcher.run_scans_and_notify()
+        exit_code, reports = watcher.run_scans()
         for r in reports:
             print("%s\t\t%s"%( r['site'], r['status'] ))
     """
@@ -64,28 +64,33 @@ class WPWatcher:
         # Init scanner
         self.scanner: Scanner = Scanner(conf)
 
-        # Dump config
-        log.info(f"Configuration:{repr(conf)}")
-
         # Save sites
-        self.wp_sites: List[Site] = [
+        conf["wp_sites"] = [
             Site(site_conf) for site_conf in conf["wp_sites"]
         ]
+        self.wp_sites: List[Site] = conf["wp_sites"]
+        
 
         # Asynchronous executor
-        self.executor: concurrent.futures.ThreadPoolExecutor = (
+        self._executor: concurrent.futures.ThreadPoolExecutor = (
             concurrent.futures.ThreadPoolExecutor(max_workers=conf["asynch_workers"])
         )
 
         # List of conccurent futures
-        self.futures: List[concurrent.futures.Future] = []  # type: ignore [type-arg]
+        self._futures: List[concurrent.futures.Future] = []  # type: ignore [type-arg]
 
         # Register the signals to be caught ^C , SIGTERM (kill) , service restart , will trigger interrupt()
         signal.signal(signal.SIGINT, self.interrupt)
         signal.signal(signal.SIGTERM, self.interrupt)
 
-        # new reports
-        self.new_reports: ReportCollection
+        self.new_reports = ReportCollection()
+        "New reports, cleared and filled when running `run_scans`."
+        
+        self.all_reports = ReportCollection()
+        "All reports an instance of `WPWatcher` have generated using `run_scans`."
+
+        # Dump config
+        log.debug(f"Configuration:{repr(conf)}")
 
     @staticmethod
     def _delete_tmp_wpscan_files() -> None:
@@ -102,64 +107,69 @@ class WPWatcher:
 
     def _cancel_pending_futures(self) -> None:
         """Cancel all asynchronous jobs"""
-        for f in self.futures:
+        for f in self._futures:
             if not f.done():
                 f.cancel()
 
-    def interrupt(self, sig=None, frame=None) -> None:  # type: ignore [no-untyped-def]
-        """Interrupt sequence"""
-        log.error("Interrupting...")
-        # If called inside ThreadPoolExecutor, raise Exeception
-        if not isinstance(threading.current_thread(), threading._MainThread):  # type: ignore [attr-defined]
-            raise InterruptedError()
-        
+    def interrupt_scans(self) -> None:
+        """
+        Interrupt the scans and append finished scan reports to self.new_reports
+        """
         # Cancel all scans
         self._cancel_pending_futures()  # future scans
         self.scanner.interrupt()  # running scans
+        self._rebuild_rew_reports()
 
-        # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
-        try:
-            timeout(5, self.executor.shutdown, kwargs=dict(wait=True))
-        except TimeoutError:
-            pass
-
-        # Recover reports from futures results
+    def _rebuild_rew_reports(self) -> None:
+        "Recover reports from futures results"
         self.new_reports = ReportCollection()
-        for f in self.futures:
+        for f in self._futures:
             if f.done():
                 try:
                     self.new_reports.append(f.result())
                 except Exception:
                     pass
 
-        # Display results and quit
-        self._print_new_reports_results()
+    def interrupt(self, sig=None, frame=None) -> None:  # type: ignore [no-untyped-def]
+        """Interrupt the program and exit. """
+        log.error("Interrupting...")
+        # If called inside ThreadPoolExecutor, raise Exeception
+        if not isinstance(threading.current_thread(), threading._MainThread):  # type: ignore [attr-defined]
+            raise InterruptedError()
+        
+        self.interrupt_scans()
+
+        # Give a 5 seconds timeout to buggy WPScan jobs to finish or ignore them
+        try:
+            timeout(5, self._executor.shutdown, kwargs=dict(wait=True))
+        except TimeoutError:
+            pass
+
+        # Display results 
+        log.info(repr(self.new_reports))
         log.info("Scans interrupted.")
+
+        # and quit
         sys.exit(-1)
 
-    def _print_new_reports_results(self) -> None:
-        """Print the result summary for the scanned sites"""
-        new_reports = ReportCollection(n for n in self.new_reports if n)
-        if len(new_reports) > 0:
-            log.info(repr(new_reports))
+
+    def _log_db_reports_infos(self):
+        if len(self.new_reports) > 0 and repr(self.new_reports) != "No scan report to show":
             if self.wp_reports.filepath != "null":
-                log.info(
-                    f"Updated {len(new_reports)} reports in database: {self.wp_reports.filepath}"
-                )
+                log.info(f"Updated reports in database: {self.wp_reports.filepath}")
             else:
                 log.info("Local database disabled, no reports updated.")
-        else:
-            log.info("No reports updated.")
 
-    def scan_site(self, wp_site: Site) -> Optional[ScanReport]:
+
+    def _scan_site(self, wp_site: Site) -> Optional[ScanReport]:
         """
         Helper method to wrap the scanning process of `WPWatcherScanner.scan_site` and add the following:
+        
         - Find the last report in the database and launch the scan
         - Write it in DB after scan.
         - Print progress bar
 
-        This function will be called asynchronously.
-        Return one report
+        This function can be called asynchronously.
         """
 
         last_wp_report = self.wp_reports.find(ScanReport(site=wp_site["url"]))
@@ -187,14 +197,17 @@ class WPWatcher:
         """
 
         log.info(f"Starting scans on {len(wp_sites)} configured sites")
+
+        # reset new reports and scanned sites list. 
+        self._futures.clear()
+        self.new_reports.clear()
+        self.scanner.scanned_sites.clear()
+
         for wp_site in wp_sites:
-            self.futures.append(self.executor.submit(self.scan_site, wp_site))
-        for f in self.futures:
+            self._futures.append(self._executor.submit(self._scan_site, wp_site))
+        for f in self._futures:
             try:
                 self.new_reports.append(f.result())
-            # Handle interruption from inside threads when using --ff
-            except InterruptedError:
-                self.interrupt()
             except concurrent.futures.CancelledError:
                 pass
         # Ensure everything is down
@@ -208,9 +221,6 @@ class WPWatcher:
         :Returns: `tuple (exit code, reports)`
         """
 
-        # reset new reports
-        self.new_reports = ReportCollection()
-
         # Check sites are in the config
         if len(self.wp_sites) == 0:
             log.error(
@@ -221,11 +231,14 @@ class WPWatcher:
         self.wp_reports.open()
         try:
             self._run_scans(self.wp_sites)
+        # Handle interruption from inside threads when using --ff
+        except InterruptedError:
+            self.interrupt()
         finally:
             self.wp_reports.close()
 
         # Print results and finish
-        self._print_new_reports_results()
+        log.info(repr(self.new_reports))
 
         if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
             log.info("Scans finished successfully.")

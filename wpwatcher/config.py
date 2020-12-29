@@ -431,7 +431,7 @@ smtp_ssl=Yes
         default_content: str = "",
         create: bool = False,
     ) -> List[str]:
-        """Find existent files based on folders name and file names.
+        """Find existent files or folders based on folders name and file names.
 
         Arguments:
         - `env_location`: list of environment variable to use as a base path. Exemple: ['HOME', 'XDG_CONFIG_HOME', 'APPDATA', 'PWD']
@@ -451,9 +451,9 @@ smtp_ssl=Yes
                     potential_paths.append(os.path.join(os.environ[env_var], file_path))
         if not env_loc_exists:
             raise RuntimeError(f"Cannot find any of the env locations {env_location}. ")
-        # If file exist, add to list
+        # If file or folder exist, add to list
         for p in potential_paths:
-            if os.path.isfile(p):
+            if os.path.isfile(p) or os.path.isdir(p):
                 existent_files.append(p)
         # If no file foud and create=True, init new template config
         if len(existent_files) == 0 and create:

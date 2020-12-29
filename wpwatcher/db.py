@@ -53,7 +53,7 @@ class DataBase:
             self._wp_report_file_lock.acquire(timeout=1)
         except Timeout as err:
             raise RuntimeError(f"Could not use the database file '{self.filepath}' because another instance of WPWatcher is using it. ") from err
-        log.debug(f"Acquired lock file '{self.filepath}.lock'")
+        log.debug(f"Acquired DB lock file '{self.filepath}.lock'")
         try:
             self.write()
         except:
@@ -67,7 +67,7 @@ class DataBase:
         Release the file lock.
         """
         self._wp_report_file_lock.release()
-        log.debug(f"Released lock file '{self.filepath}.lock'")
+        log.debug(f"Released DB lock file '{self.filepath}.lock'")
 
     @staticmethod
     def _find_db_file(daemon: bool = False) -> str:
