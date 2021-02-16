@@ -61,13 +61,15 @@ def main(_args: Optional[Sequence[Text]] = None) -> None:
 
     # If daemon lopping
     if configuration["daemon"]:
+
         # Run 4 ever
-        Daemon(configuration)
+        daemon = Daemon(configuration)
+        daemon.loop()
+
     else:
         # Run scans and quit
-        # Create main object
         wpwatcher = WPWatcher(configuration)
-        exit_code, _ = wpwatcher.run_scans()
+        exit_code, reports = wpwatcher.run_scans()
         exit(exit_code)
 
 
@@ -107,8 +109,8 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
 
 def version() -> None:
     """Print version and contributors"""
-    log.info(f"Version:\t\t{__version__}")
-    log.info(f"Authors:\t\t{__author__}")
+    print(f"Version:\t\t{__version__}")
+    print(f"Authors:\t\t{__author__}")
     exit(0)
 
 

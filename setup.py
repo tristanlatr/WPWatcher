@@ -1,10 +1,7 @@
 #! /usr/bin/env python3
 from setuptools import setup, find_packages
-import sys
-if sys.version_info[0] < 3: 
-    raise RuntimeError("You must use Python 3")
-# The directory containing this file
 import pathlib
+# The directory containing this file
 HERE = pathlib.Path(__file__).parent
 # About the project
 ABOUT = {}
@@ -19,13 +16,23 @@ setup(
     version             =   ABOUT['__version__'],
     packages            =   find_packages(exclude=('tests')), 
     entry_points        =   {'console_scripts': ['wpwatcher = wpwatcher.cli:main'],},
-    classifiers         =   ["Programming Language :: Python :: 3"],
+    classifiers         =   [
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Information Technology",
+        "Environment :: Console",
+        "Topic :: Security",
+        "Topic :: Utilities",
+        "Topic :: System :: Monitoring",
+        "Programming Language :: Python :: 3",
+        "Typing :: Typed",
+        "License :: OSI Approved :: Apache Software License", ],
     license             =   ABOUT['__license__'],
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
-    install_requires    =   ['wpscan-out-parse>=1.8.1', 'filelock'],
+    python_requires     =   '>=3.6',
+    install_requires    =   ['wpscan-out-parse>=1.8.1', 'filelock', ],
     extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent'],
-                             'docs': ["Sphinx", "sphinx_rtd_theme", "recommonmark"], 
+                             'docs': ["Sphinx", "recommonmark"], 
                              'dev': ["pytest", "pytest-cov", "codecov", "coverage", "tox", "mypy"]},
     keywords            =   ABOUT['__keywords__'],
 )

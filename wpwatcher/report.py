@@ -207,8 +207,10 @@ class ReportCollection(List[ScanReport]):
         :Return: Summary table of all sites contained in the collection.
                  Columns are: "Site", "Status", "Last scan", "Last email", "Issues", "Problematic component(s)"
         """
-        results = self
-        string = "Results summary\n"
+        results = [ item for item in self if item ] 
+        if not results:
+            return "No scan report to show"
+        string = "Scan reports summary\n"
         header = (
             "Site",
             "Status",

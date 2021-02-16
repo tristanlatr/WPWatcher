@@ -1,13 +1,14 @@
 import unittest
-import os
 import shlex
+from datetime import  timedelta
 from . import DEFAULT_CONFIG
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import Config
 from wpwatcher.scan import Scanner
 from wpwatcher.email import EmailSender
 from wpwatcher.wpscan import WPScanWrapper
-
+from wpwatcher.daemon import Daemon
+from wpwatcher.utils import timeout
 class T(unittest.TestCase):
     
     def test_interrupt(self):
@@ -31,11 +32,18 @@ class T(unittest.TestCase):
 
     def test_daemon(self):
         # test daemon_loop_sleep and daemon mode
-        pass
+
+        conf = Config.fromstring(DEFAULT_CONFIG)
+        conf['asynch_workers']+=1
+        daemon = Daemon(conf)
+
+        daemon.loop(ttl=timedelta(seconds=5))
+
+        self.assertTrue(not any([r.status() != 'ERROR' for r in daemon.wpwatcher.new_reports]))
+        self.assertGreater(len(daemon.wpwatcher.new_reports), 1)
+
 
     def test_fail_fast(self):
         pass
 
-    def test_run_scans_and_notify(self):
-        # test returned results
-        pass
+    
