@@ -76,3 +76,10 @@ jobs:
     
     - name: Run mypy
       run: tox -e mypy
+
+    - name: Publish WPWatcher to PyPI on tags
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
