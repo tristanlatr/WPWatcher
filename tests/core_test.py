@@ -1,12 +1,7 @@
 import unittest
-import os
-import io
 import shlex
-import sched, time
-import threading
-from datetime import datetime, timedelta
+from datetime import  timedelta
 from . import DEFAULT_CONFIG
-from contextlib import redirect_stdout
 from wpwatcher.core import WPWatcher
 from wpwatcher.config import Config
 from wpwatcher.scan import Scanner
@@ -42,7 +37,7 @@ class T(unittest.TestCase):
         conf['asynch_workers']+=1
         daemon = Daemon(conf)
 
-        daemon.loop(ttl = timedelta(seconds=5), fake=True)
+        daemon.loop(ttl=timedelta(seconds=5))
 
         self.assertTrue(not any([r.status() != 'ERROR' for r in daemon.wpwatcher.new_reports]))
         self.assertGreater(len(daemon.wpwatcher.new_reports), 1)

@@ -1,9 +1,6 @@
 
-from typing import Dict, Any, Optional
+from typing import Optional
 import time
-import signal 
-import sys
-import os
 from datetime import datetime, timedelta
 
 from wpwatcher import log
@@ -12,7 +9,6 @@ from wpwatcher.config import Config
 from wpwatcher.report import ScanReport
 from wpwatcher.site import Site
 
-from daemon import DaemonContext
 from filelock import FileLock, Timeout
 
 # Date format used everywhere
@@ -29,26 +25,17 @@ class Daemon:
         self.wpwatcher = WPWatcherDaemonMode(conf)
         self.pidfile = '/tmp/wpwatcher.daemon.pid.lock'
         self.pidfilelock = FileLock(self.pidfile, timeout=1)
-        self.context = DaemonContext(
-            pidfile = self.pidfilelock, 
-            signal_map = {
-                signal.SIGTERM: self.wpwatcher.interrupt,
-                },
-            detach_process = False,
-            # stdout = sys.stdout, 
-            # stderr = sys.stderr, 
-            )
         self._running: bool = False
         self._stopping: bool = False
-        self._start_time: datetime
+        self._start_time: Optional[datetime] = None
         
-    def loop(self, ttl:Optional[timedelta]=None, fake:bool=False) -> None:
-        "Turn the process into a unix daemon and enter the infinite loop that is calling `WPWatcher.run_scans`. "
+    def loop(self, ttl:Optional[timedelta]=None) -> None:
+        """Enter the infinite loop that is calling `WPWatcher.run_scans`. """
         self._running = True
         self._start_time = datetime.now()
         log.info("Daemon mode selected, looping for ever...")
         try:
-            with (self.context if not fake else self.pidfilelock):
+            with self.pidfilelock:
                 while self._running:
                     # Run scans for ever
                     self.wpwatcher.run_scans()
@@ -68,7 +55,7 @@ class Daemon:
             self._stopping = False
     
     def stop(self) -> None:
-        "Interrupt the scans and stop the loop, do NOT raise SystemExit. "
+        """Interrupt the scans and stop the loop, do NOT raise SystemExit. """
         self._stopping = True
         self._running = False
         self.wpwatcher.interrupt_scans()
@@ -80,7 +67,7 @@ class WPWatcherDaemonMode(WPWatcher):
         self._daemon_loop_sleep: timedelta = conf["daemon_loop_sleep"]
 
     def scan_site(self, wp_site: Site) -> Optional[ScanReport]:
-        "Skips a site if it has already been scanned lately. "
+        """Skips the site if it has already been scanned lately. """
 
         last_wp_report = self.wp_reports.find(ScanReport(site=wp_site["url"]))
         # Skip if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`
