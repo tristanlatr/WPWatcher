@@ -153,7 +153,7 @@ class WPWatcher:
         sys.exit(-1)
 
 
-    def _log_db_reports_infos(self):
+    def _log_db_reports_infos(self) -> None:
         if len(self.new_reports) > 0 and repr(self.new_reports) != "No scan report to show":
             if self.wp_reports.filepath != "null":
                 log.info(f"Updated reports in database: {self.wp_reports.filepath}")

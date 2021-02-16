@@ -66,7 +66,7 @@ class WPWatcherDaemonMode(WPWatcher):
         super().__init__(conf)
         self._daemon_loop_sleep: timedelta = conf["daemon_loop_sleep"]
 
-    def scan_site(self, wp_site: Site) -> Optional[ScanReport]:
+    def _scan_site(self, wp_site: Site) -> Optional[ScanReport]:
         """Skips the site if it has already been scanned lately. """
 
         last_wp_report = self.wp_reports.find(ScanReport(site=wp_site["url"]))
@@ -74,7 +74,7 @@ class WPWatcherDaemonMode(WPWatcher):
         if last_wp_report and self._skip_this_site(last_wp_report):
             return None
 
-        return super().scan_site(wp_site)
+        return super()._scan_site(wp_site)
 
     def _skip_this_site(self, last_wp_report: ScanReport) -> bool:
         """Return true if the daemon mode is enabled and scan already happend in the last configured `daemon_loop_wait`"""
