@@ -9,6 +9,7 @@ RUN gem install wpscan
 # Python install
 ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache python3
+RUN apk add --no-cache py3-setuptools
 
 # Setup user and group if specified
 ARG USER_ID
