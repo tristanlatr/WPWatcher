@@ -6,6 +6,8 @@ name: test
 on:
   push:
     branches: '*'
+    tags: 
+      - '**'
   pull_request:
     branches: [ master ]
 
