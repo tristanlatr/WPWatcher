@@ -22,66 +22,95 @@ jobs:
         os: [ubuntu-latest, macos-latest]
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Set up Ruby
-      uses: actions/setup-ruby@v1
-      with:
-        ruby-version: '2.6'
-    
-    - name: Display Python version
-      run: python --version
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          
+      - name: Set up Ruby
+        uses: actions/setup-ruby@v1
+        with:
+          ruby-version: '2.6'
       
-    - name: Display Ruby version
-      run: ruby --version
+      - name: Display Python version
+        run: python --version
+        
+      - name: Display Ruby version
+        run: ruby --version
 
-    - name: Install WPScan
-      run: gem install wpscan
-    
-    - name: Install WPWatcher
-      run: python setup.py install
-    
-    - name: Install test dependencies
-      run: |        
-        pip install tox
+      - name: Install WPScan
+        run: gem install wpscan
+      
+      - name: Install WPWatcher
+        run: python setup.py install
+      
+      - name: Install test dependencies
+        run: |        
+          pip install tox
 
-    # testing against real WP instance WIP
-    
-    # - name: Build and run vulnerable Wordpress image 
-    #   run: |
-    #     git clone https://github.com/wpscanteam/VulnerableWordpress
-    #     cd VulnerableWordpress
-    #     docker build --rm -t wpscan/vulnerablewordpress .
-    #     docker run --name vulnerablewordpress -d -p 8080:8080 -p 3306:3306 wpscan/vulnerablewordpress
-    #     sleep 300
-    #     cd ..
-    
-    # - name: Run WPScan on vulnerable testing host
-    #   run: wpscan --url http://localhost:8080
+      # testing against real WP instance WIP
+      
+      # - name: Build and run vulnerable Wordpress image 
+      #   run: |
+      #     git clone https://github.com/wpscanteam/VulnerableWordpress
+      #     cd VulnerableWordpress
+      #     docker build --rm -t wpscan/vulnerablewordpress .
+      #     docker run --name vulnerablewordpress -d -p 8080:8080 -p 3306:3306 wpscan/vulnerablewordpress
+      #     sleep 300
+      #     cd ..
+      
+      # - name: Run WPScan on vulnerable testing host
+      #   run: wpscan --url http://localhost:8080
 
-    - name: Run tests
-      run: tox -e test
-    
-    - name: Upload code coverage
-      uses: codecov/codecov-action@v1
-      with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          name: wpwatcher-code-coverage
-          yml: ./codecov.yml 
-          fail_ci_if_error: true
-    
-    - name: Run mypy
-      run: tox -e mypy
+      - name: Run tests
+        run: tox -e test
+      
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v1
+        with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            file: ./coverage.xml
+            name: wpwatcher-code-coverage
+            yml: ./codecov.yml 
+            fail_ci_if_error: true
+      
+      - name: Run mypy
+        run: tox -e mypy
 
-    - name: Publish WPWatcher to PyPI on tags
-      if: startsWith(github.ref, 'refs/tags')
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_TOKEN }}
+  release:
+
+    needs: [test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      
+      - name: Log system information
+        run: |
+          test -r /etc/os-release && sh -c '. /etc/os-release && echo "OS: $PRETTY_NAME"'
+          python --version
+          python -c "print('\nENVIRONMENT VARIABLES\n=====================\n')"
+          python -c "import os; [print(f'{k}={v}') for k, v in os.environ.items()]"
+      
+      - name: Install build deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+      
+      - name: Build WPWatcher
+        run: |
+          python setup.py --quiet build check sdist bdist_wheel
+          ls -alh ./dist/
+      
+      - name: Publish WPWatcher to PyPI on tags
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
