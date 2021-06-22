@@ -216,7 +216,7 @@ class WPScanWrapper:
                 failed_process.stdout.split("The URL supplied redirects to")[1],
             )
 
-            if len(urls) == 1:
+            if len(urls) >= 1:
                 url = urls[0].strip()
                 log.info(f"Following redirection to {url}")
                 cmd = failed_process.args
