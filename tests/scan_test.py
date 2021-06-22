@@ -83,7 +83,7 @@ class T(unittest.TestCase):
                     "infos": [
                         "[+]","blablabla"],
                     "warnings": [
-                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up\nWarning: This issue is unfixed since 2020-04-08T16-05-16"
+                        "[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.\n[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up\nThis issue is unfixed since 2020-04-08T16-05-16"
                     ],
                     "alerts": [],
                     "fixed": [

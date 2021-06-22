@@ -142,7 +142,7 @@ class ScanReport(Dict[str, Any]):
     ) -> None:
         """
         A line will be added at the end of the warning like:
-        "Warning: This issue is unfixed since {date}"
+        "This issue is unfixed since {date}"
         """
 
         for unfixed_item in unfixed_items:
@@ -166,12 +166,12 @@ class ScanReport(Dict[str, Any]):
                     older_warn_last_line = last_wp_report[issue_type][
                         older_issue_index
                     ].splitlines()[-1]
-                    if "Warning: This issue is unfixed" in older_warn_last_line:
+                    if "This issue is unfixed" in older_warn_last_line:
                         self[issue_type][issue_index] += older_warn_last_line
                     else:
                         self[issue_type][
                             issue_index
-                        ] += f"Warning: This issue is unfixed since {last_wp_report['datetime']}"
+                        ] += f"This issue is unfixed since {last_wp_report['datetime']}"
 
     def _get_fixed_n_unfixed_issues(
         self, last_wp_report: 'ScanReport', issue_type: str
