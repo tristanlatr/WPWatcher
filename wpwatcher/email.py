@@ -170,18 +170,19 @@ class EmailSender:
             )
             should = False
 
-        if (
-            wp_report["last_email"]
-            and datetime.strptime(wp_report["datetime"], DATE_FORMAT)
-            - datetime.strptime(wp_report["last_email"], DATE_FORMAT)
-            < self.resend_emails_after
-            and (not last_wp_report or last_wp_report["status"] != wp_report["status"])
-        ):
-            # No report notice
-            log.info(
-                f"Not sending WPWatcher {wp_report['status']} email report for site {wp_report['site']} because already sent in the last {self.resend_emails_after}."
-            )
-            should = False
+        if last_wp_report is not None:
+          if (
+              last_wp_report["last_email"] is not None
+              and datetime.strptime(wp_report["datetime"], DATE_FORMAT)
+                - datetime.strptime(last_wp_report["last_email"], DATE_FORMAT)
+                < self.resend_emails_after
+              and last_wp_report["status"] == wp_report["status"]
+          ):
+              # No report notice
+              log.info(
+                  f"Not sending WPWatcher {wp_report['status']} email report for site {wp_report['site']} because already sent in the last {self.resend_emails_after}."
+              )
+              should = False
 
         return should
 
