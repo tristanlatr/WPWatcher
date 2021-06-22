@@ -84,10 +84,7 @@ class WPWatcher:
         signal.signal(signal.SIGTERM, self.interrupt)
 
         self.new_reports = ReportCollection()
-        "New reports, cleared and filled when running `run_scans`."
-        
-        self.all_reports = ReportCollection()
-        "All reports an instance of `WPWatcher` have generated using `run_scans`."
+        """New reports, reset when running `run_scans`."""
 
         # Dump config
         log.debug(f"Configuration:{repr(conf)}")
