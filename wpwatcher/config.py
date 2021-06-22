@@ -488,37 +488,13 @@ smtp_ssl=Yes
         Parameters `"files"` and `"string"` are deprecated since verion 3.0.
         """
 
-        # self._files = kwargs.pop("files") if "files" in kwargs else None
-        # self._string = kwargs.pop("string") if "string" in kwargs else None
-
         super().__init__(*args, **kwargs)
         # Raise if missing fields
         missing = []
         for key in self.FIELDS:
             if key not in self:
                 missing.append(key)
-        # if self._files or self._string:  # Ensure compatibility
-        #     warnings.warn(
-        #         "Config() parameters 'files' and 'string' are deprecated since WPWatcher 3.0. "
-        #         "Config should be created from classmethods instead. ",
-        #         category=DeprecationWarning,
-        #     )
-        # el
+
         if missing:
             fields = ", ".join(f"'{key}'" for key in missing)
             raise KeyError(f"Missing config field(s): {fields}. ")
-
-    # def build_config(self) -> Tuple[Dict[str, Any], List[str]]:  # Ensure compatibility
-    #     """
-    #     Config.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead.
-    #     """
-    #     warnings.warn(
-    #         "Config.build_config() is deprecated since WPWatcher 3.0. Config should be created from classmethods instead. Not from build_config(). ",
-    #         category=DeprecationWarning,
-    #     )
-    #     if self._string:
-    #         return (self.fromstring(self._string), [])
-    #     elif self._files:
-    #         return (self.fromfiles(self._files), self._files)
-    #     else:
-    #         return (self.fromenv(), [])
