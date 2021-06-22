@@ -11,7 +11,7 @@ from wpwatcher.report import ScanReport
 from wpwatcher.utils import get_valid_filename
 from . import WP_SITES, DEFAULT_CONFIG
 
-from wpscan_out_parse.parser import WPScanJsonParser
+from wpscan_out_parse import WPScanJsonParser
 
 executor=None
 server=None

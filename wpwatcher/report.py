@@ -4,7 +4,7 @@ Containers for scan results data stucture.
 
 from typing import Dict, Any, List, Iterable, Tuple, Optional, overload
 from wpwatcher import log
-from wpscan_out_parse.parser.base import _Parser
+from wpscan_out_parse.parser.base import Parser
 class ScanReport(Dict[str, Any]):
     """
     Dict-Like object to store and process scan results.
@@ -57,7 +57,7 @@ class ScanReport(Dict[str, Any]):
             self["error"] += "\n\n"
         self["error"] += reason
 
-    def load_parser(self, parser: _Parser) -> None:
+    def load_parser(self, parser: Parser) -> None:
         """
         Load parser results into the report. 
         """
