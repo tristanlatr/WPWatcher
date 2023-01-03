@@ -79,7 +79,8 @@ class Scanner:
                 self.syslog = SyslogOutput(conf)
             except Exception as e:
                 self.broken_syslog = True
-                log.error(f"Broken Syslog: {e}")
+                log.error(f"Broken Syslog: {e}\n{traceback.format_exc()}")
+                
         
 
     def interrupt(self) -> None:
