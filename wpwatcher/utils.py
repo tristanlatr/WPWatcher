@@ -120,7 +120,7 @@ def parse_timedelta(time_str: str) -> timedelta:
     time_params = {
         name: float(param) for name, param in parts.groupdict().items() if param
     }
-    return timedelta(**time_params)  # type: ignore [arg-type]
+    return timedelta(**time_params)
 
 
 def replace(text: str, conditions: Dict[str, str]) -> str:
