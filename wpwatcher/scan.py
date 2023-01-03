@@ -251,7 +251,9 @@ class Scanner:
             # Notify recepients if match triggers
             if self.mail.notify(
                 wp_site, wp_report, 
-                last_wp_report, wpscan_command=wpscan_command
+                last_wp_report, 
+                wpscan_command=wpscan_command,
+                wpscan_version=self.wpscan._wpscan_version or '??',
             ):
                 # Store report time
                 wp_report["last_email"] = wp_report["datetime"]

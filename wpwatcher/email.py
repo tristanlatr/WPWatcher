@@ -57,11 +57,11 @@ class EmailSender:
         wp_site: Dict[str, Any],
         wp_report: Dict[str, Any],
         last_wp_report: Optional[Dict[str, Any]],
-        wpscan_command: str,
+        wpscan_command: str, wpscan_version:str,
     ) -> bool:
         """Email recipients if match `should_notify` conditions"""
         if self.should_notify(wp_report, last_wp_report):
-            self.send_report(wp_site, wp_report, wpscan_command)
+            self.send_report(wp_site, wp_report, wpscan_command, wpscan_version)
             return True
         else:
             return False
@@ -83,7 +83,7 @@ class EmailSender:
 
     # Send email report with status and timestamp
     def _send_report(
-        self, wp_report: Dict[str, Any], email_to: List[str], wpscan_command: str
+        self, wp_report: Dict[str, Any], email_to: List[str], wpscan_command: str, wpscan_version:str
     ) -> None:
         """Build MIME message based on report and call send_mail"""
 
@@ -96,7 +96,7 @@ class EmailSender:
         message["To"] = ",".join(email_to)
 
         # Email body
-        body = self.build_message(wp_report, wpscan_command)
+        body = self.build_message(wp_report, wpscan_command, wpscan_version)
         if self.use_monospace_font:
             body = (
                 f'<font face="Courier New, Courier, monospace" size="-1">{body}</font>'
@@ -187,7 +187,7 @@ class EmailSender:
         return should
 
     def send_report(
-        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any], wpscan_command: str
+        self, wp_site: Dict[str, Any], wp_report: Dict[str, Any], wpscan_command: str, wpscan_version:str
     ) -> bool:
         """Sending the report"""
         # Send the report to
@@ -206,11 +206,11 @@ class EmailSender:
             time.sleep(0.01)
 
         with self._mail_lock:
-            self._send_report(wp_report, to, wpscan_command)
+            self._send_report(wp_report, to, wpscan_command, wpscan_version)
             return True
 
     @staticmethod
-    def build_message(wp_report: Dict[str, Any], wpscan_command: str) -> str:
+    def build_message(wp_report: Dict[str, Any], wpscan_command: str, wpscan_version:str) -> str:
         """Build mail message text base on report and warnngs and info switch"""
 
         message = (
@@ -228,6 +228,7 @@ class EmailSender:
             content=message,
             wpwatcher_version=__version__,
             wpscan_command=wpscan_command,
+            wpscan_version=wpscan_version
         )
 
 
@@ -363,7 +364,7 @@ TEMPLATE_EMAIL = Template(
                 <tr>
                   <td class="content-block powered-by" style="font-family: sans-serif; vertical-align: top; padding-bottom: 10px; padding-top: 10px; font-size: 12px; color: #999999; text-align: center;">
                     Automating WPscan to scan and report vulnerable Wordpress sites <br/> 
-                    <a href="https://github.com/tristanlatr/WPWatcher" style="color: #999999; text-align: center; text-decoration: none;">WPWatcher version $wpwatcher_version </a> <br />
+                    <a href="https://github.com/tristanlatr/WPWatcher" style="color: #999999; text-align: center; text-decoration: none;">WPWatcher version $wpwatcher_version </a> - WPScan version $wpscan_version <br />
                   </td>
                 </tr>
               </table>

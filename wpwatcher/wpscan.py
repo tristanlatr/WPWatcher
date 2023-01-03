@@ -32,6 +32,8 @@ class WPScanWrapper:
 
 
     _NO_VAL = datetime(year=2000, month=1, day=1)
+    _NO_VERSION = '0.0.0'
+
     def __init__(self, wpscan_path: str, scan_timeout: Optional[timedelta] = None,
         api_limit_wait: bool = False, follow_redirect: bool = False) -> None:
         """
@@ -47,6 +49,7 @@ class WPScanWrapper:
 
         self._update_lock: threading.Lock = threading.Lock()
         self._lazy_last_db_update: Optional[datetime] = self._NO_VAL
+        self._lazy_wpscan_version: Optional[str] = None
 
         self._api_limit_wait = api_limit_wait
         self._follow_redirect = follow_redirect
@@ -103,11 +106,17 @@ class WPScanWrapper:
     @property
     def _last_db_update(self) -> Optional[datetime]: 
         if self._lazy_last_db_update == self._NO_VAL:
-            self._lazy_last_db_update = self._get_last_db_update()
+            self._init_lazy_attributes()
         return self._lazy_last_db_update
+    
+    @property
+    def _wpscan_version(self) -> Optional[str]:
+        if self._lazy_wpscan_version == self._NO_VERSION:
+            self._init_lazy_attributes()
+        return self._lazy_wpscan_version
 
 
-    def _get_last_db_update(self) -> Optional[datetime]:
+    def _init_lazy_attributes(self) -> Optional[datetime]:
 
         wp_version_args = ["--version", "--format", "json", "--no-banner"]
         try:
@@ -126,12 +135,17 @@ class WPScanWrapper:
 
         version_info = json.loads(process.stdout)
 
-        if not version_info.get("last_db_update", None):
-            return None
-        else:
-            return datetime.strptime(
+        try:
+            self._lazy_last_db_update = datetime.strptime(
                 version_info["last_db_update"].split(".")[0], "%Y-%m-%dT%H:%M:%S"
             )
+        except KeyError:
+            self._lazy_last_db_update = None
+        
+        try:
+            self._lazy_wpscan_version = version_info['version']
+        except KeyError:
+            self._lazy_wpscan_version = None
 
     def _update_wpscan(self) -> None:
         # Update wpscan database
