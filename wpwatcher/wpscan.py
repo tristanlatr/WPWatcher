@@ -135,11 +135,11 @@ class WPScanWrapper:
 
         version_info = json.loads(process.stdout)
 
-        try:
+        if isinstance(version_info.get("last_db_update"), str):
             self._lazy_last_db_update = datetime.strptime(
                 version_info["last_db_update"].split(".")[0], "%Y-%m-%dT%H:%M:%S"
             )
-        except KeyError:
+        else:
             self._lazy_last_db_update = None
         
         try:
