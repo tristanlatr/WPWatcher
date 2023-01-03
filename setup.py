@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 from setuptools import setup, find_packages
 import pathlib
+import sys
 # The directory containing this file
 HERE = pathlib.Path(__file__).parent
 # About the project
@@ -30,7 +31,9 @@ setup(
     long_description    =   README,
     long_description_content_type   =   "text/markdown",
     python_requires     =   '>=3.6',
-    install_requires    =   ['wpscan-out-parse>=1.9.3', 'filelock', ],
+    install_requires    =   ['wpscan-out-parse>=1.9.3', 
+                             # filelock dropped support for python 3.6 in version 3.4.2 https://github.com/tox-dev/py-filelock/pull/125
+                             'filelock<3.4.2' if sys.version_info < (3,7) else 'filelock', ],
     extras_require      =   {'syslog' : ['rfc5424-logging-handler', 'cefevent'],
                              'docs': ["Sphinx", "recommonmark"], 
                              'dev': ["pytest", "pytest-cov", "codecov", "coverage", "tox", "mypy"]},
