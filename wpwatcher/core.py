@@ -237,7 +237,7 @@ class WPWatcher:
         # Print results and finish
         log.info(repr(self.new_reports))
 
-        if not any([r["status"] == "ERROR" for r in self.new_reports if r]):
+        if not any([r["status"] == "ERROR" for r in self.new_reports if r]) and not self.scanner.broken_syslog:
             log.info("Scans finished successfully.")
             return (0, self.new_reports)
         else:
