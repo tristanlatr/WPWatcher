@@ -73,8 +73,14 @@ class Scanner:
             os.makedirs(os.path.join(self.wpscan_output_folder, "info/"), exist_ok=True)
 
         self.syslog: Optional[SyslogOutput] = None
+        self.broken_syslog = False
         if conf["syslog_server"]:
-            self.syslog = SyslogOutput(conf)
+            try:
+                self.syslog = SyslogOutput(conf)
+            except Exception as e:
+                self.broken_syslog = True
+                log.error(f"Broken Syslog: {e}\n{traceback.format_exc()}")
+                
         
 
     def interrupt(self) -> None:
