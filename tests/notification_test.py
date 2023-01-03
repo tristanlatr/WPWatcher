@@ -51,7 +51,7 @@ class T(unittest.TestCase):
                 "wpscan_output":"This is real%s"%(s)
             }
 
-            wpwatcher.scanner.mail._send_report(report, email_to='test', wpscan_command= 'just testing')
+            wpwatcher.scanner.mail._send_report(report, email_to='test', wpscan_command= 'just testing', wpscan_version='1.2.3')
 
             # self.assertEqual(report['fixed'], [], "Fixed item wasn't remove after email sent")
             # self.assertNotEqual(report['last_email'], None)
