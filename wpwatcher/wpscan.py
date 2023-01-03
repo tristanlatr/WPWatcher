@@ -116,7 +116,7 @@ class WPScanWrapper:
         return self._lazy_wpscan_version
 
 
-    def _init_lazy_attributes(self) -> Optional[datetime]:
+    def _init_lazy_attributes(self) -> None:
 
         wp_version_args = ["--version", "--format", "json", "--no-banner"]
         try:
