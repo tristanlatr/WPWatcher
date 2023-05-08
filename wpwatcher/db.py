@@ -41,9 +41,13 @@ class DataBase:
         # Writing into the database file is thread safe
         self._wp_report_lock: threading.Lock = threading.Lock()
 
-        # Only once instance of WPWatcher can use a database file at a time. 
-        self._wp_report_file_lock: FileLock = FileLock(f"{self.filepath}.lock")
+        try:
+            lock = FileLock(f"{self.filepath}.lock", thread_local=False)
+        except:
+            lock = FileLock(f"{self.filepath}.lock")
         
+        # Only one instance of WPWatcher can use a database file at a time. 
+        self._wp_report_file_lock: FileLock = lock
 
     def open(self) -> None:
         """
