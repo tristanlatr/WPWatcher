@@ -54,6 +54,20 @@ def main(_args: Optional[Sequence[Text]] = None) -> None:
             filepath=configuration["wp_reports"],
             daemon=args.daemon,
         )
+    if args.show_html:
+        show(
+            urlpart=args.show_html,
+            filepath=configuration["wp_reports"],
+            daemon=args.daemon,
+            format='html',
+        )
+    if args.show_json:
+        show(
+            urlpart=args.show_json,
+            filepath=configuration["wp_reports"],
+            daemon=args.daemon,
+            format='json',
+        )
 
     # Launch syslog test
     if args.syslog_test:
@@ -80,18 +94,18 @@ def wprs(filepath: Optional[str] = None, daemon: bool = False) -> None:
     exit(0)
 
 
-def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> None:
+def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False, format:str='cli') -> None:
     """Inspect a report in database"""
     db = DataBase(filepath, daemon=daemon)
     matching_reports = [r for r in db._data if urlpart in r["site"]]
     eq_reports = [r for r in db._data if urlpart == r["site"]]
     if len(eq_reports):
         print(
-            format_results(eq_reports[0], format="cli")
+            format_results(eq_reports[0], format=format)
         )
     elif len(matching_reports) == 1:
         print(
-            format_results(matching_reports[0], format="cli")
+            format_results(matching_reports[0], format=format)
         )
     elif len(matching_reports) > 1:
         print(
@@ -101,6 +115,7 @@ def show(urlpart: str, filepath: Optional[str] = None, daemon: bool = False) -> 
             repr(ReportCollection(matching_reports))
         )
         print("\nPlease be more specific. \n")
+        exit(1)
     else:
         print("No report found")
         exit(1)
@@ -306,7 +321,13 @@ All options can be missing from config file.""",
         default=False,
     )
     parser.add_argument(
-        "--show", metavar="Site", help="Inspect a report in the Database"
+        "--show", metavar="Site", help="Print a report in the Database in text format."
+    )
+    parser.add_argument(
+        "--show_html", metavar="Site", help="Print a report in the Database in HTML format, use with --quiet to print only HTML content."
+    )
+    parser.add_argument(
+        "--show_json", metavar="Site", help="Print a report in the Database in JSON format, use with --quiet to print only JSON content."
     )
     return parser
 

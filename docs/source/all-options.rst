@@ -237,8 +237,20 @@ All configuration options
     - File path or None 
     - None 
     
-  * - Inspect a report in database 
+  * - Print a report in database 
     - NA 
     - ``--show`` 
+    - String 
+    - None
+  
+  * - Print a report in database in HTML format, use with --quiet to print only HTML content
+    - NA 
+    - ``--show_html`` 
+    - String 
+    - None
+
+  * - Print a report in database in JSON format, use with --quiet to print only JSON content
+    - NA 
+    - ``--show_json`` 
     - String 
     - None
